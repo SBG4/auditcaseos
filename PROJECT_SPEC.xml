@@ -651,21 +651,22 @@ auditcaseos/
 │       │   └── report.py
 │       ├── routers/
 │       │   ├── __init__.py
-│       │   ├── auth.py            # Phase 2
+│       │   ├── auth.py            # Phase 2 - DONE
 │       │   ├── cases.py
 │       │   ├── evidence.py
 │       │   ├── users.py
 │       │   ├── scopes.py
+│       │   ├── sync.py            # Phase 2 - DONE
 │       │   ├── entities.py        # Phase 2
 │       │   ├── reports.py         # Phase 2
 │       │   ├── ai.py
 │       │   └── health.py
 │       ├── services/
 │       │   ├── __init__.py
-│       │   ├── auth_service.py    # Phase 2
+│       │   ├── auth_service.py       # Phase 2 - DONE
 │       │   ├── case_service.py
 │       │   ├── storage_service.py
-│       │   ├── paperless_service.py  # Phase 2
+│       │   ├── paperless_service.py  # Phase 2 - DONE
 │       │   ├── entity_service.py     # Phase 2
 │       │   ├── embedding_service.py  # Phase 2
 │       │   ├── report_service.py     # Phase 2
@@ -683,6 +684,7 @@ auditcaseos/
 │
 ├── configs/
 │   └── postgres/
+│       ├── 00-create-paperless-db.sh  # Phase 2 - DONE
 │       └── init.sql
 │
 ├── templates/                     # Phase 2
@@ -897,8 +899,8 @@ $$ LANGUAGE plpgsql;
     </feature_group>
 
     <known_limitations>
-      <limitation>No authentication/authorization implemented</limitation>
-      <limitation>AI summarize/similar endpoints are stubs</limitation>
+      <limitation resolved="true" resolved_in="2.2">Authentication/authorization - RESOLVED in Feature 2.2</limitation>
+      <limitation>AI summarize/similar endpoints are stubs (pending Feature 2.9/2.10)</limitation>
     </known_limitations>
   </phase>
 
@@ -976,12 +978,22 @@ $$ LANGUAGE plpgsql;
         <completion_date>2026-01-14</completion_date>
         <tasks>
           <task status="done">Add paperless service to docker-compose.yml</task>
+          <task status="done">Add Redis service for Paperless task queue</task>
           <task status="done">Configure shared storage with API service</task>
           <task status="done">Set up Paperless API credentials</task>
+          <task status="done">Create separate PostgreSQL database for Paperless</task>
         </tasks>
+        <files_created>
+          <file>configs/postgres/00-create-paperless-db.sh</file>
+        </files_created>
+        <files_modified>
+          <file>docker-compose.yml</file>
+          <file>.env.example</file>
+        </files_modified>
         <docker_config>
           <image>ghcr.io/paperless-ngx/paperless-ngx:latest</image>
           <port>18080</port>
+          <depends_on>postgres, redis</depends_on>
         </docker_config>
       </feature>
       <feature id="2.4" status="COMPLETED">
@@ -994,16 +1006,31 @@ $$ LANGUAGE plpgsql;
           <task status="done">Implement document upload to Paperless</task>
           <task status="done">Implement OCR text retrieval</task>
           <task status="done">Implement document search</task>
+          <task status="done">Implement tag management for case organization</task>
+          <task status="done">Implement health check endpoint</task>
         </tasks>
         <files_created>
           <file>api/app/services/paperless_service.py</file>
         </files_created>
+        <files_modified>
+          <file>api/app/services/__init__.py</file>
+          <file>api/app/config.py</file>
+        </files_modified>
+        <service_methods>
+          <method>upload_document() - Upload file to Paperless for OCR</method>
+          <method>get_document() - Get document with OCR text</method>
+          <method>get_document_content() - Get extracted text only</method>
+          <method>search_documents() - Full-text search</method>
+          <method>get_or_create_tag() - Tag management</method>
+          <method>health_check() - Connection status</method>
+        </service_methods>
       </feature>
       <feature id="2.5" status="COMPLETED">
         <name>Evidence Sync Pipeline</name>
         <description>Auto-sync evidence files to Paperless for OCR</description>
         <priority>3</priority>
         <completion_date>2026-01-14</completion_date>
+        <tested>true</tested>
         <tasks>
           <task status="done">Create sync endpoint POST /api/v1/sync/case/{case_id}</task>
           <task status="done">List evidence files from MinIO</task>
@@ -1014,13 +1041,23 @@ $$ LANGUAGE plpgsql;
         <files_created>
           <file>api/app/routers/sync.py</file>
         </files_created>
-        <new_endpoints>
+        <files_modified>
+          <file>api/app/routers/__init__.py</file>
+          <file>api/app/main.py</file>
+        </files_modified>
+        <supported_file_types>
+          <type>application/pdf</type>
+          <type>image/png, image/jpeg, image/gif, image/tiff</type>
+          <type>text/plain</type>
+          <type>application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document</type>
+        </supported_file_types>
+        <endpoints>
           <endpoint method="GET" path="/api/v1/sync/status">Check Paperless connection status</endpoint>
-          <endpoint method="POST" path="/api/v1/sync/case/{case_id}">Sync case evidence</endpoint>
+          <endpoint method="POST" path="/api/v1/sync/case/{case_id}">Sync all case evidence to Paperless</endpoint>
           <endpoint method="POST" path="/api/v1/sync/evidence/{evidence_id}">Sync single evidence file</endpoint>
-          <endpoint method="POST" path="/api/v1/sync/evidence/{evidence_id}/extract">Extract OCR text from Paperless</endpoint>
+          <endpoint method="POST" path="/api/v1/sync/evidence/{evidence_id}/extract">Extract OCR text from Paperless doc</endpoint>
           <endpoint method="GET" path="/api/v1/sync/paperless/search">Search Paperless documents</endpoint>
-        </new_endpoints>
+        </endpoints>
       </feature>
     </feature_group>
 
@@ -1359,6 +1396,8 @@ $$ LANGUAGE plpgsql;
     <credentials>
       <credential service="MinIO" user="minioadmin" pass="minioadmin123"/>
       <credential service="PostgreSQL" user="auditcaseos" pass="auditcaseos_secret"/>
+      <credential service="Paperless" user="admin" pass="admin123"/>
+      <credential service="API (default admin)" user="admin" pass="admin123"/>
     </credentials>
   </quick_reference>
 </project>
