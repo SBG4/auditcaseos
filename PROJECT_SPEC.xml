@@ -16,7 +16,7 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.2.0</version>
+    <version>0.2.2</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-14</last_updated>
     <current_phase>2</current_phase>
@@ -969,47 +969,57 @@ $$ LANGUAGE plpgsql;
     </feature_group>
 
     <feature_group name="Paperless-ngx Integration">
-      <feature id="2.3" status="PENDING">
+      <feature id="2.3" status="COMPLETED">
         <name>Paperless Service Setup</name>
         <description>Add Paperless-ngx to Docker Compose for OCR</description>
         <priority>3</priority>
+        <completion_date>2026-01-14</completion_date>
         <tasks>
-          <task>Add paperless service to docker-compose.yml</task>
-          <task>Configure shared storage with API service</task>
-          <task>Set up Paperless API credentials</task>
+          <task status="done">Add paperless service to docker-compose.yml</task>
+          <task status="done">Configure shared storage with API service</task>
+          <task status="done">Set up Paperless API credentials</task>
         </tasks>
         <docker_config>
           <image>ghcr.io/paperless-ngx/paperless-ngx:latest</image>
           <port>18080</port>
         </docker_config>
       </feature>
-      <feature id="2.4" status="PENDING">
+      <feature id="2.4" status="COMPLETED">
         <name>Paperless Connector</name>
         <description>API service to interact with Paperless</description>
         <priority>3</priority>
+        <completion_date>2026-01-14</completion_date>
         <tasks>
-          <task>Create api/app/services/paperless_service.py</task>
-          <task>Implement document upload to Paperless</task>
-          <task>Implement OCR text retrieval</task>
-          <task>Implement document search</task>
+          <task status="done">Create api/app/services/paperless_service.py</task>
+          <task status="done">Implement document upload to Paperless</task>
+          <task status="done">Implement OCR text retrieval</task>
+          <task status="done">Implement document search</task>
         </tasks>
-        <files_to_create>
+        <files_created>
           <file>api/app/services/paperless_service.py</file>
-        </files_to_create>
+        </files_created>
       </feature>
-      <feature id="2.5" status="PENDING">
+      <feature id="2.5" status="COMPLETED">
         <name>Evidence Sync Pipeline</name>
         <description>Auto-sync evidence files to Paperless for OCR</description>
         <priority>3</priority>
+        <completion_date>2026-01-14</completion_date>
         <tasks>
-          <task>Create sync endpoint POST /api/v1/sync/case/{case_id}</task>
-          <task>List evidence files from MinIO</task>
-          <task>Send PDFs/images to Paperless</task>
-          <task>Retrieve OCR text and store in evidence.extracted_text</task>
-          <task>Trigger embedding generation</task>
+          <task status="done">Create sync endpoint POST /api/v1/sync/case/{case_id}</task>
+          <task status="done">List evidence files from MinIO</task>
+          <task status="done">Send PDFs/images to Paperless</task>
+          <task status="done">Retrieve OCR text and store in evidence.extracted_text</task>
+          <task status="pending">Trigger embedding generation (moved to Feature 2.8)</task>
         </tasks>
+        <files_created>
+          <file>api/app/routers/sync.py</file>
+        </files_created>
         <new_endpoints>
+          <endpoint method="GET" path="/api/v1/sync/status">Check Paperless connection status</endpoint>
           <endpoint method="POST" path="/api/v1/sync/case/{case_id}">Sync case evidence</endpoint>
+          <endpoint method="POST" path="/api/v1/sync/evidence/{evidence_id}">Sync single evidence file</endpoint>
+          <endpoint method="POST" path="/api/v1/sync/evidence/{evidence_id}/extract">Extract OCR text from Paperless</endpoint>
+          <endpoint method="GET" path="/api/v1/sync/paperless/search">Search Paperless documents</endpoint>
         </new_endpoints>
       </feature>
     </feature_group>
@@ -1241,24 +1251,24 @@ $$ LANGUAGE plpgsql;
   <progress>
     <summary>
       <total_features>37</total_features>
-      <completed>14</completed>
+      <completed>17</completed>
       <in_progress>0</in_progress>
-      <pending>23</pending>
-      <completion_percentage>38</completion_percentage>
+      <pending>20</pending>
+      <completion_percentage>46</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
-      <phase number="2" features_total="12" features_completed="2" status="IN_PROGRESS"/>
+      <phase number="2" features_total="12" features_completed="5" status="IN_PROGRESS"/>
       <phase number="3" features_total="13" features_completed="0" status="PENDING"/>
     </phase_status>
 
     <next_steps>
-      <step priority="1" feature_id="2.3">Add Paperless-ngx service</step>
-      <step priority="2" feature_id="2.4">Create Paperless connector</step>
-      <step priority="3" feature_id="2.5">Build evidence sync pipeline</step>
-      <step priority="4" feature_id="2.6">Implement entity extraction</step>
-      <step priority="5" feature_id="2.8">Implement embedding service</step>
+      <step priority="1" feature_id="2.6">Implement entity extraction</step>
+      <step priority="2" feature_id="2.7">Entity storage and search</step>
+      <step priority="3" feature_id="2.8">Implement embedding service</step>
+      <step priority="4" feature_id="2.9">Similarity search with pgvector</step>
+      <step priority="5" feature_id="2.10">AI case summarization</step>
       <step priority="6" feature_id="2.11">DOCX Report Generator</step>
     </next_steps>
   </progress>
@@ -1267,6 +1277,20 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-14" version="0.2.2" phase="2">
+      <changes>
+        <change type="added">Feature 2.3: Paperless-ngx Docker service with Redis</change>
+        <change type="added">Feature 2.4: Paperless connector service (paperless_service.py)</change>
+        <change type="added">Feature 2.5: Evidence sync pipeline with OCR support</change>
+        <change type="added">GET /api/v1/sync/status - Paperless health check</change>
+        <change type="added">POST /api/v1/sync/case/{case_id} - Sync all case evidence</change>
+        <change type="added">POST /api/v1/sync/evidence/{evidence_id} - Sync single file</change>
+        <change type="added">POST /api/v1/sync/evidence/{evidence_id}/extract - Retrieve OCR text</change>
+        <change type="added">GET /api/v1/sync/paperless/search - Search Paperless docs</change>
+        <change type="added">Separate PostgreSQL database for Paperless</change>
+      </changes>
+      <git_commit>5f67c19</git_commit>
+    </entry>
     <entry date="2026-01-14" version="0.2.1" phase="2">
       <changes>
         <change type="added">Feature 2.2: JWT Authentication System</change>
