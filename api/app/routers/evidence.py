@@ -104,9 +104,10 @@ async def compute_file_hash(file: UploadFile) -> str:
 
 
 async def get_file_size(file: UploadFile) -> int:
-    """Get file size."""
-    await file.seek(0, 2)
-    size = file.tell()
+    """Get file size by reading content."""
+    await file.seek(0)
+    content = await file.read()
+    size = len(content)
     await file.seek(0)
     return size
 
