@@ -14,12 +14,17 @@ CREATE TYPE case_status AS ENUM ('OPEN', 'IN_PROGRESS', 'PENDING_REVIEW', 'CLOSE
 -- Severity Enum
 CREATE TYPE severity_level AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL');
 
+-- User Role Enum
+CREATE TYPE user_role AS ENUM ('admin', 'auditor', 'reviewer', 'viewer');
+
 -- Users table
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     username VARCHAR(100) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(255) NOT NULL,
+    role user_role DEFAULT 'viewer',
     department VARCHAR(100),
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -207,9 +212,10 @@ INSERT INTO scopes (code, name, description) VALUES
     ('LEGAL', 'Legal', 'Legal and Compliance'),
     ('RND', 'Research & Development', 'R&D and Engineering');
 
--- Insert a default admin user
-INSERT INTO users (username, email, full_name, department) VALUES
-    ('admin', 'admin@example.com', 'System Administrator', 'IT');
+-- Insert a default admin user (password: admin123)
+-- bcrypt hash generated with: passlib.hash.bcrypt.hash("admin123")
+INSERT INTO users (username, email, password_hash, full_name, role, department) VALUES
+    ('admin', 'admin@example.com', '$2b$12$v5caNNiV5WsfwLdJH3zYHeqQLO7qkKcyNW8vjV5PHxjiV1aFQzjkG', 'System Administrator', 'admin', 'IT');
 
 -- Function to generate next case ID
 CREATE OR REPLACE FUNCTION generate_case_id(p_scope_code VARCHAR, p_case_type case_type)

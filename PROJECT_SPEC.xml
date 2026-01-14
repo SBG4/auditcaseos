@@ -931,26 +931,40 @@ $$ LANGUAGE plpgsql;
           <file>configs/postgres/init.sql</file>
         </files_modified>
       </feature>
-      <feature id="2.2" status="PENDING">
+      <feature id="2.2" status="COMPLETED">
         <name>User Authentication</name>
         <description>JWT-based authentication system</description>
         <priority>2</priority>
+        <completion_date>2026-01-14</completion_date>
         <tasks>
-          <task>Add password hashing (bcrypt)</task>
-          <task>Implement login endpoint with JWT token generation</task>
-          <task>Add JWT middleware for protected routes</task>
-          <task>Implement role-based access control</task>
+          <task status="done">Add password hashing (bcrypt)</task>
+          <task status="done">Implement login endpoint with JWT token generation</task>
+          <task status="done">Add JWT middleware for protected routes</task>
+          <task status="done">Implement role-based access control</task>
         </tasks>
-        <files_to_create>
+        <files_created>
           <file>api/app/routers/auth.py</file>
           <file>api/app/services/auth_service.py</file>
           <file>api/app/utils/security.py</file>
-        </files_to_create>
+        </files_created>
+        <files_modified>
+          <file>api/app/config.py</file>
+          <file>api/app/main.py</file>
+          <file>api/app/routers/cases.py</file>
+          <file>api/app/routers/evidence.py</file>
+          <file>api/requirements.txt</file>
+          <file>configs/postgres/init.sql</file>
+        </files_modified>
         <dependencies>
-          <dependency>python-jose</dependency>
-          <dependency>passlib</dependency>
-          <dependency>bcrypt</dependency>
+          <dependency>python-jose[cryptography]</dependency>
+          <dependency>passlib[bcrypt]</dependency>
+          <dependency>bcrypt==4.0.1</dependency>
         </dependencies>
+        <endpoints>
+          <endpoint method="POST" path="/api/v1/auth/login">User login with JWT token</endpoint>
+          <endpoint method="POST" path="/api/v1/auth/register">User registration (admin only)</endpoint>
+          <endpoint method="GET" path="/api/v1/auth/me">Get current user profile</endpoint>
+        </endpoints>
       </feature>
     </feature_group>
 
@@ -1227,25 +1241,25 @@ $$ LANGUAGE plpgsql;
   <progress>
     <summary>
       <total_features>37</total_features>
-      <completed>13</completed>
+      <completed>14</completed>
       <in_progress>0</in_progress>
-      <pending>24</pending>
-      <completion_percentage>35</completion_percentage>
+      <pending>23</pending>
+      <completion_percentage>38</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
-      <phase number="2" features_total="12" features_completed="1" status="IN_PROGRESS"/>
+      <phase number="2" features_total="12" features_completed="2" status="IN_PROGRESS"/>
       <phase number="3" features_total="13" features_completed="0" status="PENDING"/>
     </phase_status>
 
     <next_steps>
-      <step priority="1" feature_id="2.2">Implement user authentication (JWT)</step>
-      <step priority="2" feature_id="2.3">Add Paperless-ngx service</step>
-      <step priority="3" feature_id="2.4">Create Paperless connector</step>
-      <step priority="4" feature_id="2.5">Build evidence sync pipeline</step>
-      <step priority="5" feature_id="2.6">Implement entity extraction</step>
-      <step priority="6" feature_id="2.8">Implement embedding service</step>
+      <step priority="1" feature_id="2.3">Add Paperless-ngx service</step>
+      <step priority="2" feature_id="2.4">Create Paperless connector</step>
+      <step priority="3" feature_id="2.5">Build evidence sync pipeline</step>
+      <step priority="4" feature_id="2.6">Implement entity extraction</step>
+      <step priority="5" feature_id="2.8">Implement embedding service</step>
+      <step priority="6" feature_id="2.11">DOCX Report Generator</step>
     </next_steps>
   </progress>
 
@@ -1253,6 +1267,21 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-14" version="0.2.1" phase="2">
+      <changes>
+        <change type="added">Feature 2.2: JWT Authentication System</change>
+        <change type="added">Password hashing with bcrypt via passlib</change>
+        <change type="added">POST /api/v1/auth/login - JWT token generation</change>
+        <change type="added">POST /api/v1/auth/register - Admin-only user registration</change>
+        <change type="added">GET /api/v1/auth/me - Current user profile endpoint</change>
+        <change type="added">JWT middleware protecting all routes except health/login</change>
+        <change type="added">Role-based access control (admin, auditor, reviewer, viewer)</change>
+        <change type="added">Security utilities (api/app/utils/security.py)</change>
+        <change type="added">Auth service (api/app/services/auth_service.py)</change>
+        <change type="fixed">bcrypt compatibility with passlib (pinned bcrypt==4.0.1)</change>
+        <change type="fixed">Settings singleton export in config.py</change>
+      </changes>
+    </entry>
     <entry date="2026-01-14" version="0.2.0" phase="2">
       <changes>
         <change type="added">Feature 2.1: Complete Database CRUD Operations</change>

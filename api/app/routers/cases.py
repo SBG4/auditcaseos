@@ -15,6 +15,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.routers.auth import get_current_user_required, OptionalUser
 from app.schemas.case import (
     CaseCreate,
     CaseListResponse,
@@ -41,34 +42,9 @@ router = APIRouter(prefix="/cases", tags=["cases"])
 # =============================================================================
 
 
-def get_current_user_id() -> UUID:
-    """
-    Dependency to get current user ID.
-
-    This is a placeholder for authentication - will be replaced in Phase 2.2.
-
-    Returns:
-        UUID: Current user's UUID (default admin user)
-    """
-    # TODO: Replace with actual JWT authentication in Phase 2.2
-    # For now, return the default admin user created in init.sql
-    return UUID("00000000-0000-0000-0000-000000000000")
-
-
-async def get_admin_user_id(db: AsyncSession) -> UUID:
-    """Get the admin user's ID from the database."""
-    query = text("SELECT id FROM users WHERE username = 'admin' LIMIT 1")
-    result = await db.execute(query)
-    row = result.fetchone()
-    if row:
-        return row[0]
-    # Fallback to a known UUID if admin not found
-    return UUID("00000000-0000-0000-0000-000000000001")
-
-
 # Type aliases for dependency injection
 DbSession = Annotated[AsyncSession, Depends(get_db)]
-CurrentUserId = Annotated[UUID, Depends(get_current_user_id)]
+CurrentUser = Annotated[dict, Depends(get_current_user_required)]
 
 
 # =============================================================================
@@ -84,6 +60,7 @@ CurrentUserId = Annotated[UUID, Depends(get_current_user_id)]
 )
 async def list_cases(
     db: DbSession,
+    current_user: CurrentUser,
     status: CaseStatus | None = Query(None, description="Filter by case status"),
     case_type: CaseType | None = Query(None, alias="type", description="Filter by case type"),
     scope: str | None = Query(None, description="Filter by scope code"),
@@ -161,6 +138,7 @@ async def create_case(
     case_data: CaseCreate,
     db: DbSession,
     request: Request,
+    current_user: CurrentUser,
 ) -> CaseResponse:
     """
     Create a new audit case.
@@ -171,8 +149,8 @@ async def create_case(
     Example: FIN-USB-0001 for the first USB case in Finance scope.
     """
     try:
-        # Get current user (placeholder until auth implemented)
-        owner_id = await get_admin_user_id(db)
+        # Get owner ID from authenticated user
+        owner_id = current_user["id"]
 
         # Verify scope exists
         scope_query = text("SELECT code FROM scopes WHERE code = :code")
@@ -242,6 +220,7 @@ async def create_case(
 async def get_case(
     db: DbSession,
     request: Request,
+    current_user: CurrentUser,
     case_id: str = Path(..., description="Case ID in format SCOPE-TYPE-SEQ (e.g., FIN-USB-0001) or UUID"),
 ) -> CaseResponse:
     """
@@ -263,7 +242,7 @@ async def get_case(
             )
 
         # Log view event
-        owner_id = await get_admin_user_id(db)
+        owner_id = current_user["id"]
         client_ip = request.client.host if request.client else None
         try:
             await audit_service.log_view(
@@ -300,6 +279,7 @@ async def update_case(
     case_update: CaseUpdate,
     db: DbSession,
     request: Request,
+    current_user: CurrentUser,
     case_id: str = Path(..., description="Case ID in format SCOPE-TYPE-SEQ or UUID"),
 ) -> CaseResponse:
     """
@@ -349,13 +329,12 @@ async def update_case(
             )
 
         # Log audit event
-        owner_id = await get_admin_user_id(db)
         client_ip = request.client.host if request.client else None
         await audit_service.log_update(
             db=db,
             entity_type="case",
             entity_id=updated_case["id"],
-            user_id=owner_id,
+            user_id=current_user["id"],
             old_values={"status": str(existing_case.get("status")), "severity": str(existing_case.get("severity"))},
             new_values=update_dict,
             user_ip=client_ip,
@@ -384,6 +363,7 @@ async def update_case(
 async def delete_case(
     db: DbSession,
     request: Request,
+    current_user: CurrentUser,
     case_id: str = Path(..., description="Case ID in format SCOPE-TYPE-SEQ or UUID"),
 ) -> MessageResponse:
     """
@@ -413,13 +393,12 @@ async def delete_case(
             )
 
         # Log audit event
-        owner_id = await get_admin_user_id(db)
         client_ip = request.client.host if request.client else None
         await audit_service.log_delete(
             db=db,
             entity_type="case",
             entity_id=existing_case["id"],
-            user_id=owner_id,
+            user_id=current_user["id"],
             old_values={"case_id": existing_case["case_id"], "status": str(existing_case.get("status"))},
             user_ip=client_ip,
         )
@@ -513,6 +492,7 @@ async def get_case_timeline(
 async def add_timeline_event(
     db: DbSession,
     request: Request,
+    current_user: CurrentUser,
     case_id: str = Path(..., description="Case ID"),
     event_type: str = Query(..., max_length=100),
     description: str = Query(..., max_length=2000),
@@ -530,7 +510,7 @@ async def add_timeline_event(
             )
 
         case_uuid = case_data["id"]
-        user_id = await get_admin_user_id(db)
+        user_id = current_user["id"]
         event_time = event_time or datetime.utcnow()
 
         # Insert timeline event
@@ -634,6 +614,7 @@ async def get_case_findings(
 async def add_finding(
     db: DbSession,
     request: Request,
+    current_user: CurrentUser,
     case_id: str = Path(..., description="Case ID"),
     title: str = Query(..., min_length=1, max_length=500),
     description: str = Query(..., min_length=1, max_length=5000),
@@ -651,7 +632,7 @@ async def add_finding(
             )
 
         case_uuid = case_data["id"]
-        user_id = await get_admin_user_id(db)
+        user_id = current_user["id"]
 
         # Insert finding
         evidence_ids_str = [str(eid) for eid in evidence_ids] if evidence_ids else None

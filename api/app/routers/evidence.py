@@ -19,6 +19,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.routers.auth import get_current_user_required
 from app.schemas.common import BaseSchema, MessageResponse, TimestampMixin
 from app.services.audit_service import audit_service
 from app.services.case_service import case_service
@@ -76,16 +77,7 @@ class EvidenceUploadResponse(EvidenceResponse):
 
 
 DbSession = Annotated[AsyncSession, Depends(get_db)]
-
-
-async def get_admin_user_id(db: AsyncSession) -> UUID:
-    """Get the admin user's ID from the database."""
-    query = text("SELECT id FROM users WHERE username = 'admin' LIMIT 1")
-    result = await db.execute(query)
-    row = result.fetchone()
-    if row:
-        return row[0]
-    return UUID("00000000-0000-0000-0000-000000000001")
+CurrentUser = Annotated[dict, Depends(get_current_user_required)]
 
 
 # =============================================================================
@@ -127,6 +119,7 @@ async def get_file_size(file: UploadFile) -> int:
 async def upload_evidence(
     db: DbSession,
     request: Request,
+    current_user: CurrentUser,
     case_id: str = Path(..., description="Case ID (e.g., FIN-USB-0001)"),
     file: UploadFile = File(..., description="Evidence file to upload"),
     description: str | None = Query(None, description="Evidence description"),
@@ -147,7 +140,7 @@ async def upload_evidence(
             )
 
         case_uuid = case_data["id"]
-        user_id = await get_admin_user_id(db)
+        user_id = current_user["id"]
 
         # Compute file hash and size
         file_hash = await compute_file_hash(file)
@@ -241,6 +234,7 @@ async def upload_evidence(
 )
 async def list_case_evidence(
     db: DbSession,
+    current_user: CurrentUser,
     case_id: str = Path(..., description="Case ID"),
 ) -> EvidenceListResponse:
     """List all evidence files associated with a case."""
@@ -310,6 +304,7 @@ async def list_case_evidence(
 )
 async def get_evidence(
     db: DbSession,
+    current_user: CurrentUser,
     evidence_id: UUID = Path(..., description="Evidence UUID"),
 ) -> EvidenceResponse:
     """Get metadata for a specific evidence file."""
@@ -367,6 +362,7 @@ async def get_evidence(
 async def download_evidence(
     db: DbSession,
     request: Request,
+    current_user: CurrentUser,
     evidence_id: UUID = Path(..., description="Evidence UUID"),
 ) -> StreamingResponse:
     """Download an evidence file."""
@@ -388,14 +384,13 @@ async def download_evidence(
         file_content = await storage_service.download_file(evidence["file_path"])
 
         # Log download event
-        user_id = await get_admin_user_id(db)
         client_ip = request.client.host if request.client else None
         try:
             await audit_service.log_download(
                 db=db,
                 entity_type="evidence",
                 entity_id=evidence_id,
-                user_id=user_id,
+                user_id=current_user["id"],
                 file_path=evidence["file_path"],
                 user_ip=client_ip,
             )
@@ -430,6 +425,7 @@ async def download_evidence(
 async def delete_evidence(
     db: DbSession,
     request: Request,
+    current_user: CurrentUser,
     evidence_id: UUID = Path(..., description="Evidence UUID"),
 ) -> MessageResponse:
     """Delete an evidence file."""
@@ -456,13 +452,12 @@ async def delete_evidence(
         await db.commit()
 
         # Log delete event
-        user_id = await get_admin_user_id(db)
         client_ip = request.client.host if request.client else None
         await audit_service.log_delete(
             db=db,
             entity_type="evidence",
             entity_id=evidence_id,
-            user_id=user_id,
+            user_id=current_user["id"],
             old_values={"file_name": evidence["file_name"], "file_path": evidence["file_path"]},
             user_ip=client_ip,
         )

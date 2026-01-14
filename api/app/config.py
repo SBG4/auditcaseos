@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     debug: bool = False
     secret_key: str = "change-me-in-production"
 
+    # JWT settings
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    SECRET_KEY: str = "change-me-in-production"  # Alias for JWT signing
+
     # Database settings (DATABASE_URL from docker-compose)
     database_url: str = "postgresql+asyncpg://auditcaseos:auditcaseos_secret@postgres:5432/auditcaseos"
 
@@ -71,3 +76,7 @@ def get_settings() -> Settings:
         Settings: The application settings instance.
     """
     return Settings()
+
+
+# Singleton settings instance for easy import
+settings = get_settings()
