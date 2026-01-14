@@ -16,11 +16,11 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.1.0</version>
+    <version>0.2.0</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-14</last_updated>
-    <current_phase>1</current_phase>
-    <overall_progress>phase_1_complete</overall_progress>
+    <current_phase>2</current_phase>
+    <overall_progress>phase_2_in_progress</overall_progress>
   </metadata>
 
   <!-- ============================================== -->
@@ -897,40 +897,39 @@ $$ LANGUAGE plpgsql;
     </feature_group>
 
     <known_limitations>
-      <limitation>API endpoints return placeholder data (not connected to actual DB queries)</limitation>
       <limitation>No authentication/authorization implemented</limitation>
       <limitation>AI summarize/similar endpoints are stubs</limitation>
-      <limitation>Evidence upload saves metadata but file storage integration incomplete</limitation>
     </known_limitations>
   </phase>
 
   <!-- ============================================== -->
-  <!-- PHASE 2: DOCUMENT INTELLIGENCE - PENDING       -->
+  <!-- PHASE 2: DOCUMENT INTELLIGENCE - IN PROGRESS   -->
   <!-- ============================================== -->
-  <phase number="2" name="Document Intelligence" status="PENDING">
+  <phase number="2" name="Document Intelligence" status="IN_PROGRESS">
     <description>OCR, entity extraction, real RAG implementation, and report generation</description>
 
     <feature_group name="Database Integration">
-      <feature id="2.1" status="PENDING">
+      <feature id="2.1" status="COMPLETED">
         <name>Complete Database CRUD</name>
         <description>Wire up all API endpoints to actual database operations</description>
         <priority>1</priority>
+        <completion_date>2026-01-14</completion_date>
         <tasks>
-          <task>Implement case creation with DB persistence</task>
-          <task>Implement case listing with filters and pagination</task>
-          <task>Implement case updates and soft deletes</task>
-          <task>Implement evidence metadata storage</task>
-          <task>Implement findings CRUD</task>
-          <task>Implement timeline events CRUD</task>
-          <task>Implement audit logging for all operations</task>
+          <task status="done">Implement case creation with DB persistence</task>
+          <task status="done">Implement case listing with filters and pagination</task>
+          <task status="done">Implement case updates and soft deletes</task>
+          <task status="done">Implement evidence metadata storage with MinIO</task>
+          <task status="done">Implement findings CRUD</task>
+          <task status="done">Implement timeline events CRUD</task>
+          <task status="done">Implement audit logging for all operations</task>
         </tasks>
-        <files_to_modify>
+        <files_modified>
           <file>api/app/routers/cases.py</file>
           <file>api/app/routers/evidence.py</file>
-          <file>api/app/routers/users.py</file>
           <file>api/app/services/case_service.py</file>
           <file>api/app/services/audit_service.py</file>
-        </files_to_modify>
+          <file>configs/postgres/init.sql</file>
+        </files_modified>
       </feature>
       <feature id="2.2" status="PENDING">
         <name>User Authentication</name>
@@ -1228,25 +1227,25 @@ $$ LANGUAGE plpgsql;
   <progress>
     <summary>
       <total_features>37</total_features>
-      <completed>12</completed>
+      <completed>13</completed>
       <in_progress>0</in_progress>
-      <pending>25</pending>
-      <completion_percentage>32</completion_percentage>
+      <pending>24</pending>
+      <completion_percentage>35</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
-      <phase number="2" features_total="12" features_completed="0" status="PENDING"/>
+      <phase number="2" features_total="12" features_completed="1" status="IN_PROGRESS"/>
       <phase number="3" features_total="13" features_completed="0" status="PENDING"/>
     </phase_status>
 
     <next_steps>
-      <step priority="1" feature_id="2.1">Complete database CRUD operations</step>
-      <step priority="2" feature_id="2.2">Implement user authentication</step>
-      <step priority="3" feature_id="2.3">Add Paperless-ngx service</step>
-      <step priority="4" feature_id="2.4">Create Paperless connector</step>
-      <step priority="5" feature_id="2.5">Build evidence sync pipeline</step>
-      <step priority="6" feature_id="2.6">Implement entity extraction</step>
+      <step priority="1" feature_id="2.2">Implement user authentication (JWT)</step>
+      <step priority="2" feature_id="2.3">Add Paperless-ngx service</step>
+      <step priority="3" feature_id="2.4">Create Paperless connector</step>
+      <step priority="4" feature_id="2.5">Build evidence sync pipeline</step>
+      <step priority="5" feature_id="2.6">Implement entity extraction</step>
+      <step priority="6" feature_id="2.8">Implement embedding service</step>
     </next_steps>
   </progress>
 
@@ -1254,6 +1253,19 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-14" version="0.2.0" phase="2">
+      <changes>
+        <change type="added">Feature 2.1: Complete Database CRUD Operations</change>
+        <change type="added">Cases router with full DB persistence</change>
+        <change type="added">Evidence router with MinIO file storage</change>
+        <change type="added">Timeline events CRUD operations</change>
+        <change type="added">Findings CRUD with severity ordering</change>
+        <change type="added">Audit logging for all operations</change>
+        <change type="fixed">asyncpg SQL type casting (CAST syntax)</change>
+        <change type="fixed">Admin user email validation</change>
+      </changes>
+      <git_commit>ed224f1</git_commit>
+    </entry>
     <entry date="2026-01-14" version="0.1.0" phase="1">
       <changes>
         <change type="added">Initial project creation with Phase 1 features</change>
