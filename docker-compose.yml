@@ -9,7 +9,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-auditcaseos}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./configs/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./configs/postgres/00-create-paperless-db.sh:/docker-entrypoint-initdb.d/00-create-paperless-db.sh:ro
+      - ./configs/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     ports:
       - "15432:5432"
     healthcheck:
@@ -53,6 +54,60 @@ services:
         reservations:
           memory: 4G
 
+  # Redis for Paperless task queue
+  redis:
+    image: redis:7-alpine
+    container_name: auditcaseos-redis
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Paperless-ngx for OCR and document intelligence
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: auditcaseos-paperless
+    environment:
+      PAPERLESS_REDIS: redis://redis:6379
+      PAPERLESS_DBENGINE: postgresql
+      PAPERLESS_DBHOST: postgres
+      PAPERLESS_DBPORT: 5432
+      PAPERLESS_DBNAME: ${PAPERLESS_DBNAME:-paperless}
+      PAPERLESS_DBUSER: ${POSTGRES_USER:-auditcaseos}
+      PAPERLESS_DBPASS: ${POSTGRES_PASSWORD:-auditcaseos_secret}
+      PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY:-paperless-secret-change-me}
+      PAPERLESS_URL: http://localhost:18080
+      PAPERLESS_ADMIN_USER: ${PAPERLESS_ADMIN_USER:-admin}
+      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD:-admin123}
+      PAPERLESS_OCR_LANGUAGE: eng
+      PAPERLESS_TIME_ZONE: UTC
+      PAPERLESS_CONSUMER_POLLING: 30
+      PAPERLESS_CONSUMER_RECURSIVE: "true"
+      PAPERLESS_CONSUMER_SUBDIRS_AS_TAGS: "true"
+    volumes:
+      - paperless_data:/usr/src/paperless/data
+      - paperless_media:/usr/src/paperless/media
+      - paperless_export:/usr/src/paperless/export
+      - paperless_consume:/usr/src/paperless/consume
+    ports:
+      - "18080:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
   # FastAPI Backend
   api:
     build:
@@ -67,6 +122,8 @@ services:
       MINIO_BUCKET: ${MINIO_BUCKET:-evidence}
       OLLAMA_HOST: http://ollama:11434
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      PAPERLESS_URL: http://paperless:8000
+      PAPERLESS_API_TOKEN: ${PAPERLESS_API_TOKEN:-}
     ports:
       - "18000:8000"
     depends_on:
@@ -85,3 +142,8 @@ volumes:
   postgres_data:
   minio_data:
   ollama_data:
+  redis_data:
+  paperless_data:
+  paperless_media:
+  paperless_export:
+  paperless_consume:

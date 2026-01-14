@@ -58,6 +58,10 @@ class Settings(BaseSettings):
     # Ollama settings
     ollama_host: str = "http://localhost:11434"
 
+    # Paperless-ngx settings
+    paperless_url: str = "http://localhost:18080"
+    paperless_api_token: str = ""
+
     @property
     def async_database_url(self) -> str:
         """Return the database URL configured for async operations."""
