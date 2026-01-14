@@ -1,0 +1,254 @@
+-- AuditCaseOS Database Schema
+-- PostgreSQL with pgvector extension
+
+-- Enable extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "vector";
+
+-- Case Types Enum
+CREATE TYPE case_type AS ENUM ('USB', 'EMAIL', 'WEB', 'POLICY');
+
+-- Case Status Enum
+CREATE TYPE case_status AS ENUM ('OPEN', 'IN_PROGRESS', 'PENDING_REVIEW', 'CLOSED', 'ARCHIVED');
+
+-- Severity Enum
+CREATE TYPE severity_level AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL');
+
+-- Users table
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    username VARCHAR(100) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    full_name VARCHAR(255) NOT NULL,
+    department VARCHAR(100),
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Scopes (departments/areas) table
+CREATE TABLE scopes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    code VARCHAR(10) UNIQUE NOT NULL,  -- FIN, HR, IT, SEC, OPS, CORP
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Case ID sequence tracking (per scope-type combination)
+CREATE TABLE case_sequences (
+    scope_code VARCHAR(10) NOT NULL,
+    case_type case_type NOT NULL,
+    last_seq INTEGER DEFAULT 0,
+    PRIMARY KEY (scope_code, case_type)
+);
+
+-- Cases table (main entity)
+CREATE TABLE cases (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    case_id VARCHAR(50) UNIQUE NOT NULL,  -- SCOPE-TYPE-SEQ format (e.g., FIN-USB-0001)
+
+    -- Classification
+    scope_code VARCHAR(10) NOT NULL REFERENCES scopes(code),
+    case_type case_type NOT NULL,
+    status case_status DEFAULT 'OPEN',
+    severity severity_level DEFAULT 'MEDIUM',
+
+    -- Core details
+    title VARCHAR(500) NOT NULL,
+    summary TEXT,
+    description TEXT,
+
+    -- Involved parties
+    subject_user VARCHAR(255),           -- Primary user being investigated
+    subject_computer VARCHAR(255),       -- Primary computer/hostname
+    subject_devices TEXT[],              -- Array of device identifiers
+    related_users TEXT[],                -- Other involved users
+
+    -- Ownership
+    owner_id UUID NOT NULL REFERENCES users(id),
+    assigned_to UUID REFERENCES users(id),
+
+    -- Timestamps
+    incident_date TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    closed_at TIMESTAMP WITH TIME ZONE,
+
+    -- Metadata
+    tags TEXT[],
+    metadata JSONB DEFAULT '{}'
+);
+
+-- Evidence table
+CREATE TABLE evidence (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    case_id UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
+
+    -- File info
+    file_name VARCHAR(500) NOT NULL,
+    file_path VARCHAR(1000) NOT NULL,    -- MinIO path
+    file_size BIGINT,
+    mime_type VARCHAR(100),
+    file_hash VARCHAR(128),              -- SHA-256 for integrity
+
+    -- Metadata
+    description TEXT,
+    uploaded_by UUID NOT NULL REFERENCES users(id),
+    uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+    -- For OCR/text extraction (Phase 2)
+    extracted_text TEXT,
+
+    metadata JSONB DEFAULT '{}'
+);
+
+-- Findings table
+CREATE TABLE findings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    case_id UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
+
+    title VARCHAR(500) NOT NULL,
+    description TEXT NOT NULL,
+    severity severity_level DEFAULT 'MEDIUM',
+
+    -- Evidence references
+    evidence_ids UUID[],
+
+    created_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Timeline events
+CREATE TABLE timeline_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    case_id UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
+
+    event_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    event_type VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+
+    -- Source tracking
+    source VARCHAR(255),
+    evidence_id UUID REFERENCES evidence(id),
+
+    created_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Audit log (all actions)
+CREATE TABLE audit_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+    -- What happened
+    action VARCHAR(100) NOT NULL,        -- CREATE, UPDATE, DELETE, VIEW, DOWNLOAD, etc.
+    entity_type VARCHAR(50) NOT NULL,    -- case, evidence, finding, etc.
+    entity_id UUID,
+
+    -- Who did it
+    user_id UUID REFERENCES users(id),
+    user_ip VARCHAR(45),
+
+    -- Details
+    old_values JSONB,
+    new_values JSONB,
+    metadata JSONB DEFAULT '{}',
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Embeddings table for RAG (pgvector)
+CREATE TABLE embeddings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+    -- What this embedding represents
+    entity_type VARCHAR(50) NOT NULL,    -- case, evidence, finding, kb
+    entity_id UUID NOT NULL,
+
+    -- The embedding
+    content TEXT NOT NULL,               -- Original text that was embedded
+    embedding vector(1536),              -- Embedding vector (OpenAI dimension, adjust for Ollama)
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE(entity_type, entity_id)
+);
+
+-- Create indexes
+CREATE INDEX idx_cases_case_id ON cases(case_id);
+CREATE INDEX idx_cases_scope_code ON cases(scope_code);
+CREATE INDEX idx_cases_case_type ON cases(case_type);
+CREATE INDEX idx_cases_status ON cases(status);
+CREATE INDEX idx_cases_owner_id ON cases(owner_id);
+CREATE INDEX idx_cases_created_at ON cases(created_at DESC);
+CREATE INDEX idx_cases_subject_user ON cases(subject_user);
+
+CREATE INDEX idx_evidence_case_id ON evidence(case_id);
+CREATE INDEX idx_findings_case_id ON findings(case_id);
+CREATE INDEX idx_timeline_case_id ON timeline_events(case_id);
+CREATE INDEX idx_timeline_event_time ON timeline_events(event_time);
+
+CREATE INDEX idx_audit_log_entity ON audit_log(entity_type, entity_id);
+CREATE INDEX idx_audit_log_user ON audit_log(user_id);
+CREATE INDEX idx_audit_log_created ON audit_log(created_at DESC);
+
+-- Vector similarity search index
+CREATE INDEX idx_embeddings_vector ON embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
+-- Insert default scopes
+INSERT INTO scopes (code, name, description) VALUES
+    ('FIN', 'Finance', 'Finance and Accounting department'),
+    ('HR', 'Human Resources', 'Human Resources department'),
+    ('IT', 'Information Technology', 'IT and Infrastructure'),
+    ('SEC', 'Security', 'Information Security and Compliance'),
+    ('OPS', 'Operations', 'Business Operations'),
+    ('CORP', 'Corporate', 'Corporate and Executive'),
+    ('LEGAL', 'Legal', 'Legal and Compliance'),
+    ('RND', 'Research & Development', 'R&D and Engineering');
+
+-- Insert a default admin user
+INSERT INTO users (username, email, full_name, department) VALUES
+    ('admin', 'admin@auditcaseos.local', 'System Administrator', 'IT');
+
+-- Function to generate next case ID
+CREATE OR REPLACE FUNCTION generate_case_id(p_scope_code VARCHAR, p_case_type case_type)
+RETURNS VARCHAR AS $$
+DECLARE
+    v_seq INTEGER;
+    v_case_id VARCHAR;
+BEGIN
+    -- Get and increment sequence
+    INSERT INTO case_sequences (scope_code, case_type, last_seq)
+    VALUES (p_scope_code, p_case_type, 1)
+    ON CONFLICT (scope_code, case_type)
+    DO UPDATE SET last_seq = case_sequences.last_seq + 1
+    RETURNING last_seq INTO v_seq;
+
+    -- Format: SCOPE-TYPE-XXXX (4 digit padded)
+    v_case_id := p_scope_code || '-' || p_case_type || '-' || LPAD(v_seq::TEXT, 4, '0');
+
+    RETURN v_case_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to auto-update updated_at
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_cases_updated_at
+    BEFORE UPDATE ON cases
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER trigger_users_updated_at
+    BEFORE UPDATE ON users
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER trigger_findings_updated_at
+    BEFORE UPDATE ON findings
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();

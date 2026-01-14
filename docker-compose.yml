@@ -1,0 +1,87 @@
+services:
+  # PostgreSQL with pgvector extension
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: auditcaseos-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-auditcaseos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-auditcaseos_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-auditcaseos}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./configs/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-auditcaseos}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # MinIO for evidence storage
+  minio:
+    image: minio/minio:latest
+    container_name: auditcaseos-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "19000:9000"
+      - "19001:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    restart: unless-stopped
+
+  # Ollama for local LLM
+  ollama:
+    image: ollama/ollama:latest
+    container_name: auditcaseos-ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "21434:11434"
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          memory: 4G
+
+  # FastAPI Backend
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: auditcaseos-api
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-auditcaseos}:${POSTGRES_PASSWORD:-auditcaseos_secret}@postgres:5432/${POSTGRES_DB:-auditcaseos}
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_BUCKET: ${MINIO_BUCKET:-evidence}
+      OLLAMA_HOST: http://ollama:11434
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+    ports:
+      - "18000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  minio_data:
+  ollama_data:

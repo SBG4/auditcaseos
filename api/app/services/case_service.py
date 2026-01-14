@@ -1,0 +1,394 @@
+"""Case service for managing audit cases."""
+
+import logging
+from datetime import datetime
+from typing import Any
+from uuid import UUID
+
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
+
+
+class CaseService:
+    """Service for managing audit cases."""
+
+    async def generate_case_id(
+        self,
+        db: AsyncSession,
+        scope_code: str,
+        case_type: str,
+    ) -> str:
+        """
+        Generate a unique case ID by querying and incrementing the case_sequences table.
+
+        Args:
+            db: Database session
+            scope_code: Scope code (e.g., 'FIN', 'HR', 'IT')
+            case_type: Case type (e.g., 'USB', 'EMAIL', 'WEB', 'POLICY')
+
+        Returns:
+            Formatted case ID in SCOPE-TYPE-XXXX format (e.g., 'FIN-USB-0001')
+
+        Raises:
+            Exception: If database operation fails
+        """
+        try:
+            # Use the database function or manual upsert to get next sequence
+            query = text("""
+                INSERT INTO case_sequences (scope_code, case_type, last_seq)
+                VALUES (:scope_code, :case_type::case_type, 1)
+                ON CONFLICT (scope_code, case_type)
+                DO UPDATE SET last_seq = case_sequences.last_seq + 1
+                RETURNING last_seq
+            """)
+
+            result = await db.execute(
+                query,
+                {"scope_code": scope_code, "case_type": case_type},
+            )
+            row = result.fetchone()
+            seq = row[0] if row else 1
+
+            # Format: SCOPE-TYPE-XXXX (4 digit padded)
+            case_id = f"{scope_code}-{case_type}-{seq:04d}"
+
+            logger.info(f"Generated case ID: {case_id}")
+            return case_id
+
+        except Exception as e:
+            logger.error(f"Failed to generate case ID: {e}")
+            raise
+
+    async def create_case(
+        self,
+        db: AsyncSession,
+        case_data: dict[str, Any],
+        owner_id: UUID,
+    ) -> dict[str, Any]:
+        """
+        Create a new audit case.
+
+        Args:
+            db: Database session
+            case_data: Case data including scope_code, case_type, title, etc.
+            owner_id: UUID of the case owner
+
+        Returns:
+            Created case record
+
+        Raises:
+            Exception: If case creation fails
+        """
+        try:
+            # Generate case ID
+            scope_code = case_data.get("scope_code")
+            case_type = case_data.get("case_type")
+            case_id = await self.generate_case_id(db, scope_code, case_type)
+
+            # Build insert query
+            query = text("""
+                INSERT INTO cases (
+                    case_id, scope_code, case_type, status, severity,
+                    title, summary, description,
+                    subject_user, subject_computer, subject_devices, related_users,
+                    owner_id, assigned_to, incident_date, tags, metadata
+                ) VALUES (
+                    :case_id, :scope_code, :case_type::case_type,
+                    COALESCE(:status, 'OPEN')::case_status,
+                    COALESCE(:severity, 'MEDIUM')::severity_level,
+                    :title, :summary, :description,
+                    :subject_user, :subject_computer, :subject_devices, :related_users,
+                    :owner_id, :assigned_to, :incident_date, :tags,
+                    COALESCE(:metadata, '{}')::jsonb
+                )
+                RETURNING *
+            """)
+
+            params = {
+                "case_id": case_id,
+                "scope_code": scope_code,
+                "case_type": case_type,
+                "status": case_data.get("status"),
+                "severity": case_data.get("severity"),
+                "title": case_data.get("title"),
+                "summary": case_data.get("summary"),
+                "description": case_data.get("description"),
+                "subject_user": case_data.get("subject_user"),
+                "subject_computer": case_data.get("subject_computer"),
+                "subject_devices": case_data.get("subject_devices"),
+                "related_users": case_data.get("related_users"),
+                "owner_id": str(owner_id),
+                "assigned_to": str(case_data["assigned_to"]) if case_data.get("assigned_to") else None,
+                "incident_date": case_data.get("incident_date"),
+                "tags": case_data.get("tags"),
+                "metadata": case_data.get("metadata"),
+            }
+
+            result = await db.execute(query, params)
+            await db.commit()
+
+            row = result.fetchone()
+            case = dict(row._mapping) if row else None
+
+            logger.info(f"Created case: {case_id}")
+            return case
+
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Failed to create case: {e}")
+            raise
+
+    async def get_case(
+        self,
+        db: AsyncSession,
+        case_id: str | UUID,
+    ) -> dict[str, Any] | None:
+        """
+        Get a case by its case_id or UUID.
+
+        Args:
+            db: Database session
+            case_id: Case ID string (e.g., 'FIN-USB-0001') or UUID
+
+        Returns:
+            Case record or None if not found
+        """
+        try:
+            # Check if it's a UUID or case_id string
+            if isinstance(case_id, UUID):
+                query = text("SELECT * FROM cases WHERE id = :id")
+                params = {"id": str(case_id)}
+            else:
+                # Try to parse as UUID first, otherwise treat as case_id string
+                try:
+                    uuid_val = UUID(str(case_id))
+                    query = text("SELECT * FROM cases WHERE id = :id")
+                    params = {"id": str(uuid_val)}
+                except ValueError:
+                    query = text("SELECT * FROM cases WHERE case_id = :case_id")
+                    params = {"case_id": case_id}
+
+            result = await db.execute(query, params)
+            row = result.fetchone()
+
+            if row:
+                return dict(row._mapping)
+            return None
+
+        except Exception as e:
+            logger.error(f"Failed to get case {case_id}: {e}")
+            raise
+
+    async def list_cases(
+        self,
+        db: AsyncSession,
+        filters: dict[str, Any] | None = None,
+        skip: int = 0,
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        """
+        List cases with optional filtering and pagination.
+
+        Args:
+            db: Database session
+            filters: Optional filters (scope_code, case_type, status, severity, owner_id)
+            skip: Number of records to skip
+            limit: Maximum number of records to return
+
+        Returns:
+            List of case records
+        """
+        try:
+            filters = filters or {}
+            where_clauses = []
+            params: dict[str, Any] = {"skip": skip, "limit": limit}
+
+            # Build filter conditions
+            if "scope_code" in filters:
+                where_clauses.append("scope_code = :scope_code")
+                params["scope_code"] = filters["scope_code"]
+
+            if "case_type" in filters:
+                where_clauses.append("case_type = :case_type::case_type")
+                params["case_type"] = filters["case_type"]
+
+            if "status" in filters:
+                where_clauses.append("status = :status::case_status")
+                params["status"] = filters["status"]
+
+            if "severity" in filters:
+                where_clauses.append("severity = :severity::severity_level")
+                params["severity"] = filters["severity"]
+
+            if "owner_id" in filters:
+                where_clauses.append("owner_id = :owner_id")
+                params["owner_id"] = str(filters["owner_id"])
+
+            if "assigned_to" in filters:
+                where_clauses.append("assigned_to = :assigned_to")
+                params["assigned_to"] = str(filters["assigned_to"])
+
+            if "subject_user" in filters:
+                where_clauses.append("subject_user ILIKE :subject_user")
+                params["subject_user"] = f"%{filters['subject_user']}%"
+
+            if "search" in filters:
+                where_clauses.append(
+                    "(title ILIKE :search OR summary ILIKE :search OR description ILIKE :search)"
+                )
+                params["search"] = f"%{filters['search']}%"
+
+            # Build query
+            where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+            query = text(f"""
+                SELECT * FROM cases
+                WHERE {where_sql}
+                ORDER BY created_at DESC
+                OFFSET :skip LIMIT :limit
+            """)
+
+            result = await db.execute(query, params)
+            rows = result.fetchall()
+
+            return [dict(row._mapping) for row in rows]
+
+        except Exception as e:
+            logger.error(f"Failed to list cases: {e}")
+            raise
+
+    async def update_case(
+        self,
+        db: AsyncSession,
+        case_id: str | UUID,
+        updates: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        """
+        Update a case.
+
+        Args:
+            db: Database session
+            case_id: Case ID string or UUID
+            updates: Dictionary of fields to update
+
+        Returns:
+            Updated case record or None if not found
+        """
+        try:
+            if not updates:
+                return await self.get_case(db, case_id)
+
+            # Build update clauses
+            set_clauses = []
+            params: dict[str, Any] = {}
+
+            # Mapping of fields to their SQL types
+            type_casts = {
+                "case_type": "::case_type",
+                "status": "::case_status",
+                "severity": "::severity_level",
+                "metadata": "::jsonb",
+            }
+
+            for key, value in updates.items():
+                if key in ("id", "case_id", "created_at"):
+                    continue  # Skip immutable fields
+
+                cast = type_casts.get(key, "")
+                set_clauses.append(f"{key} = :{key}{cast}")
+
+                if key in ("owner_id", "assigned_to") and value is not None:
+                    params[key] = str(value)
+                else:
+                    params[key] = value
+
+            if not set_clauses:
+                return await self.get_case(db, case_id)
+
+            set_sql = ", ".join(set_clauses)
+
+            # Determine if case_id is UUID or string
+            if isinstance(case_id, UUID):
+                where_clause = "id = :identifier"
+                params["identifier"] = str(case_id)
+            else:
+                try:
+                    uuid_val = UUID(str(case_id))
+                    where_clause = "id = :identifier"
+                    params["identifier"] = str(uuid_val)
+                except ValueError:
+                    where_clause = "case_id = :identifier"
+                    params["identifier"] = case_id
+
+            query = text(f"""
+                UPDATE cases
+                SET {set_sql}, updated_at = CURRENT_TIMESTAMP
+                WHERE {where_clause}
+                RETURNING *
+            """)
+
+            result = await db.execute(query, params)
+            await db.commit()
+
+            row = result.fetchone()
+            if row:
+                logger.info(f"Updated case: {case_id}")
+                return dict(row._mapping)
+            return None
+
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Failed to update case {case_id}: {e}")
+            raise
+
+    async def delete_case(
+        self,
+        db: AsyncSession,
+        case_id: str | UUID,
+    ) -> bool:
+        """
+        Delete a case.
+
+        Args:
+            db: Database session
+            case_id: Case ID string or UUID
+
+        Returns:
+            True if deleted, False if not found
+        """
+        try:
+            # Determine if case_id is UUID or string
+            if isinstance(case_id, UUID):
+                query = text("DELETE FROM cases WHERE id = :identifier RETURNING id")
+                params = {"identifier": str(case_id)}
+            else:
+                try:
+                    uuid_val = UUID(str(case_id))
+                    query = text("DELETE FROM cases WHERE id = :identifier RETURNING id")
+                    params = {"identifier": str(uuid_val)}
+                except ValueError:
+                    query = text("DELETE FROM cases WHERE case_id = :identifier RETURNING id")
+                    params = {"identifier": case_id}
+
+            result = await db.execute(query, params)
+            await db.commit()
+
+            row = result.fetchone()
+            deleted = row is not None
+
+            if deleted:
+                logger.info(f"Deleted case: {case_id}")
+            else:
+                logger.warning(f"Case not found for deletion: {case_id}")
+
+            return deleted
+
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Failed to delete case {case_id}: {e}")
+            raise
+
+
+# Singleton instance
+case_service = CaseService()
