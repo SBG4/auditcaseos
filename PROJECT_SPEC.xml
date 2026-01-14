@@ -1,8 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ╔═══════════════════════════════════════════════════════════════════════════╗
+  ║                         AUDITCASEOS PROJECT SPECIFICATION                  ║
+  ║                                                                            ║
+  ║  This XML serves as the single source of truth for project development.    ║
+  ║  Provide this file to Claude/AI assistants at the start of each session    ║
+  ║  to maintain context and ensure consistent development.                    ║
+  ╚═══════════════════════════════════════════════════════════════════════════╝
+-->
 <project>
+  <!-- ============================================== -->
+  <!-- METADATA                                       -->
+  <!-- ============================================== -->
   <metadata>
     <name>AuditCaseOS</name>
-    <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation</description>
+    <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
+    <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
     <version>0.1.0</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-14</last_updated>
@@ -10,62 +23,751 @@
     <overall_progress>phase_1_complete</overall_progress>
   </metadata>
 
+  <!-- ============================================== -->
+  <!-- AI PROMPTING SYSTEM                            -->
+  <!-- ============================================== -->
+  <prompting>
+    <purpose>
+      These prompts ensure consistent, high-quality development across sessions.
+      Use them as templates when instructing AI assistants to implement features.
+    </purpose>
+
+    <!-- Master System Prompt for Development Sessions -->
+    <system_prompt name="master_developer">
+      <![CDATA[
+You are Claude Code acting as a senior engineer. You are working on "AuditCaseOS" - a forkable open-source mono-repo that composes existing OSS projects into a dockerized investigation/audit platform.
+
+GOAL:
+An end-to-end system for tracking audit investigations (cases), storing evidence, OCR/indexing documents, similarity search (RAG), and generating Word report drafts. Must be runnable with Docker Compose on Mac.
+
+CURRENT STACK:
+1. PostgreSQL + pgvector for case data and embeddings
+2. MinIO for evidence storage (S3-compatible)
+3. Ollama for local LLM (no external APIs)
+4. FastAPI backend ("api" service)
+5. Paperless-ngx for OCR (Phase 2)
+6. React frontend (Phase 3)
+
+CASE ID SYSTEM:
+Format: SCOPE-TYPE-SEQ (e.g., FIN-USB-0001)
+- SCOPE: Department code (FIN, HR, IT, SEC, OPS, CORP, LEGAL, RND)
+- TYPE: Case type (USB, EMAIL, WEB, POLICY)
+- SEQ: Auto-incrementing per scope-type combination
+
+KEY PRINCIPLES:
+1. All services must be dockerized and health-checked
+2. No hardcoded secrets - use environment variables
+3. Keep components reachable on localhost custom ports
+4. Implement proper error handling with clear messages
+5. Use async/await patterns throughout Python code
+6. Follow REST best practices for API design
+7. Write clean, typed, documented code
+
+QUALITY BAR:
+- Stack must run without manual code edits after setting .env
+- Include clear error messages if tokens/credentials not set
+- Use clean project structure and comments
+- All endpoints must have OpenAPI documentation
+      ]]>
+    </system_prompt>
+
+    <!-- Phase-Specific Prompts -->
+    <phase_prompts>
+      <prompt phase="2" name="database_crud">
+        <![CDATA[
+Implement complete database CRUD operations for AuditCaseOS.
+
+CONTEXT:
+- Database schema exists in configs/postgres/init.sql
+- SQLAlchemy models exist in api/app/models/
+- Pydantic schemas exist in api/app/schemas/
+- Routers have placeholder implementations in api/app/routers/
+
+TASKS:
+1. Update api/app/routers/cases.py to use actual database queries
+2. Implement proper async SQLAlchemy operations
+3. Use the case_service.py for business logic
+4. Implement pagination with skip/limit
+5. Implement filtering by status, type, scope, severity
+6. Implement search in title and description
+7. Add proper error handling (404 for not found, etc.)
+8. Log all operations to audit_log table
+
+PATTERNS TO FOLLOW:
+- Use dependency injection for database sessions
+- Use service layer for business logic
+- Return proper HTTP status codes
+- Include response_model in all endpoints
+        ]]>
+      </prompt>
+
+      <prompt phase="2" name="authentication">
+        <![CDATA[
+Implement JWT-based authentication for AuditCaseOS.
+
+REQUIREMENTS:
+1. Add password hashing using bcrypt
+2. Create POST /api/v1/auth/login endpoint
+3. Create POST /api/v1/auth/register endpoint (admin only)
+4. Generate JWT tokens with expiration
+5. Create authentication middleware
+6. Protect all routes except health and login
+7. Implement role-based access control (admin, auditor, reviewer, viewer)
+
+FILES TO CREATE/MODIFY:
+- api/app/routers/auth.py (new)
+- api/app/services/auth_service.py (new)
+- api/app/utils/security.py (new)
+- api/app/main.py (add auth router)
+- api/requirements.txt (add python-jose, passlib, bcrypt)
+
+JWT PAYLOAD:
+{
+  "sub": "user_id",
+  "email": "user@example.com",
+  "role": "auditor",
+  "exp": timestamp
+}
+        ]]>
+      </prompt>
+
+      <prompt phase="2" name="paperless_integration">
+        <![CDATA[
+Integrate Paperless-ngx for OCR capabilities.
+
+TASKS:
+1. Add paperless service to docker-compose.yml
+2. Create api/app/services/paperless_service.py
+3. Create sync endpoint POST /api/v1/sync/case/{case_id}
+4. Implement evidence file upload to Paperless
+5. Retrieve OCR text and store in evidence.extracted_text
+
+DOCKER CONFIG:
+paperless:
+  image: ghcr.io/paperless-ngx/paperless-ngx:latest
+  container_name: auditcaseos-paperless
+  environment:
+    PAPERLESS_DBHOST: postgres
+    PAPERLESS_DBNAME: ${POSTGRES_DB:-auditcaseos}
+    PAPERLESS_DBUSER: ${POSTGRES_USER:-auditcaseos}
+    PAPERLESS_DBPASS: ${POSTGRES_PASSWORD:-auditcaseos_secret}
+    PAPERLESS_SECRET_KEY: ${SECRET_KEY:-change-me}
+  ports:
+    - "18080:8000"
+  volumes:
+    - paperless_data:/usr/src/paperless/data
+    - paperless_media:/usr/src/paperless/media
+  depends_on:
+    - postgres
+
+PAPERLESS API ENDPOINTS TO USE:
+- POST /api/documents/post_document/ - Upload document
+- GET /api/documents/{id}/ - Get document with OCR text
+- GET /api/documents/?query=... - Search documents
+        ]]>
+      </prompt>
+
+      <prompt phase="2" name="entity_extraction">
+        <![CDATA[
+Implement entity extraction from evidence text.
+
+ENTITIES TO EXTRACT:
+1. Employee IDs: Pattern EMP-[0-9]{6}
+2. IP Addresses: Standard IPv4 pattern
+3. Email Addresses: Standard email pattern
+4. Hostnames: Pattern [A-Z]{2,4}-[A-Z0-9]{4,10}
+5. Department Keywords: Match against scopes table
+
+FILES TO CREATE:
+- api/app/services/entity_service.py
+- api/app/models/entity.py
+- api/app/schemas/entity.py
+- api/app/routers/entities.py
+
+DATABASE TABLE:
+CREATE TABLE case_entities (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    case_id UUID NOT NULL REFERENCES cases(id),
+    entity_type VARCHAR(50) NOT NULL,
+    entity_value VARCHAR(500) NOT NULL,
+    source VARCHAR(50),
+    evidence_id UUID REFERENCES evidence(id),
+    confidence FLOAT DEFAULT 1.0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(case_id, entity_type, entity_value)
+);
+
+ENDPOINTS:
+- GET /api/v1/entities/case/{case_id}
+- GET /api/v1/entities/search?type=...&value=...
+- GET /api/v1/entities/employee/{employee_id}/cases
+- GET /api/v1/entities/computer/{hostname}/cases
+        ]]>
+      </prompt>
+
+      <prompt phase="2" name="rag_implementation">
+        <![CDATA[
+Implement RAG (Retrieval-Augmented Generation) with pgvector.
+
+COMPONENTS:
+1. Embedding Service - Generate vectors using Ollama
+2. Similarity Search - Query pgvector for similar cases
+3. AI Summarization - Generate case summaries
+
+EMBEDDING MODEL: nomic-embed-text (via Ollama)
+VECTOR DIMENSION: 768 (for nomic-embed-text)
+
+FILES TO CREATE/MODIFY:
+- api/app/services/embedding_service.py (new)
+- api/app/services/ollama_service.py (update)
+- api/app/routers/ai.py (update)
+- configs/postgres/init.sql (update embedding dimension)
+
+EMBEDDING SERVICE METHODS:
+- embed_text(text: str) -> list[float]
+- embed_case(case_id: UUID) -> None
+- embed_evidence(evidence_id: UUID) -> None
+- batch_embed_case(case_id: UUID) -> None
+
+SIMILARITY SEARCH:
+SELECT e.entity_id, e.entity_type,
+       1 - (e.embedding <=> query_vector) as similarity
+FROM embeddings e
+WHERE e.entity_type = 'case'
+  AND 1 - (e.embedding <=> query_vector) > 0.7
+ORDER BY similarity DESC
+LIMIT 10;
+
+OLLAMA API CALLS:
+- POST http://ollama:11434/api/embeddings
+  {"model": "nomic-embed-text", "prompt": "text to embed"}
+- POST http://ollama:11434/api/generate
+  {"model": "llama3.2", "prompt": "...", "stream": false}
+        ]]>
+      </prompt>
+
+      <prompt phase="2" name="report_generation">
+        <![CDATA[
+Implement DOCX report generation using python-docx.
+
+REPORT SECTIONS:
+1. Cover Page - Case ID, title, date, classification
+2. Executive Summary - AI-generated overview
+3. Case Details - Full metadata, involved parties
+4. Timeline - Chronological event listing
+5. Findings - Severity-sorted findings with recommendations
+6. Evidence List - Files with hashes and descriptions
+7. Similar Cases - Related cases from RAG search
+8. Appendix - Raw data, entity list
+
+FILES TO CREATE:
+- api/app/services/report_service.py
+- api/app/routers/reports.py
+- api/templates/ (directory for DOCX templates)
+
+ENDPOINT:
+GET /api/v1/reports/case/{case_id}.docx
+Query params:
+- template: STANDARD|EXECUTIVE_SUMMARY|DETAILED|COMPLIANCE
+- include_evidence: bool
+- include_similar: bool
+- watermark: str (optional)
+
+PYTHON-DOCX EXAMPLE:
+from docx import Document
+from docx.shared import Inches, Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+doc = Document()
+doc.add_heading(f'Case Report: {case_id}', 0)
+doc.add_paragraph(f'Generated: {datetime.now()}')
+# ... build sections
+doc.save(buffer)
+        ]]>
+      </prompt>
+
+      <prompt phase="3" name="react_frontend">
+        <![CDATA[
+Create React frontend for AuditCaseOS.
+
+SETUP:
+npm create vite@latest frontend -- --template react-ts
+cd frontend
+npm install tailwindcss postcss autoprefixer
+npm install react-router-dom @tanstack/react-query axios
+npm install @heroicons/react date-fns
+
+DIRECTORY STRUCTURE:
+frontend/
+├── src/
+│   ├── components/
+│   │   ├── common/        # Buttons, inputs, modals
+│   │   ├── cases/         # Case-related components
+│   │   ├── evidence/      # Evidence components
+│   │   ├── layout/        # Header, sidebar, footer
+│   │   └── reports/       # Report components
+│   ├── pages/
+│   │   ├── Dashboard.tsx
+│   │   ├── CaseList.tsx
+│   │   ├── CaseDetail.tsx
+│   │   ├── CaseCreate.tsx
+│   │   ├── Reports.tsx
+│   │   ├── Login.tsx
+│   │   └── Admin.tsx
+│   ├── services/
+│   │   └── api.ts         # Axios client
+│   ├── hooks/
+│   │   └── useAuth.ts     # Auth hook
+│   ├── context/
+│   │   └── AuthContext.tsx
+│   ├── types/
+│   │   └── index.ts       # TypeScript types
+│   └── App.tsx
+├── Dockerfile
+└── nginx.conf
+
+DOCKER CONFIG:
+frontend:
+  build:
+    context: ./frontend
+    dockerfile: Dockerfile
+  container_name: auditcaseos-frontend
+  ports:
+    - "13000:80"
+  depends_on:
+    - api
+        ]]>
+      </prompt>
+    </phase_prompts>
+
+    <!-- Best Practices for AI Prompting -->
+    <best_practices>
+      <practice name="context_setting">
+        <description>Always provide full context at the start of a session</description>
+        <example>
+          <![CDATA[
+"I'm continuing development on AuditCaseOS. Here's the PROJECT_SPEC.xml: [paste XML]
+We're currently on Phase 2, feature 2.3 (Paperless Integration).
+Please implement the Paperless service connector."
+          ]]>
+        </example>
+      </practice>
+
+      <practice name="specific_tasks">
+        <description>Break down features into specific, actionable tasks</description>
+        <example>
+          <![CDATA[
+"Implement the following for entity extraction:
+1. Create the EntityService class with extract_from_text() method
+2. Add regex patterns for employee IDs, IPs, emails
+3. Create the database model and migration
+4. Add the API endpoint GET /entities/case/{case_id}"
+          ]]>
+        </example>
+      </practice>
+
+      <practice name="file_references">
+        <description>Reference specific files when making changes</description>
+        <example>
+          <![CDATA[
+"Update api/app/routers/cases.py to:
+- Replace placeholder in list_cases() with actual DB query
+- Use CaseService.list_cases() from api/app/services/case_service.py
+- Follow the pattern in api/app/routers/scopes.py"
+          ]]>
+        </example>
+      </practice>
+
+      <practice name="testing_verification">
+        <description>Always request verification after implementation</description>
+        <example>
+          <![CDATA[
+"After implementing, please:
+1. Run docker compose up --build to verify it builds
+2. Test the endpoint with curl
+3. Check logs for any errors
+4. Update PROJECT_SPEC.xml to mark feature as COMPLETED"
+          ]]>
+        </example>
+      </practice>
+
+      <practice name="incremental_development">
+        <description>Build incrementally, one feature at a time</description>
+        <example>
+          <![CDATA[
+"Let's implement Phase 2 features in order:
+1. First, complete feature 2.1 (Database CRUD)
+2. Test thoroughly
+3. Commit to git
+4. Then move to feature 2.2 (Authentication)
+Do not skip ahead or implement multiple features at once."
+          ]]>
+        </example>
+      </practice>
+
+      <practice name="error_handling">
+        <description>Specify error handling requirements</description>
+        <example>
+          <![CDATA[
+"Implement with proper error handling:
+- Return 404 with message if case not found
+- Return 400 for invalid input with field-level errors
+- Return 500 with generic message for unexpected errors
+- Log all errors to audit_log with stack trace"
+          ]]>
+        </example>
+      </practice>
+    </best_practices>
+
+    <!-- Session Start Template -->
+    <session_template>
+      <![CDATA[
+=== AUDITCASEOS DEVELOPMENT SESSION ===
+
+PROJECT: AuditCaseOS - Audit Case Management System
+REPO: https://github.com/SBG4/auditcaseos
+CURRENT PHASE: [1|2|3]
+CURRENT FEATURE: [feature_id] - [feature_name]
+
+CONTEXT:
+[Paste relevant section of PROJECT_SPEC.xml or describe current state]
+
+OBJECTIVE:
+[Clearly state what you want to accomplish in this session]
+
+CONSTRAINTS:
+- All code must be dockerized
+- Use async/await patterns
+- Follow existing code structure
+- Update PROJECT_SPEC.xml when feature is complete
+
+EXPECTED OUTPUT:
+[Describe what you expect: files created, endpoints working, etc.]
+
+BEGIN:
+[Your specific request]
+      ]]>
+    </session_template>
+
+    <!-- Feature Completion Template -->
+    <completion_template>
+      <![CDATA[
+=== FEATURE COMPLETION CHECKLIST ===
+
+Feature ID: [X.X]
+Feature Name: [Name]
+
+□ Code implemented and tested
+□ Docker builds successfully
+□ Endpoints return expected responses
+□ Error handling in place
+□ Logs working correctly
+□ Documentation updated (if needed)
+□ PROJECT_SPEC.xml updated (status = COMPLETED)
+□ Changes committed to git
+□ Changes pushed to GitHub
+
+NOTES:
+[Any issues, limitations, or follow-up tasks]
+      ]]>
+    </completion_template>
+  </prompting>
+
+  <!-- ============================================== -->
+  <!-- ORIGINAL PROJECT CONCEPT                       -->
+  <!-- ============================================== -->
+  <original_concept>
+    <description>
+      A "composed-from-existing-projects" idea that combines open-source
+      docker-friendly components into a unified audit/investigation platform.
+    </description>
+
+    <components>
+      <component name="Case Management" selected="Custom FastAPI">
+        <alternative>DFIR-IRIS</alternative>
+        <reason>Custom solution allows unified case ID system and simpler integration</reason>
+      </component>
+      <component name="Evidence Storage" selected="MinIO">
+        <alternative>Nextcloud</alternative>
+        <reason>S3-compatible API, simpler for programmatic access</reason>
+      </component>
+      <component name="Document Intelligence" selected="Paperless-ngx">
+        <features>OCR, full-text search, tagging</features>
+      </component>
+      <component name="Vector Database" selected="PostgreSQL + pgvector">
+        <alternative>Chroma, Pinecone, Weaviate</alternative>
+        <reason>Single database for all data, simpler ops</reason>
+      </component>
+      <component name="AI/LLM" selected="Ollama">
+        <alternative>OpenAI API</alternative>
+        <reason>Fully offline, no API costs, data privacy</reason>
+      </component>
+      <component name="Collaboration" selected="Nextcloud + ONLYOFFICE" phase="3">
+        <features>File sharing, in-browser editing</features>
+      </component>
+    </components>
+
+    <end_to_end_flow>
+      <step number="1">
+        <action>Investigator creates a Case</action>
+        <result>Case gets unique ID: FIN-USB-0001</result>
+        <data>department, employee(s), summary, severity, status, owner</data>
+      </step>
+      <step number="2">
+        <action>Evidence uploaded to MinIO</action>
+        <result>Files stored at /cases/FIN-USB-0001/</result>
+        <data>exports, screenshots, logs, PDFs</data>
+      </step>
+      <step number="3">
+        <action>Paperless ingests files for OCR</action>
+        <result>Text extracted and searchable</result>
+      </step>
+      <step number="4">
+        <action>RAG Gateway indexes everything</action>
+        <sources>Case fields, Paperless OCR text, KB docs</sources>
+        <storage>pgvector with labels (case|evidence|kb|employee|department)</storage>
+        <queries>
+          <query>Show similar investigations to this case</query>
+          <query>Find all cases similar to Finance USB exfil</query>
+          <query>Cross-reference employee ID across investigations</query>
+          <query>Draft report executive summary</query>
+        </queries>
+      </step>
+      <step number="5">
+        <action>Report Generation</action>
+        <output>DOCX from case data + retrieved context</output>
+      </step>
+    </end_to_end_flow>
+
+    <glue_features>
+      <feature name="Case-Folder Binding">
+        <description>When case created, auto-create Nextcloud folder and Paperless tags</description>
+      </feature>
+      <feature name="Evidence Sync Pipeline">
+        <description>Sync job lists files, pushes to Paperless, indexes text into pgvector</description>
+      </feature>
+      <feature name="Cross-Reference Engine">
+        <description>Detect employee IDs, usernames, departments; store entities; link to cases</description>
+      </feature>
+      <feature name="Report Builder">
+        <description>DOCX with summary, timeline, evidence, findings, similar cases, appendix</description>
+      </feature>
+    </glue_features>
+  </original_concept>
+
+  <!-- ============================================== -->
+  <!-- ARCHITECTURE                                   -->
+  <!-- ============================================== -->
   <architecture>
+    <diagram>
+      <![CDATA[
+┌─────────────────────────────────────────────────────────────────┐
+│                         AuditCaseOS                              │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
+│  │   Frontend   │  │  API Gateway │  │    RAG Engine        │   │
+│  │   (React)    │◄─►  (FastAPI)   │◄─► (Embeddings+Search)  │   │
+│  │   :13000     │  │    :18000    │  │                      │   │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘   │
+│         │                 │                    │                 │
+│         ▼                 ▼                    ▼                 │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                PostgreSQL + pgvector :15432               │   │
+│  │  (Cases, Users, Evidence metadata, Embeddings, Audit)     │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│         │                 │                    │                 │
+│         ▼                 ▼                    ▼                 │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
+│  │    MinIO     │  │  Paperless   │  │       Ollama         │   │
+│  │  :19000/01   │  │   :18080     │  │      :21434          │   │
+│  │  (Evidence)  │  │    (OCR)     │  │   (Local LLM)        │   │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘   │
+│                                                                  │
+│  ┌──────────────┐  ┌──────────────┐  (Phase 3)                  │
+│  │  Nextcloud   │  │  ONLYOFFICE  │                             │
+│  │  (Collab)    │  │  (Editing)   │                             │
+│  └──────────────┘  └──────────────┘                             │
+└─────────────────────────────────────────────────────────────────┘
+      ]]>
+    </diagram>
+
     <stack>
       <backend>FastAPI (Python 3.12)</backend>
       <database>PostgreSQL 16 + pgvector</database>
       <storage>MinIO (S3-compatible)</storage>
-      <ai>Ollama (local LLM)</ai>
+      <ai>Ollama (local LLM - llama3.2, nomic-embed-text)</ai>
       <ocr>Paperless-ngx (Phase 2)</ocr>
-      <frontend>React (Phase 3)</frontend>
+      <frontend>React + Vite + TypeScript + TailwindCSS (Phase 3)</frontend>
       <collaboration>Nextcloud + ONLYOFFICE (Phase 3)</collaboration>
     </stack>
+
     <ports>
-      <api>18000</api>
-      <postgres>15432</postgres>
-      <minio_api>19000</minio_api>
-      <minio_console>19001</minio_console>
-      <ollama>21434</ollama>
-      <paperless>18080</paperless>
-      <frontend>13000</frontend>
+      <port service="api" external="18000" internal="8000"/>
+      <port service="postgres" external="15432" internal="5432"/>
+      <port service="minio_api" external="19000" internal="9000"/>
+      <port service="minio_console" external="19001" internal="9001"/>
+      <port service="ollama" external="21434" internal="11434"/>
+      <port service="paperless" external="18080" internal="8000"/>
+      <port service="frontend" external="13000" internal="80"/>
     </ports>
+
+    <directory_structure>
+      <![CDATA[
+auditcaseos/
+├── docker-compose.yml
+├── docker-compose.phase2.yml      # Phase 2 additions
+├── docker-compose.phase3.yml      # Phase 3 additions
+├── .env.example
+├── .gitignore
+├── README.md
+├── PROJECT_SPEC.xml               # This file
+│
+├── api/                           # FastAPI backend
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── app/
+│       ├── __init__.py
+│       ├── main.py
+│       ├── config.py
+│       ├── database.py
+│       ├── models/
+│       │   ├── __init__.py
+│       │   ├── base.py
+│       │   ├── user.py
+│       │   ├── scope.py
+│       │   ├── case.py
+│       │   ├── evidence.py
+│       │   ├── finding.py
+│       │   ├── entity.py          # Phase 2
+│       │   └── audit_log.py
+│       ├── schemas/
+│       │   ├── __init__.py
+│       │   ├── common.py
+│       │   ├── user.py
+│       │   ├── case.py
+│       │   ├── evidence.py
+│       │   ├── finding.py
+│       │   ├── entity.py          # Phase 2
+│       │   └── report.py
+│       ├── routers/
+│       │   ├── __init__.py
+│       │   ├── auth.py            # Phase 2
+│       │   ├── cases.py
+│       │   ├── evidence.py
+│       │   ├── users.py
+│       │   ├── scopes.py
+│       │   ├── entities.py        # Phase 2
+│       │   ├── reports.py         # Phase 2
+│       │   ├── ai.py
+│       │   └── health.py
+│       ├── services/
+│       │   ├── __init__.py
+│       │   ├── auth_service.py    # Phase 2
+│       │   ├── case_service.py
+│       │   ├── storage_service.py
+│       │   ├── paperless_service.py  # Phase 2
+│       │   ├── entity_service.py     # Phase 2
+│       │   ├── embedding_service.py  # Phase 2
+│       │   ├── report_service.py     # Phase 2
+│       │   ├── ollama_service.py
+│       │   └── audit_service.py
+│       └── utils/
+│           ├── __init__.py
+│           └── security.py        # Phase 2
+│
+├── frontend/                      # Phase 3
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   ├── package.json
+│   └── src/
+│
+├── configs/
+│   └── postgres/
+│       └── init.sql
+│
+├── templates/                     # Phase 2
+│   └── reports/
+│       ├── standard.docx
+│       └── executive.docx
+│
+├── scripts/
+│   ├── bootstrap.sh
+│   ├── seed-data.sh
+│   └── backup.sh
+│
+└── kb/                            # Knowledge base docs
+    └── sample-policy.md
+      ]]>
+    </directory_structure>
   </architecture>
 
+  <!-- ============================================== -->
+  <!-- CASE ID SYSTEM                                 -->
+  <!-- ============================================== -->
   <case_id_system>
     <format>SCOPE-TYPE-SEQ</format>
-    <example>FIN-USB-0001</example>
+    <description>Human-readable, auto-generated case identifiers</description>
+    <examples>
+      <example>FIN-USB-0001 - Finance dept, USB exfiltration, first case</example>
+      <example>HR-EMAIL-0003 - HR dept, Email incident, third case</example>
+      <example>SEC-POLICY-0012 - Security dept, Policy violation, twelfth case</example>
+    </examples>
+
     <scopes>
-      <scope code="FIN">Finance</scope>
-      <scope code="HR">Human Resources</scope>
-      <scope code="IT">Information Technology</scope>
-      <scope code="SEC">Security</scope>
-      <scope code="OPS">Operations</scope>
-      <scope code="CORP">Corporate</scope>
-      <scope code="LEGAL">Legal</scope>
-      <scope code="RND">Research and Development</scope>
-      <scope code="LEG">Legal</scope>
-      <scope code="PRO">Procurement</scope>
-      <scope code="MKT">Marketing</scope>
-      <scope code="QA">Quality Assurance</scope>
-      <scope code="ENV">Environmental</scope>
-      <scope code="SAF">Health and Safety</scope>
-      <scope code="EXT">External</scope>
-      <scope code="GOV">Governance</scope>
-      <scope code="GEN">General</scope>
+      <scope code="FIN" name="Finance">Financial operations, accounting, monetary transactions</scope>
+      <scope code="HR" name="Human Resources">Employee data, HR processes, personnel</scope>
+      <scope code="IT" name="Information Technology">IT systems, infrastructure, technical ops</scope>
+      <scope code="SEC" name="Security">Physical and information security, access controls</scope>
+      <scope code="OPS" name="Operations">Business operations, process management</scope>
+      <scope code="CORP" name="Corporate">Corporate and executive matters</scope>
+      <scope code="LEGAL" name="Legal">Legal compliance, contracts, regulatory</scope>
+      <scope code="RND" name="Research &amp; Development">R&amp;D, innovation, product development</scope>
+      <scope code="PRO" name="Procurement">Purchasing, vendor management, supply chain</scope>
+      <scope code="MKT" name="Marketing">Marketing activities, campaigns, communications</scope>
+      <scope code="QA" name="Quality Assurance">Quality control, testing, compliance verification</scope>
+      <scope code="ENV" name="Environmental">Environmental compliance, sustainability</scope>
+      <scope code="SAF" name="Health &amp; Safety">Workplace health and safety</scope>
+      <scope code="EXT" name="External">External partnerships, third-party relationships</scope>
+      <scope code="GOV" name="Governance">Corporate governance, board-level matters</scope>
+      <scope code="GEN" name="General">General audits not fitting other categories</scope>
     </scopes>
+
     <types>
-      <type>USB</type>
-      <type>EMAIL</type>
-      <type>WEB</type>
-      <type>POLICY</type>
+      <type code="USB">USB/removable media incidents</type>
+      <type code="EMAIL">Email-related incidents</type>
+      <type code="WEB">Web/internet-related incidents</type>
+      <type code="POLICY">Policy violations</type>
     </types>
+
+    <implementation>
+      <![CDATA[
+-- PostgreSQL function for ID generation
+CREATE OR REPLACE FUNCTION generate_case_id(p_scope_code VARCHAR, p_case_type case_type)
+RETURNS VARCHAR AS $$
+DECLARE
+    v_seq INTEGER;
+    v_case_id VARCHAR;
+BEGIN
+    INSERT INTO case_sequences (scope_code, case_type, last_seq)
+    VALUES (p_scope_code, p_case_type, 1)
+    ON CONFLICT (scope_code, case_type)
+    DO UPDATE SET last_seq = case_sequences.last_seq + 1
+    RETURNING last_seq INTO v_seq;
+
+    v_case_id := p_scope_code || '-' || p_case_type || '-' || LPAD(v_seq::TEXT, 4, '0');
+    RETURN v_case_id;
+END;
+$$ LANGUAGE plpgsql;
+      ]]>
+    </implementation>
   </case_id_system>
 
   <!-- ============================================== -->
-  <!-- PHASE 1: CORE PLATFORM (MVP)                   -->
+  <!-- PHASE 1: CORE PLATFORM (MVP) - COMPLETED       -->
   <!-- ============================================== -->
   <phase number="1" name="Core Platform" status="COMPLETED">
     <description>Foundational case management system with basic AI integration</description>
+    <completion_date>2026-01-14</completion_date>
 
     <feature_group name="Infrastructure">
       <feature id="1.1" status="COMPLETED">
@@ -158,33 +860,6 @@
           <file>api/app/routers/ai.py</file>
           <file>api/app/routers/health.py</file>
         </files>
-        <endpoints>
-          <endpoint method="GET" path="/health">Health check</endpoint>
-          <endpoint method="GET" path="/api/v1/cases/">List cases</endpoint>
-          <endpoint method="POST" path="/api/v1/cases/">Create case</endpoint>
-          <endpoint method="GET" path="/api/v1/cases/{case_id}">Get case</endpoint>
-          <endpoint method="PATCH" path="/api/v1/cases/{case_id}">Update case</endpoint>
-          <endpoint method="DELETE" path="/api/v1/cases/{case_id}">Archive case</endpoint>
-          <endpoint method="GET" path="/api/v1/cases/{case_id}/timeline">Get timeline</endpoint>
-          <endpoint method="POST" path="/api/v1/cases/{case_id}/timeline">Add timeline event</endpoint>
-          <endpoint method="GET" path="/api/v1/cases/{case_id}/findings">Get findings</endpoint>
-          <endpoint method="POST" path="/api/v1/cases/{case_id}/findings">Add finding</endpoint>
-          <endpoint method="POST" path="/api/v1/evidence/cases/{case_id}/evidence">Upload evidence</endpoint>
-          <endpoint method="GET" path="/api/v1/evidence/cases/{case_id}/evidence">List evidence</endpoint>
-          <endpoint method="GET" path="/api/v1/evidence/{evidence_id}">Get evidence metadata</endpoint>
-          <endpoint method="GET" path="/api/v1/evidence/{evidence_id}/download">Download evidence</endpoint>
-          <endpoint method="DELETE" path="/api/v1/evidence/{evidence_id}">Delete evidence</endpoint>
-          <endpoint method="GET" path="/api/v1/users/">List users</endpoint>
-          <endpoint method="POST" path="/api/v1/users/">Create user</endpoint>
-          <endpoint method="GET" path="/api/v1/users/me">Current user</endpoint>
-          <endpoint method="GET" path="/api/v1/users/{user_id}">Get user</endpoint>
-          <endpoint method="PATCH" path="/api/v1/users/{user_id}">Update user</endpoint>
-          <endpoint method="DELETE" path="/api/v1/users/{user_id}">Delete user</endpoint>
-          <endpoint method="GET" path="/api/v1/scopes/">List scopes</endpoint>
-          <endpoint method="POST" path="/api/v1/ai/summarize/{case_id}">AI summarize</endpoint>
-          <endpoint method="POST" path="/api/v1/ai/similar/{case_id}">Find similar cases</endpoint>
-          <endpoint method="GET" path="/api/v1/ai/health">AI health check</endpoint>
-        </endpoints>
       </feature>
       <feature id="1.9" status="COMPLETED">
         <name>Service Layer</name>
@@ -230,7 +905,7 @@
   </phase>
 
   <!-- ============================================== -->
-  <!-- PHASE 2: DOCUMENT INTELLIGENCE                 -->
+  <!-- PHASE 2: DOCUMENT INTELLIGENCE - PENDING       -->
   <!-- ============================================== -->
   <phase number="2" name="Document Intelligence" status="PENDING">
     <description>OCR, entity extraction, real RAG implementation, and report generation</description>
@@ -239,6 +914,7 @@
       <feature id="2.1" status="PENDING">
         <name>Complete Database CRUD</name>
         <description>Wire up all API endpoints to actual database operations</description>
+        <priority>1</priority>
         <tasks>
           <task>Implement case creation with DB persistence</task>
           <task>Implement case listing with filters and pagination</task>
@@ -248,16 +924,34 @@
           <task>Implement timeline events CRUD</task>
           <task>Implement audit logging for all operations</task>
         </tasks>
+        <files_to_modify>
+          <file>api/app/routers/cases.py</file>
+          <file>api/app/routers/evidence.py</file>
+          <file>api/app/routers/users.py</file>
+          <file>api/app/services/case_service.py</file>
+          <file>api/app/services/audit_service.py</file>
+        </files_to_modify>
       </feature>
       <feature id="2.2" status="PENDING">
         <name>User Authentication</name>
         <description>JWT-based authentication system</description>
+        <priority>2</priority>
         <tasks>
           <task>Add password hashing (bcrypt)</task>
           <task>Implement login endpoint with JWT token generation</task>
           <task>Add JWT middleware for protected routes</task>
           <task>Implement role-based access control</task>
         </tasks>
+        <files_to_create>
+          <file>api/app/routers/auth.py</file>
+          <file>api/app/services/auth_service.py</file>
+          <file>api/app/utils/security.py</file>
+        </files_to_create>
+        <dependencies>
+          <dependency>python-jose</dependency>
+          <dependency>passlib</dependency>
+          <dependency>bcrypt</dependency>
+        </dependencies>
       </feature>
     </feature_group>
 
@@ -265,6 +959,7 @@
       <feature id="2.3" status="PENDING">
         <name>Paperless Service Setup</name>
         <description>Add Paperless-ngx to Docker Compose for OCR</description>
+        <priority>3</priority>
         <tasks>
           <task>Add paperless service to docker-compose.yml</task>
           <task>Configure shared storage with API service</task>
@@ -278,17 +973,21 @@
       <feature id="2.4" status="PENDING">
         <name>Paperless Connector</name>
         <description>API service to interact with Paperless</description>
+        <priority>3</priority>
         <tasks>
           <task>Create api/app/services/paperless_service.py</task>
           <task>Implement document upload to Paperless</task>
           <task>Implement OCR text retrieval</task>
           <task>Implement document search</task>
         </tasks>
-        <new_file>api/app/services/paperless_service.py</new_file>
+        <files_to_create>
+          <file>api/app/services/paperless_service.py</file>
+        </files_to_create>
       </feature>
       <feature id="2.5" status="PENDING">
         <name>Evidence Sync Pipeline</name>
         <description>Auto-sync evidence files to Paperless for OCR</description>
+        <priority>3</priority>
         <tasks>
           <task>Create sync endpoint POST /api/v1/sync/case/{case_id}</task>
           <task>List evidence files from MinIO</task>
@@ -296,7 +995,9 @@
           <task>Retrieve OCR text and store in evidence.extracted_text</task>
           <task>Trigger embedding generation</task>
         </tasks>
-        <new_endpoint method="POST" path="/api/v1/sync/case/{case_id}">Sync case evidence</new_endpoint>
+        <new_endpoints>
+          <endpoint method="POST" path="/api/v1/sync/case/{case_id}">Sync case evidence</endpoint>
+        </new_endpoints>
       </feature>
     </feature_group>
 
@@ -304,6 +1005,7 @@
       <feature id="2.6" status="PENDING">
         <name>Entity Extraction Service</name>
         <description>Extract structured entities from evidence text</description>
+        <priority>4</priority>
         <tasks>
           <task>Create api/app/services/entity_service.py</task>
           <task>Implement regex patterns for employee IDs (EMP-[0-9]{6})</task>
@@ -312,23 +1014,31 @@
           <task>Implement email address extraction</task>
           <task>Implement department keyword matching</task>
         </tasks>
-        <new_file>api/app/services/entity_service.py</new_file>
+        <files_to_create>
+          <file>api/app/services/entity_service.py</file>
+        </files_to_create>
         <entity_patterns>
-          <pattern name="employee_id">EMP-[0-9]{6}</pattern>
-          <pattern name="ip_address">\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b</pattern>
-          <pattern name="email">[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}</pattern>
-          <pattern name="hostname">[A-Z]{2,4}-[A-Z0-9]{4,10}</pattern>
+          <pattern name="employee_id" regex="EMP-[0-9]{6}"/>
+          <pattern name="ip_address" regex="\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b"/>
+          <pattern name="email" regex="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"/>
+          <pattern name="hostname" regex="[A-Z]{2,4}-[A-Z0-9]{4,10}"/>
         </entity_patterns>
       </feature>
       <feature id="2.7" status="PENDING">
         <name>Entity Storage</name>
         <description>Store and query extracted entities</description>
+        <priority>4</priority>
         <tasks>
           <task>Create case_entities table in init.sql</task>
           <task>Create Entity SQLAlchemy model</task>
           <task>Create entity schemas</task>
           <task>Implement entity router with search endpoints</task>
         </tasks>
+        <files_to_create>
+          <file>api/app/models/entity.py</file>
+          <file>api/app/schemas/entity.py</file>
+          <file>api/app/routers/entities.py</file>
+        </files_to_create>
         <new_endpoints>
           <endpoint method="GET" path="/api/v1/entities/case/{case_id}">List entities for case</endpoint>
           <endpoint method="GET" path="/api/v1/entities/search">Search cases by entity</endpoint>
@@ -342,6 +1052,7 @@
       <feature id="2.8" status="PENDING">
         <name>Embedding Service</name>
         <description>Generate and store vector embeddings using Ollama</description>
+        <priority>5</priority>
         <tasks>
           <task>Create api/app/services/embedding_service.py</task>
           <task>Implement text chunking for long documents</task>
@@ -349,22 +1060,33 @@
           <task>Store embeddings in pgvector</task>
           <task>Implement batch embedding for case sync</task>
         </tasks>
-        <new_file>api/app/services/embedding_service.py</new_file>
-        <embedding_model>nomic-embed-text</embedding_model>
+        <files_to_create>
+          <file>api/app/services/embedding_service.py</file>
+        </files_to_create>
+        <embedding_config>
+          <model>nomic-embed-text</model>
+          <dimension>768</dimension>
+        </embedding_config>
       </feature>
       <feature id="2.9" status="PENDING">
         <name>Similarity Search</name>
         <description>Real vector similarity search for cases</description>
+        <priority>5</priority>
         <tasks>
           <task>Implement cosine similarity query in pgvector</task>
           <task>Update /api/v1/ai/similar/{case_id} to use real embeddings</task>
           <task>Return matching cases with similarity scores</task>
           <task>Add filters (same scope, include closed, min similarity)</task>
         </tasks>
+        <files_to_modify>
+          <file>api/app/routers/ai.py</file>
+          <file>api/app/services/embedding_service.py</file>
+        </files_to_modify>
       </feature>
       <feature id="2.10" status="PENDING">
         <name>AI Case Summarization</name>
         <description>Real AI summarization using Ollama</description>
+        <priority>5</priority>
         <tasks>
           <task>Build case context from DB (title, description, findings, timeline)</task>
           <task>Create summarization prompt template</task>
@@ -372,6 +1094,10 @@
           <task>Parse structured response (summary, key points, risk, recommendations)</task>
           <task>Update /api/v1/ai/summarize/{case_id} endpoint</task>
         </tasks>
+        <files_to_modify>
+          <file>api/app/routers/ai.py</file>
+          <file>api/app/services/ollama_service.py</file>
+        </files_to_modify>
       </feature>
     </feature_group>
 
@@ -379,6 +1105,7 @@
       <feature id="2.11" status="PENDING">
         <name>DOCX Report Generator</name>
         <description>Generate Word documents from case data</description>
+        <priority>6</priority>
         <tasks>
           <task>Create api/app/services/report_service.py</task>
           <task>Create DOCX template structure</task>
@@ -390,12 +1117,18 @@
           <task>Implement similar cases appendix</task>
           <task>Implement recommendations section</task>
         </tasks>
-        <new_file>api/app/services/report_service.py</new_file>
-        <new_endpoint method="GET" path="/api/v1/reports/case/{case_id}.docx">Generate DOCX report</new_endpoint>
+        <files_to_create>
+          <file>api/app/services/report_service.py</file>
+          <file>api/app/routers/reports.py</file>
+        </files_to_create>
+        <new_endpoints>
+          <endpoint method="GET" path="/api/v1/reports/case/{case_id}.docx">Generate DOCX report</endpoint>
+        </new_endpoints>
       </feature>
       <feature id="2.12" status="PENDING">
         <name>Report Templates</name>
         <description>Configurable report templates</description>
+        <priority>6</priority>
         <tasks>
           <task>Create templates directory</task>
           <task>Create standard report template</task>
@@ -404,17 +1137,17 @@
           <task>Create compliance report template</task>
         </tasks>
         <templates>
-          <template>STANDARD</template>
-          <template>EXECUTIVE_SUMMARY</template>
-          <template>DETAILED</template>
-          <template>COMPLIANCE</template>
+          <template name="STANDARD">Full case report with all sections</template>
+          <template name="EXECUTIVE_SUMMARY">Brief overview for management</template>
+          <template name="DETAILED">Comprehensive investigation report</template>
+          <template name="COMPLIANCE">Regulatory compliance focused</template>
         </templates>
       </feature>
     </feature_group>
   </phase>
 
   <!-- ============================================== -->
-  <!-- PHASE 3: FRONTEND & COLLABORATION              -->
+  <!-- PHASE 3: FRONTEND & COLLABORATION - PENDING    -->
   <!-- ============================================== -->
   <phase number="3" name="Frontend and Collaboration" status="PENDING">
     <description>React frontend, real-time collaboration, advanced analytics</description>
@@ -423,14 +1156,6 @@
       <feature id="3.1" status="PENDING">
         <name>Frontend Setup</name>
         <description>React application with Vite, TypeScript, TailwindCSS</description>
-        <tasks>
-          <task>Create frontend directory with Vite React TypeScript template</task>
-          <task>Configure TailwindCSS</task>
-          <task>Set up React Router</task>
-          <task>Create API client service</task>
-          <task>Add authentication context</task>
-          <task>Create Docker configuration for frontend</task>
-        </tasks>
         <tech_stack>
           <framework>React 18</framework>
           <bundler>Vite</bundler>
@@ -443,66 +1168,26 @@
       <feature id="3.2" status="PENDING">
         <name>Dashboard Page</name>
         <description>Main dashboard with case overview and statistics</description>
-        <components>
-          <component>CaseStatistics - counts by status, type, severity</component>
-          <component>RecentCases - list of latest cases</component>
-          <component>MyAssignedCases - cases assigned to current user</component>
-          <component>QuickActions - create case, search, reports</component>
-        </components>
       </feature>
       <feature id="3.3" status="PENDING">
         <name>Case List Page</name>
         <description>Searchable, filterable case list</description>
-        <components>
-          <component>CaseFilters - status, type, scope, date range, severity</component>
-          <component>CaseTable - sortable columns, pagination</component>
-          <component>CaseSearch - full-text and AI-powered search</component>
-          <component>BulkActions - export, assign, change status</component>
-        </components>
       </feature>
       <feature id="3.4" status="PENDING">
         <name>Case Detail Page</name>
         <description>Full case view with all related data</description>
-        <components>
-          <component>CaseHeader - ID, title, status badge, actions</component>
-          <component>CaseSummary - description, metadata, assigned users</component>
-          <component>EvidencePanel - file list, upload, preview</component>
-          <component>FindingsPanel - findings list, add/edit</component>
-          <component>TimelinePanel - chronological event view</component>
-          <component>EntitiesPanel - extracted entities with links</component>
-          <component>SimilarCases - AI-suggested related cases</component>
-          <component>AISummary - generated case summary</component>
-        </components>
       </feature>
       <feature id="3.5" status="PENDING">
         <name>Case Create/Edit Form</name>
         <description>Form for creating and editing cases</description>
-        <components>
-          <component>CaseForm - multi-step or single page form</component>
-          <component>ScopeSelector - department selection</component>
-          <component>TypeSelector - case type selection</component>
-          <component>SubjectFields - user, computer, devices inputs</component>
-          <component>EvidenceUploader - drag-and-drop file upload</component>
-        </components>
       </feature>
       <feature id="3.6" status="PENDING">
         <name>Reports Page</name>
         <description>Report generation and history</description>
-        <components>
-          <component>ReportGenerator - select case, template, options</component>
-          <component>ReportHistory - previously generated reports</component>
-          <component>ReportPreview - preview before download</component>
-        </components>
       </feature>
       <feature id="3.7" status="PENDING">
         <name>Admin Pages</name>
         <description>User and system administration</description>
-        <components>
-          <component>UserManagement - CRUD users, roles</component>
-          <component>ScopeManagement - manage department scopes</component>
-          <component>AuditLog - view system audit trail</component>
-          <component>SystemHealth - service status dashboard</component>
-        </components>
       </feature>
     </feature_group>
 
@@ -510,32 +1195,14 @@
       <feature id="3.8" status="PENDING">
         <name>Nextcloud Integration</name>
         <description>File storage and collaboration platform</description>
-        <tasks>
-          <task>Add Nextcloud to docker-compose.yml</task>
-          <task>Configure shared storage</task>
-          <task>Create Nextcloud connector service</task>
-          <task>Auto-create case folders in Nextcloud</task>
-          <task>Sync evidence between MinIO and Nextcloud</task>
-        </tasks>
       </feature>
       <feature id="3.9" status="PENDING">
         <name>ONLYOFFICE Integration</name>
         <description>In-browser document editing</description>
-        <tasks>
-          <task>Add ONLYOFFICE Document Server to docker-compose.yml</task>
-          <task>Configure Nextcloud ONLYOFFICE connector</task>
-          <task>Enable collaborative editing of case documents</task>
-        </tasks>
       </feature>
       <feature id="3.10" status="PENDING">
         <name>Real-time Updates</name>
         <description>WebSocket-based live updates</description>
-        <tasks>
-          <task>Add WebSocket support to FastAPI</task>
-          <task>Implement case update notifications</task>
-          <task>Implement presence indicators (who's viewing)</task>
-          <task>Add real-time comments/chat per case</task>
-        </tasks>
       </feature>
     </feature_group>
 
@@ -543,36 +1210,14 @@
       <feature id="3.11" status="PENDING">
         <name>Analytics Dashboard</name>
         <description>Visual analytics and reporting</description>
-        <components>
-          <component>CaseTrends - cases over time chart</component>
-          <component>SeverityDistribution - pie/bar chart</component>
-          <component>TypeBreakdown - by case type</component>
-          <component>ScopeAnalysis - by department</component>
-          <component>ResolutionTime - average time to close</component>
-          <component>UserActivity - cases per investigator</component>
-        </components>
       </feature>
       <feature id="3.12" status="PENDING">
         <name>Workflow Automation</name>
         <description>Automated case state transitions and notifications</description>
-        <tasks>
-          <task>Define workflow states and transitions</task>
-          <task>Implement state machine for cases</task>
-          <task>Add email notifications on state changes</task>
-          <task>Add Slack/Teams integration for alerts</task>
-          <task>Implement SLA tracking and escalation</task>
-        </tasks>
       </feature>
       <feature id="3.13" status="PENDING">
         <name>Advanced Search</name>
         <description>Full-text and semantic search across all content</description>
-        <tasks>
-          <task>Implement PostgreSQL full-text search</task>
-          <task>Add semantic search using embeddings</task>
-          <task>Create unified search endpoint</task>
-          <task>Add search suggestions/autocomplete</task>
-          <task>Implement saved searches</task>
-        </tasks>
       </feature>
     </feature_group>
   </phase>
@@ -582,26 +1227,26 @@
   <!-- ============================================== -->
   <progress>
     <summary>
-      <total_features>39</total_features>
+      <total_features>37</total_features>
       <completed>12</completed>
       <in_progress>0</in_progress>
-      <pending>27</pending>
-      <completion_percentage>31</completion_percentage>
+      <pending>25</pending>
+      <completion_percentage>32</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="2" features_total="12" features_completed="0" status="PENDING"/>
-      <phase number="3" features_total="15" features_completed="0" status="PENDING"/>
+      <phase number="3" features_total="13" features_completed="0" status="PENDING"/>
     </phase_status>
 
     <next_steps>
-      <step priority="1">Complete database CRUD operations (feature 2.1)</step>
-      <step priority="2">Implement user authentication (feature 2.2)</step>
-      <step priority="3">Add Paperless-ngx for OCR (features 2.3-2.5)</step>
-      <step priority="4">Implement entity extraction (features 2.6-2.7)</step>
-      <step priority="5">Complete RAG implementation (features 2.8-2.10)</step>
-      <step priority="6">Build report generator (features 2.11-2.12)</step>
+      <step priority="1" feature_id="2.1">Complete database CRUD operations</step>
+      <step priority="2" feature_id="2.2">Implement user authentication</step>
+      <step priority="3" feature_id="2.3">Add Paperless-ngx service</step>
+      <step priority="4" feature_id="2.4">Create Paperless connector</step>
+      <step priority="5" feature_id="2.5">Build evidence sync pipeline</step>
+      <step priority="6" feature_id="2.6">Implement entity extraction</step>
     </next_steps>
   </progress>
 
@@ -609,12 +1254,46 @@
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
-    <entry date="2026-01-14" phase="1">
-      <change>Initial project creation</change>
-      <change>Completed all Phase 1 features</change>
-      <change>Deployed to Docker with custom ports (18000, 15432, 19000, 19001, 21434)</change>
-      <change>Pushed to GitHub: https://github.com/SBG4/auditcaseos</change>
-      <change>Fixed: DATABASE_URL async driver, email-validator dependency, Path vs Query params</change>
+    <entry date="2026-01-14" version="0.1.0" phase="1">
+      <changes>
+        <change type="added">Initial project creation with Phase 1 features</change>
+        <change type="added">Docker Compose with PostgreSQL, MinIO, Ollama, FastAPI</change>
+        <change type="added">Complete API structure with routers, models, schemas, services</change>
+        <change type="added">Case ID generation system (SCOPE-TYPE-SEQ)</change>
+        <change type="added">PROJECT_SPEC.xml for project tracking</change>
+        <change type="fixed">DATABASE_URL async driver configuration</change>
+        <change type="fixed">email-validator dependency</change>
+        <change type="fixed">Path vs Query parameter in cases router</change>
+      </changes>
+      <git_commit>823359f</git_commit>
     </entry>
   </changelog>
+
+  <!-- ============================================== -->
+  <!-- QUICK REFERENCE                                -->
+  <!-- ============================================== -->
+  <quick_reference>
+    <commands>
+      <command name="Start services">docker compose up -d</command>
+      <command name="View logs">docker compose logs -f api</command>
+      <command name="Rebuild API">docker compose up -d --build api</command>
+      <command name="Stop services">docker compose down</command>
+      <command name="Reset data">docker compose down -v</command>
+      <command name="Access DB">docker exec -it auditcaseos-db psql -U auditcaseos -d auditcaseos</command>
+      <command name="Pull Ollama model">docker exec -it auditcaseos-ollama ollama pull llama3.2</command>
+    </commands>
+
+    <urls>
+      <url name="API Docs">http://localhost:18000/docs</url>
+      <url name="Health Check">http://localhost:18000/health</url>
+      <url name="MinIO Console">http://localhost:19001</url>
+      <url name="Paperless">http://localhost:18080</url>
+      <url name="Frontend">http://localhost:13000</url>
+    </urls>
+
+    <credentials>
+      <credential service="MinIO" user="minioadmin" pass="minioadmin123"/>
+      <credential service="PostgreSQL" user="auditcaseos" pass="auditcaseos_secret"/>
+    </credentials>
+  </quick_reference>
 </project>
