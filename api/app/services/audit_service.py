@@ -54,7 +54,7 @@ class AuditService:
                     old_values, new_values, metadata
                 ) VALUES (
                     :action, :entity_type, :entity_id, :user_id, :user_ip,
-                    :old_values::jsonb, :new_values::jsonb, :metadata::jsonb
+                    CAST(:old_values AS jsonb), CAST(:new_values AS jsonb), CAST(:metadata AS jsonb)
                 )
             """)
 

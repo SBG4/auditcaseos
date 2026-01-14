@@ -209,7 +209,7 @@ INSERT INTO scopes (code, name, description) VALUES
 
 -- Insert a default admin user
 INSERT INTO users (username, email, full_name, department) VALUES
-    ('admin', 'admin@auditcaseos.local', 'System Administrator', 'IT');
+    ('admin', 'admin@example.com', 'System Administrator', 'IT');
 
 -- Function to generate next case ID
 CREATE OR REPLACE FUNCTION generate_case_id(p_scope_code VARCHAR, p_case_type case_type)

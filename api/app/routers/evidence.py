@@ -4,17 +4,27 @@ This module provides endpoints for managing evidence files,
 including upload, download, listing, and deletion.
 """
 
+import hashlib
+import logging
 from datetime import datetime
-from typing import Annotated
-from uuid import UUID, uuid4
+from io import BytesIO
+from typing import Annotated, Any
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Path, Query, Request, UploadFile
+from fastapi import status as http_status
 from fastapi.responses import StreamingResponse
 from pydantic import Field
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.schemas.common import BaseSchema, MessageResponse, TimestampMixin
+from app.services.audit_service import audit_service
+from app.services.case_service import case_service
+from app.services.storage_service import storage_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/evidence", tags=["evidence"])
 
@@ -27,31 +37,23 @@ router = APIRouter(prefix="/evidence", tags=["evidence"])
 class EvidenceBase(BaseSchema):
     """Base schema for evidence data."""
 
-    filename: str = Field(..., description="Original filename")
-    file_type: str = Field(..., description="MIME type of the file")
+    file_name: str = Field(..., description="Original filename")
+    mime_type: str | None = Field(None, description="MIME type of the file")
     file_size: int = Field(..., ge=0, description="File size in bytes")
     description: str | None = Field(None, max_length=1000, description="Evidence description")
-    hash_sha256: str = Field(..., description="SHA-256 hash of the file")
-
-
-class EvidenceCreate(BaseSchema):
-    """Schema for evidence creation (internal use)."""
-
-    filename: str
-    file_type: str
-    file_size: int
-    description: str | None = None
-    hash_sha256: str
-    storage_path: str
+    file_hash: str | None = Field(None, description="SHA-256 hash of the file")
 
 
 class EvidenceResponse(EvidenceBase, TimestampMixin):
     """Schema for evidence response."""
 
     id: UUID = Field(..., description="Evidence UUID")
-    case_id: str = Field(..., description="Associated case ID")
-    storage_path: str = Field(..., description="Internal storage path")
+    case_id: UUID = Field(..., description="Associated case UUID")
+    case_id_str: str | None = Field(None, description="Human-readable case ID")
+    file_path: str = Field(..., description="Storage path")
     uploaded_by: UUID = Field(..., description="UUID of user who uploaded")
+    uploaded_by_name: str | None = Field(None, description="Name of uploader")
+    extracted_text: str | None = Field(None, description="OCR extracted text")
 
 
 class EvidenceListResponse(BaseSchema):
@@ -73,22 +75,17 @@ class EvidenceUploadResponse(EvidenceResponse):
 # =============================================================================
 
 
-def get_current_user_id() -> UUID:
-    """
-    Dependency to get current user ID.
-
-    This is a placeholder for authentication.
-
-    Returns:
-        UUID: Current user's UUID
-    """
-    # TODO: Implement actual authentication
-    return UUID("00000000-0000-0000-0000-000000000001")
-
-
-# Type aliases for dependency injection
 DbSession = Annotated[AsyncSession, Depends(get_db)]
-CurrentUserId = Annotated[UUID, Depends(get_current_user_id)]
+
+
+async def get_admin_user_id(db: AsyncSession) -> UUID:
+    """Get the admin user's ID from the database."""
+    query = text("SELECT id FROM users WHERE username = 'admin' LIMIT 1")
+    result = await db.execute(query)
+    row = result.fetchone()
+    if row:
+        return row[0]
+    return UUID("00000000-0000-0000-0000-000000000001")
 
 
 # =============================================================================
@@ -97,71 +94,21 @@ CurrentUserId = Annotated[UUID, Depends(get_current_user_id)]
 
 
 async def compute_file_hash(file: UploadFile) -> str:
-    """
-    Compute SHA-256 hash of uploaded file.
-
-    Args:
-        file: Uploaded file
-
-    Returns:
-        str: Hexadecimal SHA-256 hash
-    """
-    import hashlib
-
+    """Compute SHA-256 hash of uploaded file."""
     sha256 = hashlib.sha256()
-    # Reset file position
     await file.seek(0)
     while chunk := await file.read(8192):
         sha256.update(chunk)
-    # Reset file position for later use
     await file.seek(0)
     return sha256.hexdigest()
 
 
-async def save_file_to_storage(file: UploadFile, case_id: str, evidence_id: UUID) -> str:
-    """
-    Save uploaded file to storage.
-
-    Args:
-        file: Uploaded file
-        case_id: Associated case ID
-        evidence_id: Evidence UUID
-
-    Returns:
-        str: Storage path
-    """
-    # TODO: Implement actual file storage (local filesystem, S3, etc.)
-    # For now, return a placeholder path
-    extension = file.filename.rsplit(".", 1)[-1] if "." in file.filename else ""
-    return f"evidence/{case_id}/{evidence_id}.{extension}"
-
-
-async def get_file_from_storage(storage_path: str):
-    """
-    Retrieve file from storage.
-
-    Args:
-        storage_path: Path to the stored file
-
-    Yields:
-        bytes: File chunks
-    """
-    # TODO: Implement actual file retrieval
-    raise NotImplementedError("File storage not configured")
-
-
-async def delete_file_from_storage(storage_path: str) -> bool:
-    """
-    Delete file from storage.
-
-    Args:
-        storage_path: Path to the stored file
-
-    Returns:
-        bool: True if deleted successfully
-    """
-    # TODO: Implement actual file deletion
-    return True
+async def get_file_size(file: UploadFile) -> int:
+    """Get file size."""
+    await file.seek(0, 2)
+    size = file.tell()
+    await file.seek(0)
+    return size
 
 
 # =============================================================================
@@ -170,14 +117,16 @@ async def delete_file_from_storage(storage_path: str) -> bool:
 
 
 @router.post(
-    "/cases/{case_id}/evidence",
+    "/cases/{case_id}/upload",
     response_model=EvidenceUploadResponse,
-    status_code=status.HTTP_201_CREATED,
+    status_code=http_status.HTTP_201_CREATED,
     summary="Upload evidence file",
     description="Upload a new evidence file for a case.",
 )
 async def upload_evidence(
-    case_id: str,
+    db: DbSession,
+    request: Request,
+    case_id: str = Path(..., description="Case ID (e.g., FIN-USB-0001)"),
     file: UploadFile = File(..., description="Evidence file to upload"),
     description: str | None = Query(None, description="Evidence description"),
 ) -> EvidenceUploadResponse:
@@ -185,91 +134,171 @@ async def upload_evidence(
     Upload evidence file for a case.
 
     Accepts multipart/form-data with a file and optional description.
-    The file is stored securely and a SHA-256 hash is computed for integrity.
-
-    Supported file types include:
-    - Documents (PDF, DOC, DOCX, TXT)
-    - Images (PNG, JPG, GIF)
-    - Archives (ZIP, RAR)
-    - Data files (CSV, JSON, XML)
-    - Log files
-
-    - **case_id**: Case ID to attach evidence to
-    - **file**: Evidence file (multipart upload)
-    - **description**: Optional description of the evidence
-
-    Returns the created evidence metadata.
-
-    Raises:
-        HTTPException: 404 if case not found
-        HTTPException: 413 if file too large
-        HTTPException: 415 if unsupported file type
+    The file is stored in MinIO and a SHA-256 hash is computed for integrity.
     """
-    # TODO: Validate case exists
-    # TODO: Validate file type and size
-    # TODO: Implement actual file storage
+    try:
+        # Verify case exists
+        case_data = await case_service.get_case(db, case_id)
+        if not case_data:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail=f"Case with ID '{case_id}' not found",
+            )
 
-    # Compute file hash
-    file_hash = await compute_file_hash(file)
+        case_uuid = case_data["id"]
+        user_id = await get_admin_user_id(db)
 
-    # Get file size
-    await file.seek(0, 2)  # Seek to end
-    file_size = file.tell()
-    await file.seek(0)  # Reset to beginning
+        # Compute file hash and size
+        file_hash = await compute_file_hash(file)
+        file_size = await get_file_size(file)
 
-    evidence_id = uuid4()
-    user_id = get_current_user_id()
-    now = datetime.utcnow()
+        # Read file content
+        await file.seek(0)
+        file_content = await file.read()
+        await file.seek(0)
 
-    # Save file to storage
-    storage_path = await save_file_to_storage(file, case_id, evidence_id)
+        # Upload to MinIO
+        storage_path = await storage_service.upload_file(
+            case_id=case_data["case_id"],
+            file=file_content,
+            filename=file.filename or "unknown",
+            content_type=file.content_type,
+        )
 
-    return EvidenceUploadResponse(
-        id=evidence_id,
-        case_id=case_id,
-        filename=file.filename or "unknown",
-        file_type=file.content_type or "application/octet-stream",
-        file_size=file_size,
-        description=description,
-        hash_sha256=file_hash,
-        storage_path=storage_path,
-        uploaded_by=user_id,
-        created_at=now,
-        updated_at=now,
-        message="Evidence uploaded successfully",
-    )
+        # Insert into database
+        query = text("""
+            INSERT INTO evidence (case_id, file_name, file_path, file_size, mime_type, file_hash, description, uploaded_by)
+            VALUES (:case_id, :file_name, :file_path, :file_size, :mime_type, :file_hash, :description, :uploaded_by)
+            RETURNING *
+        """)
+        result = await db.execute(query, {
+            "case_id": str(case_uuid),
+            "file_name": file.filename or "unknown",
+            "file_path": storage_path,
+            "file_size": file_size,
+            "mime_type": file.content_type or "application/octet-stream",
+            "file_hash": file_hash,
+            "description": description,
+            "uploaded_by": str(user_id),
+        })
+        await db.commit()
+
+        row = result.fetchone()
+        evidence_data = dict(row._mapping) if row else {}
+
+        # Get uploader name
+        user_query = text("SELECT full_name FROM users WHERE id = :user_id")
+        user_result = await db.execute(user_query, {"user_id": str(user_id)})
+        user_row = user_result.fetchone()
+        uploader_name = user_row.full_name if user_row else None
+
+        # Log audit event
+        client_ip = request.client.host if request.client else None
+        await audit_service.log_create(
+            db=db,
+            entity_type="evidence",
+            entity_id=evidence_data.get("id"),
+            user_id=user_id,
+            new_values={"file_name": file.filename, "case_id": case_data["case_id"]},
+            user_ip=client_ip,
+        )
+
+        now = datetime.utcnow()
+        return EvidenceUploadResponse(
+            id=evidence_data["id"],
+            case_id=case_uuid,
+            case_id_str=case_data["case_id"],
+            file_name=evidence_data["file_name"],
+            mime_type=evidence_data["mime_type"],
+            file_size=evidence_data["file_size"],
+            file_hash=evidence_data["file_hash"],
+            file_path=evidence_data["file_path"],
+            description=evidence_data.get("description"),
+            uploaded_by=user_id,
+            uploaded_by_name=uploader_name,
+            extracted_text=None,
+            created_at=evidence_data.get("uploaded_at", now),
+            updated_at=evidence_data.get("uploaded_at", now),
+            message="Evidence uploaded successfully",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to upload evidence: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to upload evidence: {str(e)}",
+        )
 
 
 @router.get(
-    "/cases/{case_id}/evidence",
+    "/cases/{case_id}",
     response_model=EvidenceListResponse,
     summary="List case evidence",
     description="Retrieve all evidence files for a case.",
 )
 async def list_case_evidence(
-    case_id: str,
+    db: DbSession,
+    case_id: str = Path(..., description="Case ID"),
 ) -> EvidenceListResponse:
-    """
-    List all evidence files associated with a case.
+    """List all evidence files associated with a case."""
+    try:
+        # Verify case exists
+        case_data = await case_service.get_case(db, case_id)
+        if not case_data:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail=f"Case with ID '{case_id}' not found",
+            )
 
-    Returns metadata for all evidence files, including:
-    - Original filename
-    - File type and size
-    - Upload timestamp
-    - SHA-256 hash for integrity verification
+        case_uuid = case_data["id"]
 
-    The actual file content is not included; use the download endpoint
-    to retrieve file content.
+        # Get evidence
+        query = text("""
+            SELECT e.*, u.full_name as uploaded_by_name
+            FROM evidence e
+            LEFT JOIN users u ON e.uploaded_by = u.id
+            WHERE e.case_id = :case_uuid
+            ORDER BY e.uploaded_at DESC
+        """)
+        result = await db.execute(query, {"case_uuid": str(case_uuid)})
+        rows = result.fetchall()
 
-    Raises:
-        HTTPException: 404 if case not found
-    """
-    # TODO: Implement actual database query
-    return EvidenceListResponse(
-        items=[],
-        total=0,
-        case_id=case_id,
-    )
+        items = []
+        for row in rows:
+            row_dict = dict(row._mapping)
+            items.append(EvidenceResponse(
+                id=row_dict["id"],
+                case_id=row_dict["case_id"],
+                case_id_str=case_data["case_id"],
+                file_name=row_dict["file_name"],
+                mime_type=row_dict.get("mime_type"),
+                file_size=row_dict.get("file_size", 0),
+                file_hash=row_dict.get("file_hash"),
+                file_path=row_dict["file_path"],
+                description=row_dict.get("description"),
+                uploaded_by=row_dict["uploaded_by"],
+                uploaded_by_name=row_dict.get("uploaded_by_name"),
+                extracted_text=row_dict.get("extracted_text"),
+                created_at=row_dict.get("uploaded_at", datetime.utcnow()),
+                updated_at=row_dict.get("uploaded_at", datetime.utcnow()),
+            ))
+
+        return EvidenceListResponse(
+            items=items,
+            total=len(items),
+            case_id=case_data["case_id"],
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to list evidence: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve evidence",
+        )
 
 
 @router.get(
@@ -279,22 +308,53 @@ async def list_case_evidence(
     description="Retrieve metadata for a specific evidence file.",
 )
 async def get_evidence(
-    evidence_id: UUID,
+    db: DbSession,
+    evidence_id: UUID = Path(..., description="Evidence UUID"),
 ) -> EvidenceResponse:
-    """
-    Get metadata for a specific evidence file.
+    """Get metadata for a specific evidence file."""
+    try:
+        query = text("""
+            SELECT e.*, u.full_name as uploaded_by_name, c.case_id as case_id_str
+            FROM evidence e
+            LEFT JOIN users u ON e.uploaded_by = u.id
+            LEFT JOIN cases c ON e.case_id = c.id
+            WHERE e.id = :evidence_id
+        """)
+        result = await db.execute(query, {"evidence_id": str(evidence_id)})
+        row = result.fetchone()
 
-    Returns all metadata about the evidence file without the actual content.
-    Use the /download endpoint to retrieve the file content.
+        if not row:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail=f"Evidence with ID '{evidence_id}' not found",
+            )
 
-    Raises:
-        HTTPException: 404 if evidence not found
-    """
-    # TODO: Implement actual database query
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Evidence with ID '{evidence_id}' not found",
-    )
+        row_dict = dict(row._mapping)
+        return EvidenceResponse(
+            id=row_dict["id"],
+            case_id=row_dict["case_id"],
+            case_id_str=row_dict.get("case_id_str"),
+            file_name=row_dict["file_name"],
+            mime_type=row_dict.get("mime_type"),
+            file_size=row_dict.get("file_size", 0),
+            file_hash=row_dict.get("file_hash"),
+            file_path=row_dict["file_path"],
+            description=row_dict.get("description"),
+            uploaded_by=row_dict["uploaded_by"],
+            uploaded_by_name=row_dict.get("uploaded_by_name"),
+            extracted_text=row_dict.get("extracted_text"),
+            created_at=row_dict.get("uploaded_at", datetime.utcnow()),
+            updated_at=row_dict.get("uploaded_at", datetime.utcnow()),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get evidence: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve evidence",
+        )
 
 
 @router.get(
@@ -304,40 +364,60 @@ async def get_evidence(
     description="Download the actual evidence file content.",
 )
 async def download_evidence(
-    evidence_id: UUID,
+    db: DbSession,
+    request: Request,
+    evidence_id: UUID = Path(..., description="Evidence UUID"),
 ) -> StreamingResponse:
-    """
-    Download an evidence file.
+    """Download an evidence file."""
+    try:
+        # Get evidence metadata
+        query = text("SELECT * FROM evidence WHERE id = :evidence_id")
+        result = await db.execute(query, {"evidence_id": str(evidence_id)})
+        row = result.fetchone()
 
-    Returns the actual file content as a streaming response with
-    appropriate Content-Type and Content-Disposition headers.
+        if not row:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail=f"Evidence with ID '{evidence_id}' not found",
+            )
 
-    The file is streamed to avoid loading large files into memory.
+        evidence = dict(row._mapping)
 
-    Raises:
-        HTTPException: 404 if evidence not found
-    """
-    # TODO: Implement actual database query and file retrieval
-    # 1. Get evidence metadata from database
-    # 2. Stream file from storage
+        # Download file from MinIO
+        file_content = await storage_service.download_file(evidence["file_path"])
 
-    # Placeholder - would get from database
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Evidence with ID '{evidence_id}' not found",
-    )
+        # Log download event
+        user_id = await get_admin_user_id(db)
+        client_ip = request.client.host if request.client else None
+        try:
+            await audit_service.log_download(
+                db=db,
+                entity_type="evidence",
+                entity_id=evidence_id,
+                user_id=user_id,
+                file_path=evidence["file_path"],
+                user_ip=client_ip,
+            )
+        except Exception as audit_error:
+            logger.warning(f"Failed to log download: {audit_error}")
 
-    # Example implementation once database is connected:
-    # evidence = await get_evidence_from_db(evidence_id)
-    # file_stream = get_file_from_storage(evidence.storage_path)
-    # return StreamingResponse(
-    #     file_stream,
-    #     media_type=evidence.file_type,
-    #     headers={
-    #         "Content-Disposition": f'attachment; filename="{evidence.filename}"',
-    #         "Content-Length": str(evidence.file_size),
-    #     },
-    # )
+        return StreamingResponse(
+            BytesIO(file_content),
+            media_type=evidence.get("mime_type", "application/octet-stream"),
+            headers={
+                "Content-Disposition": f'attachment; filename="{evidence["file_name"]}"',
+                "Content-Length": str(len(file_content)),
+            },
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to download evidence: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to download evidence",
+        )
 
 
 @router.delete(
@@ -347,28 +427,55 @@ async def download_evidence(
     description="Delete an evidence file and its metadata.",
 )
 async def delete_evidence(
-    evidence_id: UUID,
+    db: DbSession,
+    request: Request,
+    evidence_id: UUID = Path(..., description="Evidence UUID"),
 ) -> MessageResponse:
-    """
-    Delete an evidence file.
+    """Delete an evidence file."""
+    try:
+        # Get evidence metadata
+        query = text("SELECT * FROM evidence WHERE id = :evidence_id")
+        result = await db.execute(query, {"evidence_id": str(evidence_id)})
+        row = result.fetchone()
 
-    This permanently removes both the file from storage and its
-    metadata from the database. This action cannot be undone.
+        if not row:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail=f"Evidence with ID '{evidence_id}' not found",
+            )
 
-    A timeline event is automatically added to the associated case
-    to record the deletion.
+        evidence = dict(row._mapping)
 
-    Raises:
-        HTTPException: 404 if evidence not found
-        HTTPException: 403 if user lacks permission to delete
-    """
-    # TODO: Implement actual deletion
-    # 1. Get evidence metadata
-    # 2. Delete file from storage
-    # 3. Delete metadata from database
-    # 4. Add timeline event to case
+        # Delete from MinIO
+        await storage_service.delete_file(evidence["file_path"])
 
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Evidence with ID '{evidence_id}' not found",
-    )
+        # Delete from database
+        delete_query = text("DELETE FROM evidence WHERE id = :evidence_id")
+        await db.execute(delete_query, {"evidence_id": str(evidence_id)})
+        await db.commit()
+
+        # Log delete event
+        user_id = await get_admin_user_id(db)
+        client_ip = request.client.host if request.client else None
+        await audit_service.log_delete(
+            db=db,
+            entity_type="evidence",
+            entity_id=evidence_id,
+            user_id=user_id,
+            old_values={"file_name": evidence["file_name"], "file_path": evidence["file_path"]},
+            user_ip=client_ip,
+        )
+
+        return MessageResponse(
+            message=f"Evidence '{evidence['file_name']}' deleted successfully",
+            details={"evidence_id": str(evidence_id), "file_name": evidence["file_name"]},
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete evidence: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete evidence",
+        )

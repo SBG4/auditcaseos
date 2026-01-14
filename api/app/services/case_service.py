@@ -35,24 +35,15 @@ class CaseService:
             Exception: If database operation fails
         """
         try:
-            # Use the database function or manual upsert to get next sequence
-            query = text("""
-                INSERT INTO case_sequences (scope_code, case_type, last_seq)
-                VALUES (:scope_code, :case_type::case_type, 1)
-                ON CONFLICT (scope_code, case_type)
-                DO UPDATE SET last_seq = case_sequences.last_seq + 1
-                RETURNING last_seq
-            """)
+            # Use the PostgreSQL function defined in init.sql
+            query = text("SELECT generate_case_id(:scope_code, :case_type)")
 
             result = await db.execute(
                 query,
                 {"scope_code": scope_code, "case_type": case_type},
             )
             row = result.fetchone()
-            seq = row[0] if row else 1
-
-            # Format: SCOPE-TYPE-XXXX (4 digit padded)
-            case_id = f"{scope_code}-{case_type}-{seq:04d}"
+            case_id = row[0] if row else f"{scope_code}-{case_type}-0001"
 
             logger.info(f"Generated case ID: {case_id}")
             return case_id
@@ -87,7 +78,8 @@ class CaseService:
             case_type = case_data.get("case_type")
             case_id = await self.generate_case_id(db, scope_code, case_type)
 
-            # Build insert query
+            # Build insert query - avoid inline type casts with asyncpg
+            # PostgreSQL will handle implicit casts for enums
             query = text("""
                 INSERT INTO cases (
                     case_id, scope_code, case_type, status, severity,
@@ -95,13 +87,13 @@ class CaseService:
                     subject_user, subject_computer, subject_devices, related_users,
                     owner_id, assigned_to, incident_date, tags, metadata
                 ) VALUES (
-                    :case_id, :scope_code, :case_type::case_type,
-                    COALESCE(:status, 'OPEN')::case_status,
-                    COALESCE(:severity, 'MEDIUM')::severity_level,
+                    :case_id, :scope_code, CAST(:case_type AS case_type),
+                    CAST(COALESCE(:status, 'OPEN') AS case_status),
+                    CAST(COALESCE(:severity, 'MEDIUM') AS severity_level),
                     :title, :summary, :description,
                     :subject_user, :subject_computer, :subject_devices, :related_users,
                     :owner_id, :assigned_to, :incident_date, :tags,
-                    COALESCE(:metadata, '{}')::jsonb
+                    CAST(COALESCE(:metadata, '{}') AS jsonb)
                 )
                 RETURNING *
             """)
@@ -181,6 +173,74 @@ class CaseService:
             logger.error(f"Failed to get case {case_id}: {e}")
             raise
 
+    async def count_cases(
+        self,
+        db: AsyncSession,
+        filters: dict[str, Any] | None = None,
+    ) -> int:
+        """
+        Count cases with optional filtering.
+
+        Args:
+            db: Database session
+            filters: Optional filters (same as list_cases)
+
+        Returns:
+            Total count of matching cases
+        """
+        try:
+            filters = filters or {}
+            where_clauses = []
+            params: dict[str, Any] = {}
+
+            # Build filter conditions (same as list_cases)
+            if "scope_code" in filters:
+                where_clauses.append("scope_code = :scope_code")
+                params["scope_code"] = filters["scope_code"]
+
+            if "case_type" in filters:
+                where_clauses.append("case_type = CAST(:case_type AS case_type)")
+                params["case_type"] = filters["case_type"]
+
+            if "status" in filters:
+                where_clauses.append("status = CAST(:status AS case_status)")
+                params["status"] = filters["status"]
+
+            if "severity" in filters:
+                where_clauses.append("severity = CAST(:severity AS severity_level)")
+                params["severity"] = filters["severity"]
+
+            if "owner_id" in filters:
+                where_clauses.append("owner_id = :owner_id")
+                params["owner_id"] = str(filters["owner_id"])
+
+            if "assigned_to" in filters:
+                where_clauses.append("assigned_to = :assigned_to")
+                params["assigned_to"] = str(filters["assigned_to"])
+
+            if "subject_user" in filters:
+                where_clauses.append("subject_user ILIKE :subject_user")
+                params["subject_user"] = f"%{filters['subject_user']}%"
+
+            if "search" in filters:
+                where_clauses.append(
+                    "(title ILIKE :search OR summary ILIKE :search OR description ILIKE :search OR case_id ILIKE :search)"
+                )
+                params["search"] = f"%{filters['search']}%"
+
+            # Build query
+            where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+            query = text(f"SELECT COUNT(*) FROM cases WHERE {where_sql}")
+
+            result = await db.execute(query, params)
+            row = result.fetchone()
+
+            return row[0] if row else 0
+
+        except Exception as e:
+            logger.error(f"Failed to count cases: {e}")
+            raise
+
     async def list_cases(
         self,
         db: AsyncSession,
@@ -211,15 +271,15 @@ class CaseService:
                 params["scope_code"] = filters["scope_code"]
 
             if "case_type" in filters:
-                where_clauses.append("case_type = :case_type::case_type")
+                where_clauses.append("case_type = CAST(:case_type AS case_type)")
                 params["case_type"] = filters["case_type"]
 
             if "status" in filters:
-                where_clauses.append("status = :status::case_status")
+                where_clauses.append("status = CAST(:status AS case_status)")
                 params["status"] = filters["status"]
 
             if "severity" in filters:
-                where_clauses.append("severity = :severity::severity_level")
+                where_clauses.append("severity = CAST(:severity AS severity_level)")
                 params["severity"] = filters["severity"]
 
             if "owner_id" in filters:
@@ -236,7 +296,7 @@ class CaseService:
 
             if "search" in filters:
                 where_clauses.append(
-                    "(title ILIKE :search OR summary ILIKE :search OR description ILIKE :search)"
+                    "(title ILIKE :search OR summary ILIKE :search OR description ILIKE :search OR case_id ILIKE :search)"
                 )
                 params["search"] = f"%{filters['search']}%"
 
@@ -283,20 +343,23 @@ class CaseService:
             set_clauses = []
             params: dict[str, Any] = {}
 
-            # Mapping of fields to their SQL types
+            # Mapping of fields to their SQL cast types
             type_casts = {
-                "case_type": "::case_type",
-                "status": "::case_status",
-                "severity": "::severity_level",
-                "metadata": "::jsonb",
+                "case_type": "case_type",
+                "status": "case_status",
+                "severity": "severity_level",
+                "metadata": "jsonb",
             }
 
             for key, value in updates.items():
                 if key in ("id", "case_id", "created_at"):
                     continue  # Skip immutable fields
 
-                cast = type_casts.get(key, "")
-                set_clauses.append(f"{key} = :{key}{cast}")
+                if key in type_casts:
+                    # Use CAST() syntax for asyncpg compatibility
+                    set_clauses.append(f"{key} = CAST(:{key} AS {type_casts[key]})")
+                else:
+                    set_clauses.append(f"{key} = :{key}")
 
                 if key in ("owner_id", "assigned_to") and value is not None:
                     params[key] = str(value)
@@ -388,6 +451,99 @@ class CaseService:
             await db.rollback()
             logger.error(f"Failed to delete case {case_id}: {e}")
             raise
+
+
+    async def get_user_brief(
+        self,
+        db: AsyncSession,
+        user_id: UUID | str,
+    ) -> dict[str, Any] | None:
+        """
+        Get brief user info for embedding in responses.
+
+        Args:
+            db: Database session
+            user_id: User UUID
+
+        Returns:
+            User dict with id, full_name, email or None
+        """
+        try:
+            query = text("SELECT id, full_name, email FROM users WHERE id = :user_id")
+            result = await db.execute(query, {"user_id": str(user_id)})
+            row = result.fetchone()
+            if row:
+                return dict(row._mapping)
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get user {user_id}: {e}")
+            return None
+
+    async def get_case_counts(
+        self,
+        db: AsyncSession,
+        case_uuid: UUID | str,
+    ) -> dict[str, int]:
+        """
+        Get evidence and findings counts for a case.
+
+        Args:
+            db: Database session
+            case_uuid: Case UUID (internal ID)
+
+        Returns:
+            Dict with evidence_count and findings_count
+        """
+        try:
+            query = text("""
+                SELECT
+                    (SELECT COUNT(*) FROM evidence WHERE case_id = :case_uuid) as evidence_count,
+                    (SELECT COUNT(*) FROM findings WHERE case_id = :case_uuid) as findings_count
+            """)
+            result = await db.execute(query, {"case_uuid": str(case_uuid)})
+            row = result.fetchone()
+            if row:
+                return {
+                    "evidence_count": row.evidence_count or 0,
+                    "findings_count": row.findings_count or 0,
+                }
+            return {"evidence_count": 0, "findings_count": 0}
+        except Exception as e:
+            logger.error(f"Failed to get case counts: {e}")
+            return {"evidence_count": 0, "findings_count": 0}
+
+    async def build_case_response(
+        self,
+        db: AsyncSession,
+        case_data: dict[str, Any],
+    ) -> dict[str, Any]:
+        """
+        Build a complete case response with user info and counts.
+
+        Args:
+            db: Database session
+            case_data: Raw case data from database
+
+        Returns:
+            Complete case response dict
+        """
+        # Get owner info
+        owner = await self.get_user_brief(db, case_data["owner_id"])
+
+        # Get assignee info if assigned
+        assigned_to = None
+        if case_data.get("assigned_to"):
+            assigned_to = await self.get_user_brief(db, case_data["assigned_to"])
+
+        # Get counts
+        counts = await self.get_case_counts(db, case_data["id"])
+
+        return {
+            **case_data,
+            "owner": owner,
+            "assigned_to": assigned_to,
+            **counts,
+        }
 
 
 # Singleton instance
