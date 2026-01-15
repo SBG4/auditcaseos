@@ -173,7 +173,7 @@ CREATE TABLE embeddings (
 
     -- The embedding
     content TEXT NOT NULL,               -- Original text that was embedded
-    embedding vector(1536),              -- Embedding vector (OpenAI dimension, adjust for Ollama)
+    embedding vector(768),               -- Embedding vector (nomic-embed-text dimension)
 
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 

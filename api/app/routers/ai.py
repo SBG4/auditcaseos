@@ -1,19 +1,26 @@
 """AI router for AuditCaseOS API.
 
 This module provides AI-powered endpoints including case summarization
-using Ollama and similarity search using RAG (Retrieval-Augmented Generation).
+using Ollama, similarity search using RAG, and embedding management.
 """
 
+import logging
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.routers.auth import get_current_user_required
 from app.schemas.common import BaseSchema, Severity
+from app.services.case_service import case_service
+from app.services.embedding_service import embedding_service
+from app.services.ollama_service import ollama_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -87,6 +94,31 @@ class AIHealthResponse(BaseSchema):
     embedding_model: str | None = Field(None, description="Embedding model for RAG")
 
 
+class EmbedCaseRequest(BaseSchema):
+    """Request schema for embedding a case."""
+
+    include_evidence: bool = Field(default=True, description="Also embed all case evidence")
+
+
+class EmbedCaseResponse(BaseSchema):
+    """Response schema for case embedding."""
+
+    case_id: str = Field(..., description="Case ID that was embedded")
+    case_embedded: bool = Field(..., description="Whether case was successfully embedded")
+    evidence_embedded: int = Field(default=0, description="Number of evidence items embedded")
+    errors: list[str] = Field(default_factory=list, description="Any errors encountered")
+
+
+class EmbeddingHealthResponse(BaseSchema):
+    """Response schema for embedding service health."""
+
+    status: str = Field(..., description="Service status")
+    ollama_host: str = Field(..., description="Ollama host URL")
+    model: str = Field(..., description="Embedding model")
+    dimension: int = Field(..., description="Embedding dimension")
+    embedding_works: bool = Field(default=False, description="Whether embedding generation works")
+
+
 # =============================================================================
 # Dependencies
 # =============================================================================
@@ -107,6 +139,7 @@ def get_current_user_id() -> UUID:
 
 # Type aliases for dependency injection
 DbSession = Annotated[AsyncSession, Depends(get_db)]
+CurrentUser = Annotated[dict, Depends(get_current_user_required)]
 CurrentUserId = Annotated[UUID, Depends(get_current_user_id)]
 
 
@@ -364,26 +397,27 @@ async def summarize_case(
     "/similar/{case_id}",
     response_model=SimilarCasesResponse,
     summary="Find similar cases",
-    description="Use RAG to find cases similar to the specified case.",
+    description="Use pgvector embeddings to find cases similar to the specified case.",
 )
 async def find_similar_cases(
-    case_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    case_id: str = Path(..., description="Case ID (SCOPE-TYPE-SEQ format)"),
     request: SimilarCasesRequest | None = None,
 ) -> SimilarCasesResponse:
     """
-    Find cases similar to the specified case using RAG.
+    Find cases similar to the specified case using vector embeddings.
 
-    This endpoint uses vector embeddings and similarity search to find
-    audit cases that are similar to the specified case. This is useful for:
+    This endpoint uses pgvector cosine similarity to find audit cases
+    that are similar to the specified case. This is useful for:
 
     - Finding precedents for similar issues
     - Identifying patterns across cases
     - Learning from past resolutions
 
-    The similarity search considers:
-    - Case description and title
-    - Findings and their descriptions
-    - Timeline events
+    The similarity search is based on embeddings that capture:
+    - Case title, summary, description
+    - Findings and their details
     - Case metadata (type, scope, severity)
 
     Request Options:
@@ -392,43 +426,42 @@ async def find_similar_cases(
     - **include_closed**: Include closed cases in results (default: true)
     - **same_scope_only**: Only return cases from same scope (default: false)
 
-    Note: This is a placeholder implementation. Full RAG functionality
-    requires a vector database (e.g., Chroma, Pinecone, Weaviate) and
-    embedding model configuration.
+    Note: The case must have embeddings generated first via POST /ai/embed/case/{case_id}
 
     Returns:
         SimilarCasesResponse: List of similar cases with similarity scores
 
     Raises:
         HTTPException: 404 if case not found
-        HTTPException: 503 if RAG service unavailable
+        HTTPException: 500 if search fails
     """
     if request is None:
         request = SimilarCasesRequest()
 
-    # TODO: Verify case exists
-    # case = await get_case_from_db(case_id)
-    # if not case:
-    #     raise HTTPException(status_code=404, detail=f"Case '{case_id}' not found")
-
-    # Check if RAG service is available
-    if not await rag_service.is_available():
-        # Return empty results if RAG not configured
-        return SimilarCasesResponse(
-            case_id=case_id,
-            similar_cases=[],
-            total_found=0,
-            search_method="rag_unavailable",
-            generated_at=datetime.utcnow(),
-        )
-
     try:
-        # Find similar cases
-        similar = await rag_service.find_similar(
-            case_id,
+        # Verify case exists and get data
+        case_data = await case_service.get_case(db, case_id)
+        if not case_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Case '{case_id}' not found",
+            )
+
+        case_uuid = case_data["id"]
+        source_scope = case_data.get("scope_code")
+
+        # Find similar cases using embedding service
+        similar = await embedding_service.find_similar_cases(
+            db=db,
+            case_id=case_uuid,
             limit=request.limit,
             min_similarity=request.min_similarity,
+            include_closed=request.include_closed,
         )
+
+        # Apply same_scope_only filter if requested
+        if request.same_scope_only and source_scope:
+            similar = [s for s in similar if s.get("scope_code") == source_scope]
 
         # Convert to response format
         similar_cases = [
@@ -436,9 +469,9 @@ async def find_similar_cases(
                 case_id=item["case_id"],
                 title=item["title"],
                 similarity_score=item["similarity"],
-                matching_aspects=item.get("matching_aspects", []),
+                matching_aspects=[],
                 case_type=item["case_type"],
-                scope=item["scope"],
+                scope=item["scope_code"],
                 severity=item["severity"],
                 status=item["status"],
             )
@@ -446,13 +479,17 @@ async def find_similar_cases(
         ]
 
         return SimilarCasesResponse(
-            case_id=case_id,
+            case_id=case_data["case_id"],
             similar_cases=similar_cases,
             total_found=len(similar_cases),
-            search_method="vector_similarity",
+            search_method="pgvector_cosine",
             generated_at=datetime.utcnow(),
         )
+
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Error finding similar cases for {case_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error finding similar cases: {str(e)}",
@@ -490,4 +527,190 @@ async def check_ai_health() -> AIHealthResponse:
         ollama_models=ollama_models,
         rag_available=rag_available,
         embedding_model=rag_service.embedding_model if rag_available else None,
+    )
+
+
+# =============================================================================
+# Embedding Endpoints
+# =============================================================================
+
+
+@router.post(
+    "/embed/case/{case_id}",
+    response_model=EmbedCaseResponse,
+    summary="Generate embeddings for a case",
+    description="Generate and store vector embeddings for a case and its evidence.",
+)
+async def embed_case(
+    db: DbSession,
+    current_user: CurrentUser,
+    case_id: str = Path(..., description="Case ID (SCOPE-TYPE-SEQ or UUID)"),
+    request: EmbedCaseRequest | None = None,
+) -> EmbedCaseResponse:
+    """
+    Generate vector embeddings for a case.
+
+    This creates embeddings that enable similarity search to find related cases.
+    Embeddings are generated using Ollama's nomic-embed-text model.
+
+    Options:
+    - **include_evidence**: Also generate embeddings for all evidence files (default: true)
+
+    The embedding captures:
+    - Case title, summary, description
+    - Findings and their details
+    - Evidence extracted text (if OCR available)
+    """
+    if request is None:
+        request = EmbedCaseRequest()
+
+    try:
+        # Get case to verify it exists and get UUID
+        case_data = await case_service.get_case(db, case_id)
+        if not case_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Case '{case_id}' not found",
+            )
+
+        case_uuid = case_data["id"]
+
+        if request.include_evidence:
+            # Batch embed case and all evidence
+            result = await embedding_service.batch_embed_case(db, case_uuid)
+        else:
+            # Embed only the case
+            embed_result = await embedding_service.embed_case(db, case_uuid)
+            result = {
+                "case_embedded": embed_result is not None,
+                "evidence_embedded": 0,
+                "errors": [] if embed_result else ["Failed to generate case embedding"],
+            }
+
+        return EmbedCaseResponse(
+            case_id=case_data["case_id"],
+            case_embedded=result["case_embedded"],
+            evidence_embedded=result.get("evidence_embedded", 0),
+            errors=result.get("errors", []),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to embed case {case_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate embeddings: {str(e)}",
+        )
+
+
+@router.get(
+    "/similar-cases/{case_id}",
+    response_model=SimilarCasesResponse,
+    summary="Find similar cases using embeddings",
+    description="Find cases similar to the given case using vector similarity search.",
+)
+async def find_similar_cases_real(
+    db: DbSession,
+    current_user: CurrentUser,
+    case_id: str = Path(..., description="Case ID"),
+    limit: int = Query(5, ge=1, le=20, description="Maximum results"),
+    min_similarity: float = Query(0.5, ge=0.0, le=1.0, description="Minimum similarity"),
+    include_closed: bool = Query(True, description="Include closed cases"),
+    same_scope_only: bool = Query(False, description="Only return cases from same scope"),
+) -> SimilarCasesResponse:
+    """
+    Find cases similar to the given case using vector similarity.
+
+    This uses pgvector cosine similarity to find cases with similar
+    content based on their embeddings. The case must have been embedded
+    first using POST /ai/embed/case/{case_id}.
+
+    Query Parameters:
+    - **limit**: Maximum number of results (default: 5)
+    - **min_similarity**: Minimum similarity score 0-1 (default: 0.5)
+    - **include_closed**: Include closed/archived cases (default: true)
+    - **same_scope_only**: Only return cases from same scope/department (default: false)
+    """
+    try:
+        # Get case UUID
+        case_data = await case_service.get_case(db, case_id)
+        if not case_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Case '{case_id}' not found",
+            )
+
+        case_uuid = case_data["id"]
+        source_scope = case_data.get("scope_code")
+
+        # Find similar cases
+        similar = await embedding_service.find_similar_cases(
+            db=db,
+            case_id=case_uuid,
+            limit=limit,
+            min_similarity=min_similarity,
+            include_closed=include_closed,
+        )
+
+        # Apply same_scope_only filter if requested
+        if same_scope_only and source_scope:
+            similar = [s for s in similar if s.get("scope_code") == source_scope]
+
+        # Convert to response format
+        similar_cases = [
+            SimilarCaseResult(
+                case_id=item["case_id"],
+                title=item["title"],
+                similarity_score=item["similarity"],
+                matching_aspects=[],
+                case_type=item["case_type"],
+                scope=item["scope_code"],
+                severity=item["severity"],
+                status=item["status"],
+            )
+            for item in similar
+        ]
+
+        return SimilarCasesResponse(
+            case_id=case_data["case_id"],
+            similar_cases=similar_cases,
+            total_found=len(similar_cases),
+            search_method="pgvector_cosine",
+            generated_at=datetime.utcnow(),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to find similar cases: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to search similar cases: {str(e)}",
+        )
+
+
+@router.get(
+    "/embeddings/health",
+    response_model=EmbeddingHealthResponse,
+    summary="Check embedding service health",
+    description="Check if the embedding service is available and working.",
+)
+async def check_embedding_health() -> EmbeddingHealthResponse:
+    """
+    Check the health of the embedding service.
+
+    Tests that:
+    - Ollama is accessible
+    - The embedding model is available
+    - Embedding generation works
+    """
+    health = await embedding_service.health_check()
+
+    return EmbeddingHealthResponse(
+        status=health.get("status", "unknown"),
+        ollama_host=health.get("ollama_host", ""),
+        model=health.get("model", ""),
+        dimension=health.get("dimension", 0),
+        embedding_works=health.get("embedding_works", False),
     )

@@ -16,7 +16,7 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.2.3</version>
+    <version>0.2.4</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-15</last_updated>
     <current_phase>2</current_phase>
@@ -1137,7 +1137,7 @@ $$ LANGUAGE plpgsql;
     </feature_group>
 
     <feature_group name="RAG Implementation">
-      <feature id="2.8" status="PENDING">
+      <feature id="2.8" status="COMPLETED">
         <name>Embedding Service</name>
         <description>Generate and store vector embeddings using Ollama</description>
         <priority>5</priority>
@@ -1156,20 +1156,25 @@ $$ LANGUAGE plpgsql;
           <dimension>768</dimension>
         </embedding_config>
       </feature>
-      <feature id="2.9" status="PENDING">
+      <feature id="2.9" status="COMPLETED">
         <name>Similarity Search</name>
         <description>Real vector similarity search for cases</description>
         <priority>5</priority>
+        <completion_date>2026-01-15</completion_date>
         <tasks>
-          <task>Implement cosine similarity query in pgvector</task>
-          <task>Update /api/v1/ai/similar/{case_id} to use real embeddings</task>
-          <task>Return matching cases with similarity scores</task>
-          <task>Add filters (same scope, include closed, min similarity)</task>
+          <task status="done">Implement cosine similarity query in pgvector</task>
+          <task status="done">Update /api/v1/ai/similar/{case_id} to use real embeddings</task>
+          <task status="done">Return matching cases with similarity scores</task>
+          <task status="done">Add filters (same scope, include closed, min similarity)</task>
         </tasks>
-        <files_to_modify>
+        <files_modified>
           <file>api/app/routers/ai.py</file>
-          <file>api/app/services/embedding_service.py</file>
-        </files_to_modify>
+        </files_modified>
+        <endpoints>
+          <endpoint method="GET" path="/api/v1/ai/similar-cases/{case_id}">Find similar cases (query params)</endpoint>
+          <endpoint method="POST" path="/api/v1/ai/similar/{case_id}">Find similar cases (request body)</endpoint>
+        </endpoints>
+        <tested>true</tested>
       </feature>
       <feature id="2.10" status="PENDING">
         <name>AI Case Summarization</name>
@@ -1316,25 +1321,22 @@ $$ LANGUAGE plpgsql;
   <progress>
     <summary>
       <total_features>37</total_features>
-      <completed>17</completed>
+      <completed>21</completed>
       <in_progress>0</in_progress>
-      <pending>20</pending>
-      <completion_percentage>46</completion_percentage>
+      <pending>16</pending>
+      <completion_percentage>57</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
-      <phase number="2" features_total="12" features_completed="5" status="IN_PROGRESS"/>
+      <phase number="2" features_total="12" features_completed="9" status="IN_PROGRESS"/>
       <phase number="3" features_total="13" features_completed="0" status="PENDING"/>
     </phase_status>
 
     <next_steps>
-      <step priority="1" feature_id="2.6">Implement entity extraction</step>
-      <step priority="2" feature_id="2.7">Entity storage and search</step>
-      <step priority="3" feature_id="2.8">Implement embedding service</step>
-      <step priority="4" feature_id="2.9">Similarity search with pgvector</step>
-      <step priority="5" feature_id="2.10">AI case summarization</step>
-      <step priority="6" feature_id="2.11">DOCX Report Generator</step>
+      <step priority="1" feature_id="2.10">AI case summarization</step>
+      <step priority="2" feature_id="2.11">DOCX Report Generator</step>
+      <step priority="3" feature_id="2.12">Report Templates</step>
     </next_steps>
   </progress>
 
@@ -1342,6 +1344,28 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-15" version="0.2.4" phase="2">
+      <changes>
+        <change type="added">Feature 2.8: Embedding Service with Ollama nomic-embed-text</change>
+        <change type="added">POST /api/v1/ai/embed/case/{case_id} - Generate case embeddings</change>
+        <change type="added">GET /api/v1/ai/similar-cases/{case_id} - Find similar cases via pgvector</change>
+        <change type="added">GET /api/v1/ai/embeddings/health - Embedding service health check</change>
+        <change type="added">Text chunking for long documents (8000 char chunks)</change>
+        <change type="added">768-dimension vectors stored in pgvector</change>
+        <change type="fixed">SQL CAST syntax for asyncpg compatibility</change>
+      </changes>
+    </entry>
+    <entry date="2026-01-15" version="0.2.3" phase="2">
+      <changes>
+        <change type="added">Feature 2.6: Entity Extraction Service</change>
+        <change type="added">Feature 2.7: Entity Storage and Search</change>
+        <change type="added">POST /api/v1/entities/extract - Extract entities from text</change>
+        <change type="added">POST /api/v1/entities/store - Store entities for case</change>
+        <change type="added">GET /api/v1/entities/case/{case_id} - List case entities</change>
+        <change type="added">GET /api/v1/entities/search - Cross-case entity search</change>
+        <change type="added">Regex patterns for employee IDs, IPs, emails, hostnames, MACs, USB devices</change>
+      </changes>
+    </entry>
     <entry date="2026-01-14" version="0.2.2" phase="2">
       <changes>
         <change type="added">Feature 2.3: Paperless-ngx Docker service with Redis</change>
