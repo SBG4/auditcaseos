@@ -1369,17 +1369,58 @@ $$ LANGUAGE plpgsql;
         </features>
         <tested>true</tested>
       </feature>
-      <feature id="3.4" status="PENDING">
-        <name>Case Detail Page</name>
-        <description>Full case view with all related data</description>
+      <feature id="3.4" status="COMPLETED">
+        <name>Case Detail Page Enhancements</name>
+        <description>Full case view with AI Analysis tab and report generation</description>
+        <completion_date>2026-01-15</completion_date>
+        <files_modified>
+          <file>frontend/src/pages/CaseDetail.tsx</file>
+        </files_modified>
+        <features>
+          <feature>AI Analysis tab with summary, key points, risk assessment, recommendations</feature>
+          <feature>Report generation with 4 template options (Standard, Executive, Detailed, Compliance)</feature>
+          <feature>Evidence upload functionality with description</feature>
+          <feature>Enhanced overview with Summary and Description cards</feature>
+          <feature>Subject details card (user, computer)</feature>
+          <feature>Statistics card (evidence count, findings count)</feature>
+          <feature>Tags display</feature>
+        </features>
+        <tested>true</tested>
       </feature>
-      <feature id="3.5" status="PENDING">
+      <feature id="3.5" status="COMPLETED">
         <name>Case Create/Edit Form</name>
-        <description>Form for creating and editing cases</description>
+        <description>Form for creating and editing cases with validation</description>
+        <completion_date>2026-01-15</completion_date>
+        <files_modified>
+          <file>frontend/src/pages/CaseCreate.tsx</file>
+        </files_modified>
+        <features>
+          <feature>All required fields (title, summary, scope, type, severity)</feature>
+          <feature>Client-side validation (min length for title/summary)</feature>
+          <feature>Tags input (comma-separated)</feature>
+          <feature>Custom metadata JSON field</feature>
+          <feature>Scope dropdown with all 15 scopes</feature>
+        </features>
+        <tested>true</tested>
       </feature>
-      <feature id="3.6" status="PENDING">
+      <feature id="3.6" status="COMPLETED">
         <name>Reports Page</name>
-        <description>Report generation and history</description>
+        <description>Dedicated page for report generation</description>
+        <completion_date>2026-01-15</completion_date>
+        <files_created>
+          <file>frontend/src/pages/Reports.tsx</file>
+        </files_created>
+        <files_modified>
+          <file>frontend/src/App.tsx - Added route</file>
+        </files_modified>
+        <features>
+          <feature>Template selection cards (Standard, Executive, Detailed, Compliance)</feature>
+          <feature>Case search and filtering</feature>
+          <feature>Case list with status, severity, stats</feature>
+          <feature>One-click report generation per case</feature>
+          <feature>Report information help section</feature>
+        </features>
+        <tested>true</tested>
       </feature>
       <feature id="3.7" status="PENDING">
         <name>Admin Pages</name>
@@ -1424,22 +1465,22 @@ $$ LANGUAGE plpgsql;
   <progress>
     <summary>
       <total_features>37</total_features>
-      <completed>27</completed>
+      <completed>30</completed>
       <in_progress>0</in_progress>
-      <pending>10</pending>
-      <completion_percentage>73</completion_percentage>
+      <pending>7</pending>
+      <completion_percentage>81</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="2" features_total="12" features_completed="12" status="COMPLETED"/>
-      <phase number="3" features_total="13" features_completed="3" status="IN_PROGRESS"/>
+      <phase number="3" features_total="13" features_completed="6" status="IN_PROGRESS"/>
     </phase_status>
 
     <next_steps>
-      <step priority="1" feature_id="3.4">Case Detail Page enhancements</step>
-      <step priority="2" feature_id="3.5">Case Create/Edit Form improvements</step>
-      <step priority="3" feature_id="3.6">Reports Page</step>
+      <step priority="1" feature_id="3.7">Admin Pages (user management)</step>
+      <step priority="2" feature_id="3.8">Nextcloud Integration</step>
+      <step priority="3" feature_id="3.9">ONLYOFFICE Integration</step>
     </next_steps>
   </progress>
 
@@ -1447,6 +1488,20 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-15" version="0.4.1" phase="3">
+      <changes>
+        <change type="added">Feature 3.4: Case Detail Page Enhancements with AI Analysis tab</change>
+        <change type="added">Feature 3.5: Case Create/Edit Form improvements with validation</change>
+        <change type="added">Feature 3.6: Reports Page with template selection and one-click generation</change>
+        <change type="added">AI Analysis tab showing summary, key points, risk assessment, recommendations</change>
+        <change type="added">Report generation from Case Detail page with 4 templates</change>
+        <change type="added">Evidence upload functionality with description</change>
+        <change type="added">Reports page route (/reports)</change>
+        <change type="fixed">Fixed 400 error on case creation - added missing scopes to database</change>
+        <change type="fixed">Fixed TypeScript build errors (unused imports)</change>
+        <change type="milestone">Phase 3 progress: 6/13 features complete (46%)</change>
+      </changes>
+    </entry>
     <entry date="2026-01-15" version="0.4.0" phase="3">
       <changes>
         <change type="added">Feature 3.1: React Frontend Setup with Vite, TypeScript, TailwindCSS</change>
