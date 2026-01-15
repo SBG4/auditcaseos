@@ -395,9 +395,8 @@ class NextcloudService:
         Returns:
             URL to the case folder in Nextcloud web interface
         """
-        # External URL for browser access
-        external_url = settings.nextcloud_url.replace("http://nextcloud", "http://localhost:18081")
-        return f"{external_url}/apps/files/?dir=/AuditCases/{case_id}"
+        # External URL for browser access (from config, not string replacement)
+        return f"{settings.nextcloud_external_url}/apps/files/?dir=/AuditCases/{case_id}"
 
 
 # Singleton instance

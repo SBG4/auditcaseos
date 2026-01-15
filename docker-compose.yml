@@ -123,12 +123,18 @@ services:
       MINIO_BUCKET: ${MINIO_BUCKET:-evidence}
       OLLAMA_HOST: http://ollama:11434
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      # INTERNAL: API to Paperless server-to-server
       PAPERLESS_URL: http://paperless:8000
       PAPERLESS_API_TOKEN: ${PAPERLESS_API_TOKEN:-}
+      # INTERNAL: API to Nextcloud server-to-server
       NEXTCLOUD_URL: http://nextcloud
+      # EXTERNAL: Browser access to Nextcloud (for edit URLs)
+      NEXTCLOUD_EXTERNAL_URL: ${NEXTCLOUD_EXTERNAL_URL:-http://localhost:18081}
       NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER:-admin}
       NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD:-admin123}
-      ONLYOFFICE_URL: http://localhost:18082
+      # EXTERNAL: Browser access to ONLYOFFICE Document Server
+      ONLYOFFICE_URL: ${ONLYOFFICE_EXTERNAL_URL:-http://localhost:18082}
+      # INTERNAL: API/Nextcloud to ONLYOFFICE server-to-server
       ONLYOFFICE_INTERNAL_URL: http://onlyoffice
       ONLYOFFICE_JWT_SECRET: ${ONLYOFFICE_JWT_SECRET:-auditcaseos-onlyoffice-secret}
     ports:

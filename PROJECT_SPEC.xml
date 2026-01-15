@@ -16,7 +16,7 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.4.7</version>
+    <version>0.4.8</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-15</last_updated>
     <current_phase>3</current_phase>
@@ -627,13 +627,15 @@ NOTES:
     </stack>
 
     <ports>
-      <port service="api" external="18000" internal="8000"/>
-      <port service="postgres" external="15432" internal="5432"/>
-      <port service="minio_api" external="19000" internal="9000"/>
-      <port service="minio_console" external="19001" internal="9001"/>
-      <port service="ollama" external="21434" internal="11434"/>
-      <port service="paperless" external="18080" internal="8000"/>
-      <port service="frontend" external="13000" internal="80"/>
+      <port service="frontend" external="13000" internal="80" description="React SPA"/>
+      <port service="api" external="18000" internal="8000" description="FastAPI backend"/>
+      <port service="postgres" external="15432" internal="5432" description="PostgreSQL + pgvector"/>
+      <port service="minio_api" external="19000" internal="9000" description="MinIO S3 API"/>
+      <port service="minio_console" external="19001" internal="9001" description="MinIO Web Console"/>
+      <port service="ollama" external="21434" internal="11434" description="Ollama LLM API"/>
+      <port service="paperless" external="18080" internal="8000" description="Paperless-ngx OCR"/>
+      <port service="nextcloud" external="18081" internal="80" description="Nextcloud file collaboration"/>
+      <port service="onlyoffice" external="18082" internal="80" description="ONLYOFFICE Document Server"/>
     </ports>
 
     <directory_structure>
@@ -726,6 +728,207 @@ auditcaseos/
     └── sample-policy.md
       ]]>
     </directory_structure>
+
+    <!-- ============================================== -->
+    <!-- IMPLEMENTATION GUIDELINES & CONSTRAINTS        -->
+    <!-- ============================================== -->
+    <implementation_guidelines>
+      <purpose>
+        These guidelines MUST be followed to prevent common implementation failures.
+        They are derived from actual bugs encountered during development.
+      </purpose>
+
+      <!-- URL ARCHITECTURE -->
+      <url_architecture>
+        <principle>ALWAYS distinguish between INTERNAL (Docker) and EXTERNAL (browser) URLs</principle>
+
+        <internal_urls description="Server-to-server communication within Docker network">
+          <url service="postgres">postgres:5432</url>
+          <url service="minio">minio:9000</url>
+          <url service="redis">redis:6379</url>
+          <url service="ollama">http://ollama:11434</url>
+          <url service="paperless">http://paperless:8000</url>
+          <url service="nextcloud">http://nextcloud</url>
+          <url service="onlyoffice">http://onlyoffice</url>
+          <url service="api">http://api:8000</url>
+        </internal_urls>
+
+        <external_urls description="Browser/user access from host machine">
+          <url service="postgres">localhost:15432</url>
+          <url service="minio_api">localhost:19000</url>
+          <url service="minio_console">localhost:19001</url>
+          <url service="ollama">localhost:21434</url>
+          <url service="paperless">localhost:18080</url>
+          <url service="nextcloud">localhost:18081</url>
+          <url service="onlyoffice">localhost:18082</url>
+          <url service="api">localhost:18000</url>
+          <url service="frontend">localhost:13000</url>
+        </external_urls>
+
+        <rules>
+          <rule id="URL-1" severity="CRITICAL">
+            Backend services (running in containers) MUST use INTERNAL URLs for server-to-server communication.
+            Example: API calling Nextcloud uses "http://nextcloud", NOT "http://localhost:18081"
+          </rule>
+          <rule id="URL-2" severity="CRITICAL">
+            URLs returned to browsers/frontend MUST use EXTERNAL URLs.
+            Example: ONLYOFFICE edit URL uses "http://localhost:18082", NOT "http://onlyoffice"
+          </rule>
+          <rule id="URL-3" severity="HIGH">
+            NEVER hardcode URLs in service code. Always use config/environment variables.
+          </rule>
+          <rule id="URL-4" severity="HIGH">
+            NEVER use string replacement to convert internal to external URLs.
+            Bad: url.replace("http://nextcloud", "http://localhost:18081")
+            Good: settings.nextcloud_external_url
+          </rule>
+          <rule id="URL-5" severity="MEDIUM">
+            Default values in config.py should use INTERNAL Docker URLs, not localhost.
+            Environment variables in docker-compose.yml override with correct values.
+          </rule>
+        </rules>
+      </url_architecture>
+
+      <!-- ONLYOFFICE SPECIFIC -->
+      <onlyoffice_configuration>
+        <description>ONLYOFFICE has THREE distinct URL configurations that MUST be correct</description>
+
+        <setting name="DocumentServerUrl" type="EXTERNAL">
+          <purpose>URL browsers use to load ONLYOFFICE editor JavaScript</purpose>
+          <correct>http://localhost:18082 (or production domain)</correct>
+          <wrong>http://onlyoffice (browsers cannot resolve Docker DNS)</wrong>
+        </setting>
+
+        <setting name="DocumentServerInternalUrl" type="INTERNAL">
+          <purpose>URL Nextcloud server uses to communicate with ONLYOFFICE</purpose>
+          <correct>http://onlyoffice</correct>
+          <wrong>http://localhost:18082 (container cannot reach host localhost)</wrong>
+        </setting>
+
+        <setting name="StorageUrl" type="INTERNAL">
+          <purpose>URL ONLYOFFICE uses to fetch files from Nextcloud</purpose>
+          <correct>http://nextcloud</correct>
+          <wrong>http://localhost:18081 (container cannot reach host localhost)</wrong>
+        </setting>
+
+        <jwt_configuration>
+          <requirement>JWT secret MUST match between ONLYOFFICE server and Nextcloud connector</requirement>
+          <env_var>ONLYOFFICE_JWT_SECRET</env_var>
+          <default>auditcaseos-onlyoffice-secret</default>
+        </jwt_configuration>
+
+        <edit_url_format>
+          <correct>/index.php/apps/onlyoffice/{fileId}</correct>
+          <wrong>/apps/onlyoffice/{filePath}</wrong>
+          <note>Use Nextcloud file ID (integer), not file path. Get ID via WebDAV PROPFIND.</note>
+        </edit_url_format>
+      </onlyoffice_configuration>
+
+      <!-- NGINX CONFIGURATION -->
+      <nginx_guidelines>
+        <rule id="NGINX-1" severity="CRITICAL">
+          Set client_max_body_size for file uploads. Default 1MB is too small.
+          Recommended: client_max_body_size 100M;
+        </rule>
+        <rule id="NGINX-2" severity="HIGH">
+          For large file uploads, disable buffering:
+          proxy_request_buffering off;
+          proxy_buffering off;
+        </rule>
+        <rule id="NGINX-3" severity="MEDIUM">
+          Use internal Docker DNS for proxy_pass:
+          proxy_pass http://api:8000; (NOT http://localhost:18000)
+        </rule>
+      </nginx_guidelines>
+
+      <!-- TESTING REQUIREMENTS -->
+      <testing_requirements>
+        <rule id="TEST-1" severity="CRITICAL">
+          Test BOTH API responses AND actual browser functionality.
+          API tests can pass while browser experience is broken.
+        </rule>
+        <rule id="TEST-2" severity="HIGH">
+          For features with external URLs (ONLYOFFICE, Nextcloud links):
+          - Verify the URL is accessible from a browser
+          - Verify the URL resolves correctly
+          - Verify the action completes (document opens, file downloads)
+        </rule>
+        <rule id="TEST-3" severity="HIGH">
+          Test file upload with files &gt;1MB, &gt;10MB, and &gt;50MB.
+          nginx limits are often forgotten.
+        </rule>
+        <rule id="TEST-4" severity="MEDIUM">
+          After any URL configuration change, restart affected containers
+          and clear browser cache before testing.
+        </rule>
+      </testing_requirements>
+
+      <!-- CONFIGURATION MANAGEMENT -->
+      <configuration_management>
+        <rule id="CONFIG-1" severity="CRITICAL">
+          ALL external URLs must be configurable via environment variables.
+          This allows deployment to different environments without code changes.
+        </rule>
+        <rule id="CONFIG-2" severity="HIGH">
+          Environment variables in docker-compose.yml:
+          - INTERNAL URLs: Hardcode (they're always the same in Docker)
+          - EXTERNAL URLs: Use ${VAR:-default} pattern for flexibility
+        </rule>
+        <rule id="CONFIG-3" severity="MEDIUM">
+          Document which URLs are INTERNAL vs EXTERNAL in config.py comments.
+        </rule>
+      </configuration_management>
+
+      <!-- COMMON FAILURE PATTERNS TO AVOID -->
+      <failure_patterns>
+        <pattern name="localhost-in-container" severity="CRITICAL">
+          <description>Using localhost URLs in backend services running in containers</description>
+          <symptom>Service timeouts, connection refused errors</symptom>
+          <cause>localhost inside container refers to container itself, not host</cause>
+          <fix>Use Docker service names (e.g., http://nextcloud instead of http://localhost:18081)</fix>
+        </pattern>
+
+        <pattern name="internal-url-to-browser" severity="CRITICAL">
+          <description>Returning Docker internal URLs to frontend/browser</description>
+          <symptom>Browser shows "cannot connect" or DNS resolution failure</symptom>
+          <cause>Browsers cannot resolve Docker DNS names like "http://onlyoffice"</cause>
+          <fix>Return external URLs (e.g., http://localhost:18082) for browser consumption</fix>
+        </pattern>
+
+        <pattern name="string-replacement-urls" severity="HIGH">
+          <description>Converting URLs via string replacement</description>
+          <symptom>URLs break when format changes, HTTPS added, or ports differ</symptom>
+          <cause>Fragile string manipulation instead of proper configuration</cause>
+          <fix>Use separate config variables for internal and external URLs</fix>
+        </pattern>
+
+        <pattern name="hardcoded-ports" severity="HIGH">
+          <description>Hardcoding port numbers in service code</description>
+          <symptom>App breaks when deployed with different port mappings</symptom>
+          <cause>Ports embedded as literals instead of configuration</cause>
+          <fix>All external ports should come from environment variables</fix>
+        </pattern>
+
+        <pattern name="missing-nginx-limits" severity="HIGH">
+          <description>Not configuring nginx body size limits</description>
+          <symptom>413 Request Entity Too Large for file uploads</symptom>
+          <cause>nginx default client_max_body_size is 1MB</cause>
+          <fix>Set client_max_body_size in both server and location blocks</fix>
+        </pattern>
+      </failure_patterns>
+
+      <!-- CHECKLIST FOR NEW FEATURES -->
+      <implementation_checklist>
+        <item>[ ] All URLs in code come from configuration, not hardcoded</item>
+        <item>[ ] Internal URLs use Docker service names (http://service-name)</item>
+        <item>[ ] External URLs returned to browser use localhost:PORT or domain</item>
+        <item>[ ] Environment variables added to docker-compose.yml for external URLs</item>
+        <item>[ ] nginx configured with appropriate body size limits if uploading files</item>
+        <item>[ ] Tests verify actual browser functionality, not just API responses</item>
+        <item>[ ] Documentation updated with any new configuration requirements</item>
+        <item>[ ] Tested with container restart to ensure config persists</item>
+      </implementation_checklist>
+    </implementation_guidelines>
   </architecture>
 
   <!-- ============================================== -->
@@ -1620,6 +1823,22 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-15" version="0.4.8" phase="3">
+      <changes>
+        <change type="added">Comprehensive Implementation Guidelines section in PROJECT_SPEC.xml</change>
+        <change type="added">URL Architecture documentation (internal vs external URLs)</change>
+        <change type="added">ONLYOFFICE configuration documentation (3 URL types explained)</change>
+        <change type="added">Common failure patterns documentation with fixes</change>
+        <change type="added">Implementation checklist for new features</change>
+        <change type="fixed">config.py defaults now use internal Docker URLs (minio:9000, ollama:11434, etc.)</change>
+        <change type="fixed">Added nextcloud_external_url setting for browser URLs</change>
+        <change type="fixed">Removed hardcoded external URL from onlyoffice_service.py</change>
+        <change type="fixed">Removed string replacement hack from nextcloud_service.py</change>
+        <change type="improved">docker-compose.yml now documents INTERNAL vs EXTERNAL URLs</change>
+        <change type="improved">All external URLs configurable via environment variables</change>
+        <change type="milestone">Architecture hardening - eliminated URL configuration anti-patterns</change>
+      </changes>
+    </entry>
     <entry date="2026-01-15" version="0.4.7" phase="3">
       <changes>
         <change type="fixed">Large file uploads (100MB) via nginx client_max_body_size and disabled buffering</change>

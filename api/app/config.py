@@ -49,26 +49,34 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://auditcaseos:auditcaseos_secret@postgres:5432/auditcaseos"
 
     # MinIO settings
-    minio_endpoint: str = "localhost:9000"
+    # INTERNAL: Used by API container to reach MinIO
+    minio_endpoint: str = "minio:9000"
     minio_access_key: str = "minioadmin"
     minio_secret_key: str = "minioadmin"
     minio_bucket: str = "evidence"
     minio_secure: bool = False
 
     # Ollama settings
-    ollama_host: str = "http://localhost:11434"
+    # INTERNAL: Used by API container to reach Ollama
+    ollama_host: str = "http://ollama:11434"
 
     # Paperless-ngx settings
-    paperless_url: str = "http://localhost:18080"
+    # INTERNAL: Used by API container to reach Paperless
+    paperless_url: str = "http://paperless:8000"
     paperless_api_token: str = ""
 
     # Nextcloud settings
-    nextcloud_url: str = "http://localhost:18081"
+    # INTERNAL: Used by API container for server-to-server communication
+    nextcloud_url: str = "http://nextcloud"
+    # EXTERNAL: Used by browsers to access Nextcloud (set via NEXTCLOUD_EXTERNAL_URL env var)
+    nextcloud_external_url: str = "http://localhost:18081"
     nextcloud_admin_user: str = "admin"
     nextcloud_admin_password: str = "admin123"
 
     # ONLYOFFICE settings
+    # EXTERNAL: Used by browsers to access ONLYOFFICE Document Server
     onlyoffice_url: str = "http://localhost:18082"
+    # INTERNAL: Used by API/Nextcloud for server-to-server communication
     onlyoffice_internal_url: str = "http://onlyoffice"
     onlyoffice_jwt_secret: str = "auditcaseos-onlyoffice-secret"
 

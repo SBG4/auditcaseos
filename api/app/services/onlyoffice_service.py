@@ -16,11 +16,15 @@ class OnlyOfficeService:
 
     def __init__(self):
         """Initialize ONLYOFFICE service with configuration."""
-        self.external_url = settings.onlyoffice_url  # For browser access
-        self.internal_url = settings.onlyoffice_internal_url  # For server-to-server
+        # EXTERNAL: For browser access to ONLYOFFICE
+        self.external_url = settings.onlyoffice_url
+        # INTERNAL: For API server-to-server communication with ONLYOFFICE
+        self.internal_url = settings.onlyoffice_internal_url
         self.jwt_secret = settings.onlyoffice_jwt_secret
-        self.nextcloud_internal_url = settings.nextcloud_url  # Internal Nextcloud URL
-        self.nextcloud_external_url = "http://localhost:18081"  # External Nextcloud URL
+        # INTERNAL: For API server-to-server communication with Nextcloud
+        self.nextcloud_internal_url = settings.nextcloud_url
+        # EXTERNAL: For browser access to Nextcloud (from config, not hardcoded)
+        self.nextcloud_external_url = settings.nextcloud_external_url
         self.nextcloud_user = settings.nextcloud_admin_user
         self.nextcloud_pass = settings.nextcloud_admin_password
 
