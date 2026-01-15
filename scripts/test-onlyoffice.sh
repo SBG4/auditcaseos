@@ -152,7 +152,7 @@ run_test "ONLYOFFICE app installed in Nextcloud" "1" "$response"
 
 # Check ONLYOFFICE config in Nextcloud
 response=$(docker exec -u www-data auditcaseos-nextcloud php occ config:app:get onlyoffice DocumentServerUrl 2>/dev/null || echo "error")
-run_test "Nextcloud ONLYOFFICE URL configured" "onlyoffice" "$response"
+run_test "Nextcloud ONLYOFFICE URL configured" "localhost:18082" "$response"
 
 response=$(docker exec -u www-data auditcaseos-nextcloud php occ config:app:get onlyoffice jwt_secret 2>/dev/null || echo "error")
 run_test "Nextcloud ONLYOFFICE JWT secret configured" "auditcaseos-onlyoffice-secret" "$response"

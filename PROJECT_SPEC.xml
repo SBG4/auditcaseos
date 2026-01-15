@@ -16,7 +16,7 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.4.6</version>
+    <version>0.4.7</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-15</last_updated>
     <current_phase>3</current_phase>
@@ -1620,6 +1620,15 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-15" version="0.4.7" phase="3">
+      <changes>
+        <change type="fixed">Large file uploads (100MB) via nginx client_max_body_size and disabled buffering</change>
+        <change type="fixed">ONLYOFFICE edit URL now uses Nextcloud file ID for direct document editing</change>
+        <change type="fixed">ONLYOFFICE connectivity - DocumentServerUrl uses external URL for browser access</change>
+        <change type="improved">WebDAV PROPFIND to fetch file IDs from Nextcloud</change>
+        <change type="improved">Fallback to directory URL when file ID unavailable</change>
+      </changes>
+    </entry>
     <entry date="2026-01-15" version="0.4.6" phase="3">
       <changes>
         <change type="added">Feature 3.9: ONLYOFFICE Integration for in-browser document editing</change>
