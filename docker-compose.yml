@@ -182,10 +182,17 @@ services:
       NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD:-admin123}
       NEXTCLOUD_TRUSTED_DOMAINS: "localhost localhost:18081 nextcloud onlyoffice"
       OVERWRITEPROTOCOL: http
+      # ONLYOFFICE configuration environment vars (for configure-onlyoffice.sh)
+      ONLYOFFICE_URL: ${ONLYOFFICE_EXTERNAL_URL:-http://localhost:18082}
+      ONLYOFFICE_INTERNAL_URL: http://onlyoffice
+      # CRITICAL: StorageUrl MUST have trailing slash to avoid URL concatenation bug
+      NEXTCLOUD_INTERNAL_URL: http://nextcloud/
+      ONLYOFFICE_JWT_SECRET: ${ONLYOFFICE_JWT_SECRET:-auditcaseos-onlyoffice-secret}
     volumes:
       - nextcloud_data:/var/www/html
       - nextcloud_apps:/var/www/html/custom_apps
       - nextcloud_config:/var/www/html/config
+      - ./configs/nextcloud/configure-onlyoffice.sh:/configure-onlyoffice.sh:ro
     ports:
       - "18081:80"
     depends_on:
