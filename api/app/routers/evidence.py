@@ -24,6 +24,7 @@ from app.schemas.common import BaseSchema, MessageResponse, TimestampMixin
 from app.services.audit_service import audit_service
 from app.services.case_service import case_service
 from app.services.storage_service import storage_service
+from app.services.nextcloud_service import nextcloud_service
 
 logger = logging.getLogger(__name__)
 
@@ -196,6 +197,18 @@ async def upload_evidence(
             new_values={"file_name": file.filename, "case_id": case_data["case_id"]},
             user_ip=client_ip,
         )
+
+        # Sync to Nextcloud (non-blocking - don't fail upload if NC is unavailable)
+        try:
+            nc_path = f"AuditCases/{case_data['case_id']}/Evidence/{file.filename or 'unknown'}"
+            await nextcloud_service.upload_file(
+                path=nc_path,
+                content=file_content,
+                content_type=file.content_type or "application/octet-stream",
+            )
+            logger.info(f"Evidence synced to Nextcloud: {nc_path}")
+        except Exception as nc_error:
+            logger.warning(f"Failed to sync evidence to Nextcloud (non-fatal): {nc_error}")
 
         now = datetime.utcnow()
         return EvidenceUploadResponse(
@@ -474,4 +487,267 @@ async def delete_evidence(
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete evidence",
+        )
+
+
+# =============================================================================
+# Sync Endpoints
+# =============================================================================
+
+
+class SyncResponse(BaseSchema):
+    """Response for sync operations."""
+
+    success: bool
+    message: str
+    synced_count: int = 0
+    failed_count: int = 0
+    details: list[dict[str, Any]] = []
+
+
+@router.post(
+    "/cases/{case_id}/sync-to-nextcloud",
+    response_model=SyncResponse,
+    summary="Sync evidence to Nextcloud",
+    description="Sync all case evidence files from MinIO to Nextcloud Evidence folder.",
+)
+async def sync_evidence_to_nextcloud(
+    db: DbSession,
+    current_user: CurrentUser,
+    case_id: str = Path(..., description="Case ID"),
+) -> SyncResponse:
+    """
+    Sync all evidence files for a case to Nextcloud.
+
+    Downloads files from MinIO and uploads to Nextcloud AuditCases/{case_id}/Evidence/
+    """
+    try:
+        # Verify case exists
+        case_data = await case_service.get_case(db, case_id)
+        if not case_data:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail=f"Case with ID '{case_id}' not found",
+            )
+
+        case_uuid = case_data["id"]
+
+        # Get all evidence for case
+        query = text("SELECT * FROM evidence WHERE case_id = :case_uuid")
+        result = await db.execute(query, {"case_uuid": str(case_uuid)})
+        rows = result.fetchall()
+
+        if not rows:
+            return SyncResponse(
+                success=True,
+                message="No evidence files to sync",
+                synced_count=0,
+                failed_count=0,
+            )
+
+        synced = []
+        failed = []
+
+        for row in rows:
+            evidence = dict(row._mapping)
+            try:
+                # Download from MinIO
+                file_content = await storage_service.download_file(evidence["file_path"])
+
+                # Upload to Nextcloud
+                nc_path = f"AuditCases/{case_data['case_id']}/Evidence/{evidence['file_name']}"
+                success = await nextcloud_service.upload_file(
+                    path=nc_path,
+                    content=file_content,
+                    content_type=evidence.get("mime_type", "application/octet-stream"),
+                )
+
+                if success:
+                    synced.append({
+                        "evidence_id": str(evidence["id"]),
+                        "file_name": evidence["file_name"],
+                        "nc_path": nc_path,
+                    })
+                else:
+                    failed.append({
+                        "evidence_id": str(evidence["id"]),
+                        "file_name": evidence["file_name"],
+                        "error": "Upload to Nextcloud failed",
+                    })
+
+            except Exception as e:
+                logger.error(f"Failed to sync evidence {evidence['id']}: {e}")
+                failed.append({
+                    "evidence_id": str(evidence["id"]),
+                    "file_name": evidence["file_name"],
+                    "error": str(e),
+                })
+
+        return SyncResponse(
+            success=len(failed) == 0,
+            message=f"Synced {len(synced)} files, {len(failed)} failed",
+            synced_count=len(synced),
+            failed_count=len(failed),
+            details=synced + failed,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to sync evidence to Nextcloud: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to sync evidence: {str(e)}",
+        )
+
+
+@router.post(
+    "/cases/{case_id}/import-from-nextcloud",
+    response_model=SyncResponse,
+    summary="Import files from Nextcloud",
+    description="Import files from Nextcloud Evidence folder into AuditCaseOS evidence.",
+)
+async def import_evidence_from_nextcloud(
+    db: DbSession,
+    request: Request,
+    current_user: CurrentUser,
+    case_id: str = Path(..., description="Case ID"),
+) -> SyncResponse:
+    """
+    Import files from Nextcloud Evidence folder into AuditCaseOS.
+
+    Lists files in Nextcloud AuditCases/{case_id}/Evidence/ and creates
+    Evidence records for files not already in the database.
+    """
+    try:
+        # Verify case exists
+        case_data = await case_service.get_case(db, case_id)
+        if not case_data:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail=f"Case with ID '{case_id}' not found",
+            )
+
+        case_uuid = case_data["id"]
+        user_id = current_user["id"]
+
+        # Get existing evidence file names
+        query = text("SELECT file_name FROM evidence WHERE case_id = :case_uuid")
+        result = await db.execute(query, {"case_uuid": str(case_uuid)})
+        existing_files = {row.file_name for row in result.fetchall()}
+
+        # List files in Nextcloud Evidence folder
+        nc_path = f"AuditCases/{case_data['case_id']}/Evidence"
+        nc_files = await nextcloud_service.list_folder(nc_path)
+
+        if not nc_files:
+            return SyncResponse(
+                success=True,
+                message="No files found in Nextcloud Evidence folder",
+                synced_count=0,
+                failed_count=0,
+            )
+
+        imported = []
+        failed = []
+        skipped = []
+
+        for nc_file in nc_files:
+            # Skip directories
+            if nc_file.get("is_directory", False):
+                continue
+
+            file_name = nc_file.get("name", "")
+            if not file_name:
+                continue
+
+            # Skip if already exists
+            if file_name in existing_files:
+                skipped.append({"file_name": file_name, "reason": "Already exists"})
+                continue
+
+            try:
+                # Download from Nextcloud
+                file_path = f"{nc_path}/{file_name}"
+                file_content = await nextcloud_service.download_file(file_path)
+
+                if file_content is None:
+                    failed.append({
+                        "file_name": file_name,
+                        "error": "Failed to download from Nextcloud",
+                    })
+                    continue
+
+                # Compute hash
+                file_hash = hashlib.sha256(file_content).hexdigest()
+                file_size = len(file_content)
+
+                # Upload to MinIO
+                storage_path = await storage_service.upload_file(
+                    case_id=case_data["case_id"],
+                    file=file_content,
+                    filename=file_name,
+                    content_type=nc_file.get("content_type", "application/octet-stream"),
+                )
+
+                # Insert into database
+                insert_query = text("""
+                    INSERT INTO evidence (case_id, file_name, file_path, file_size, mime_type, file_hash, description, uploaded_by)
+                    VALUES (:case_id, :file_name, :file_path, :file_size, :mime_type, :file_hash, :description, :uploaded_by)
+                    RETURNING id
+                """)
+                result = await db.execute(insert_query, {
+                    "case_id": str(case_uuid),
+                    "file_name": file_name,
+                    "file_path": storage_path,
+                    "file_size": file_size,
+                    "mime_type": nc_file.get("content_type", "application/octet-stream"),
+                    "file_hash": file_hash,
+                    "description": f"Imported from Nextcloud on {datetime.utcnow().isoformat()}",
+                    "uploaded_by": str(user_id),
+                })
+                await db.commit()
+
+                row = result.fetchone()
+                evidence_id = row.id if row else None
+
+                # Log audit event
+                client_ip = request.client.host if request.client else None
+                await audit_service.log_create(
+                    db=db,
+                    entity_type="evidence",
+                    entity_id=evidence_id,
+                    user_id=user_id,
+                    new_values={"file_name": file_name, "case_id": case_data["case_id"], "source": "nextcloud"},
+                    user_ip=client_ip,
+                )
+
+                imported.append({
+                    "evidence_id": str(evidence_id),
+                    "file_name": file_name,
+                    "file_size": file_size,
+                })
+
+            except Exception as e:
+                logger.error(f"Failed to import {file_name} from Nextcloud: {e}")
+                failed.append({
+                    "file_name": file_name,
+                    "error": str(e),
+                })
+
+        return SyncResponse(
+            success=len(failed) == 0,
+            message=f"Imported {len(imported)} files, {len(failed)} failed, {len(skipped)} skipped",
+            synced_count=len(imported),
+            failed_count=len(failed),
+            details=imported + failed + skipped,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to import evidence from Nextcloud: {e}")
+        raise HTTPException(
+            status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to import evidence: {str(e)}",
         )

@@ -16,7 +16,7 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.4.3</version>
+    <version>0.4.5</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-15</last_updated>
     <current_phase>3</current_phase>
@@ -1523,6 +1523,32 @@ $$ LANGUAGE plpgsql;
         <name>Advanced Search</name>
         <description>Full-text and semantic search across all content</description>
       </feature>
+      <feature id="3.14" status="COMPLETED">
+        <name>Evidence-Nextcloud Bidirectional Sync</name>
+        <description>Automatic sync between MinIO evidence storage and Nextcloud collaboration folders</description>
+        <completion_date>2026-01-15</completion_date>
+        <files_created>
+          <file>scripts/test-evidence-sync.sh - Comprehensive 24-test suite for sync</file>
+        </files_created>
+        <files_modified>
+          <file>api/app/routers/evidence.py - Added sync endpoints and auto-sync on upload</file>
+          <file>api/app/routers/nextcloud.py - Added files field to list responses</file>
+        </files_modified>
+        <features>
+          <feature>Evidence auto-sync to Nextcloud on upload</feature>
+          <feature>Manual sync endpoint: POST /evidence/cases/{case_id}/sync-to-nextcloud</feature>
+          <feature>Import from Nextcloud: POST /evidence/cases/{case_id}/import-from-nextcloud</feature>
+          <feature>Files uploaded to Nextcloud can be imported as evidence</feature>
+          <feature>Skip already-imported files (deduplication)</feature>
+          <feature>Audit logging for imported evidence</feature>
+        </features>
+        <api_endpoints>
+          <endpoint method="POST" path="/api/v1/evidence/cases/{case_id}/sync-to-nextcloud">Sync all evidence to Nextcloud</endpoint>
+          <endpoint method="POST" path="/api/v1/evidence/cases/{case_id}/import-from-nextcloud">Import files from Nextcloud</endpoint>
+        </api_endpoints>
+        <test_script>scripts/test-evidence-sync.sh (24 tests)</test_script>
+        <tested>true</tested>
+      </feature>
     </feature_group>
   </phase>
 
@@ -1531,17 +1557,17 @@ $$ LANGUAGE plpgsql;
   <!-- ============================================== -->
   <progress>
     <summary>
-      <total_features>37</total_features>
-      <completed>32</completed>
+      <total_features>38</total_features>
+      <completed>33</completed>
       <in_progress>0</in_progress>
       <pending>5</pending>
-      <completion_percentage>86</completion_percentage>
+      <completion_percentage>87</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="2" features_total="12" features_completed="12" status="COMPLETED"/>
-      <phase number="3" features_total="13" features_completed="8" status="IN_PROGRESS"/>
+      <phase number="3" features_total="14" features_completed="9" status="IN_PROGRESS"/>
     </phase_status>
 
     <next_steps>
@@ -1555,6 +1581,20 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-15" version="0.4.5" phase="3">
+      <changes>
+        <change type="added">Feature 3.14: Evidence-Nextcloud Bidirectional Sync</change>
+        <change type="added">Auto-sync evidence to Nextcloud on upload</change>
+        <change type="added">POST /api/v1/evidence/cases/{case_id}/sync-to-nextcloud - Manual sync all evidence</change>
+        <change type="added">POST /api/v1/evidence/cases/{case_id}/import-from-nextcloud - Import from Nextcloud</change>
+        <change type="added">scripts/test-evidence-sync.sh - Comprehensive 24-test sync test suite</change>
+        <change type="added">Files uploaded directly to Nextcloud can be imported as evidence</change>
+        <change type="added">Deduplication - skips already-imported files</change>
+        <change type="added">Audit logging for all imported evidence</change>
+        <change type="fixed">Evidence now syncs to Nextcloud Evidence folder automatically</change>
+        <change type="milestone">Evidence-Nextcloud bidirectional sync complete - 43 total tests pass</change>
+      </changes>
+    </entry>
     <entry date="2026-01-15" version="0.4.3" phase="3">
       <changes>
         <change type="added">Feature 3.8: Nextcloud Integration for file collaboration</change>
@@ -1730,10 +1770,13 @@ $$ LANGUAGE plpgsql;
       <command name="Start services">docker compose up -d</command>
       <command name="View logs">docker compose logs -f api</command>
       <command name="Rebuild API">docker compose up -d --build api</command>
+      <command name="Rebuild Frontend">docker compose up -d --build frontend</command>
       <command name="Stop services">docker compose down</command>
       <command name="Reset data">docker compose down -v</command>
       <command name="Access DB">docker exec -it auditcaseos-db psql -U auditcaseos -d auditcaseos</command>
       <command name="Pull Ollama model">docker exec -it auditcaseos-ollama ollama pull llama3.2</command>
+      <command name="Run all tests">bash scripts/test-all.sh</command>
+      <command name="Run sync tests">bash scripts/test-evidence-sync.sh</command>
     </commands>
 
     <urls>
@@ -1750,7 +1793,13 @@ $$ LANGUAGE plpgsql;
       <credential service="PostgreSQL" user="auditcaseos" pass="auditcaseos_secret"/>
       <credential service="Paperless" user="admin" pass="admin123"/>
       <credential service="Nextcloud" user="admin" pass="admin123"/>
-      <credential service="API (default admin)" user="admin" pass="admin123"/>
+      <credential service="API (default admin)" user="admin@example.com" pass="admin123"/>
     </credentials>
+
+    <testing>
+      <test_script name="Comprehensive tests">scripts/test-all.sh (19 tests)</test_script>
+      <test_script name="Evidence-Nextcloud sync">scripts/test-evidence-sync.sh (24 tests)</test_script>
+      <total_tests>43</total_tests>
+    </testing>
   </quick_reference>
 </project>

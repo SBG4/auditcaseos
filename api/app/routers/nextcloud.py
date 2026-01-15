@@ -64,6 +64,7 @@ class FolderListResponse(BaseModel):
 
     path: str
     items: list[FileItem]
+    files: list[FileItem] = []  # Alias for items
     count: int
 
 
@@ -160,9 +161,11 @@ async def list_folder(
 ) -> FolderListResponse:
     """List contents of a Nextcloud folder."""
     items = await nextcloud_service.list_folder(path)
+    file_items = [FileItem(**item) for item in items]
     return FolderListResponse(
         path=path,
-        items=[FileItem(**item) for item in items],
+        items=file_items,
+        files=file_items,
         count=len(items),
     )
 
@@ -184,9 +187,11 @@ async def list_case_files(
         path = f"{path}/{subfolder}"
 
     items = await nextcloud_service.list_folder(path)
+    file_items = [FileItem(**item) for item in items]
     return FolderListResponse(
         path=path,
-        items=[FileItem(**item) for item in items],
+        items=file_items,
+        files=file_items,
         count=len(items),
     )
 
@@ -216,7 +221,7 @@ async def upload_to_case(
     success = await nextcloud_service.upload_file(path, content, content_type)
 
     if success:
-        return MessageResponse(message=f"File '{file.filename}' uploaded to {subfolder}")
+        return MessageResponse(message=f"File '{file.filename}' uploaded to {subfolder}", success=True)
     raise HTTPException(
         status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail=f"Failed to upload file '{file.filename}'",
