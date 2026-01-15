@@ -16,7 +16,7 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.5.1</version>
+    <version>0.5.2</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-15</last_updated>
     <current_phase>3</current_phase>
@@ -2393,9 +2393,8 @@ $$ LANGUAGE plpgsql;
     </phase_status>
 
     <next_steps>
-      <step priority="1" feature_id="3.11">Analytics Dashboard</step>
-      <step priority="2" feature_id="3.12">Workflow Automation</step>
-      <step priority="3" feature_id="4.1">Full-text Search</step>
+      <step priority="1" feature_id="3.12">Workflow Automation</step>
+      <step priority="2" feature_id="3.13">Advanced Search</step>
     </next_steps>
   </progress>
 
