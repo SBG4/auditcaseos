@@ -122,7 +122,9 @@ async def get_edit_url(
             detail=f"File type not supported by ONLYOFFICE: {filename}",
         )
 
-    edit_url = onlyoffice_service.get_nextcloud_edit_url(file_path)
+    # Get file ID from Nextcloud for direct ONLYOFFICE URL
+    file_id = await onlyoffice_service.get_nextcloud_file_id(file_path)
+    edit_url = onlyoffice_service.get_nextcloud_edit_url(file_path, file_id)
 
     return EditUrlResponse(
         file_path=file_path,

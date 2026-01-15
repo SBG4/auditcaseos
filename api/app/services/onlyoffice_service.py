@@ -1,6 +1,7 @@
 """ONLYOFFICE service for document editing integration."""
 
 import logging
+import re
 from typing import Any
 
 import httpx
@@ -18,6 +19,10 @@ class OnlyOfficeService:
         self.external_url = settings.onlyoffice_url  # For browser access
         self.internal_url = settings.onlyoffice_internal_url  # For server-to-server
         self.jwt_secret = settings.onlyoffice_jwt_secret
+        self.nextcloud_internal_url = settings.nextcloud_url  # Internal Nextcloud URL
+        self.nextcloud_external_url = "http://localhost:18081"  # External Nextcloud URL
+        self.nextcloud_user = settings.nextcloud_admin_user
+        self.nextcloud_pass = settings.nextcloud_admin_password
 
     async def health_check(self) -> dict[str, Any]:
         """
@@ -55,22 +60,68 @@ class OnlyOfficeService:
         """Get the ONLYOFFICE editor URL for browser access."""
         return self.external_url
 
-    def get_nextcloud_edit_url(self, file_path: str) -> str:
+    async def get_nextcloud_file_id(self, file_path: str) -> int | None:
         """
-        Generate a Nextcloud ONLYOFFICE edit URL for a file.
+        Get the Nextcloud file ID for a file path using WebDAV PROPFIND.
 
         Args:
             file_path: Path to the file in Nextcloud (e.g., "AuditCases/IT-POLICY-0001/Reports/report.docx")
 
         Returns:
+            The Nextcloud file ID or None if not found
+        """
+        try:
+            webdav_url = f"{self.nextcloud_internal_url}/remote.php/dav/files/{self.nextcloud_user}/{file_path}"
+            propfind_body = """<?xml version="1.0" encoding="UTF-8"?>
+<d:propfind xmlns:d="DAV:" xmlns:oc="http://owncloud.org/ns">
+  <d:prop>
+    <oc:fileid/>
+  </d:prop>
+</d:propfind>"""
+
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.request(
+                    "PROPFIND",
+                    webdav_url,
+                    content=propfind_body,
+                    headers={
+                        "Content-Type": "application/xml",
+                        "Depth": "0",
+                    },
+                    auth=(self.nextcloud_user, self.nextcloud_pass),
+                )
+                if response.status_code in [200, 207]:
+                    # Parse file ID from response
+                    match = re.search(r'<oc:fileid>(\d+)</oc:fileid>', response.text)
+                    if match:
+                        return int(match.group(1))
+                logger.warning(f"Could not get file ID for {file_path}: {response.status_code}")
+                return None
+        except Exception as e:
+            logger.error(f"Error getting file ID from Nextcloud: {e}")
+            return None
+
+    def get_nextcloud_edit_url(self, file_path: str, file_id: int | None = None) -> str:
+        """
+        Generate a Nextcloud ONLYOFFICE edit URL for a file.
+
+        Args:
+            file_path: Path to the file in Nextcloud (e.g., "AuditCases/IT-POLICY-0001/Reports/report.docx")
+            file_id: Optional Nextcloud file ID. If provided, uses direct ONLYOFFICE URL.
+
+        Returns:
             URL to edit the document in Nextcloud with ONLYOFFICE
         """
-        # Nextcloud ONLYOFFICE edit URL format
-        # The file path needs to be URL-encoded
-        import urllib.parse
-        encoded_path = urllib.parse.quote(file_path, safe='')
-        nextcloud_url = settings.nextcloud_url.replace("http://nextcloud", "http://localhost:18081")
-        return f"{nextcloud_url}/apps/onlyoffice/{encoded_path}"
+        if file_id:
+            # Direct ONLYOFFICE URL with file ID
+            return f"{self.nextcloud_external_url}/index.php/apps/onlyoffice/{file_id}"
+        else:
+            # Fallback to file browser URL
+            import urllib.parse
+            encoded_path = urllib.parse.quote(f"/{file_path}", safe='/')
+            dir_path = "/".join(file_path.split("/")[:-1])
+            encoded_dir = urllib.parse.quote(f"/{dir_path}", safe='/')
+            return f"{self.nextcloud_external_url}/index.php/apps/files/?dir={encoded_dir}"
 
     def get_supported_extensions(self) -> dict[str, list[str]]:
         """
