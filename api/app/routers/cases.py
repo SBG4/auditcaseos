@@ -53,7 +53,7 @@ CurrentUser = Annotated[dict, Depends(get_current_user_required)]
 
 
 @router.get(
-    "/",
+    "",
     response_model=CaseListResponse,
     summary="List all cases",
     description="Retrieve a paginated list of audit cases with optional filtering.",
@@ -128,7 +128,7 @@ async def list_cases(
 
 
 @router.post(
-    "/",
+    "",
     response_model=CaseResponse,
     status_code=http_status.HTTP_201_CREATED,
     summary="Create a new case",

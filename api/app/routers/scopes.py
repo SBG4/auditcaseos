@@ -122,7 +122,7 @@ PREDEFINED_SCOPES: list[ScopeResponse] = [
 
 
 @router.get(
-    "/",
+    "",
     response_model=ScopeListResponse,
     summary="List all scopes",
     description="Retrieve all available audit scopes.",

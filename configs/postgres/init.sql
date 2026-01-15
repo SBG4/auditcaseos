@@ -203,14 +203,21 @@ CREATE INDEX idx_embeddings_vector ON embeddings USING ivfflat (embedding vector
 
 -- Insert default scopes
 INSERT INTO scopes (code, name, description) VALUES
-    ('FIN', 'Finance', 'Finance and Accounting department'),
-    ('HR', 'Human Resources', 'Human Resources department'),
-    ('IT', 'Information Technology', 'IT and Infrastructure'),
-    ('SEC', 'Security', 'Information Security and Compliance'),
-    ('OPS', 'Operations', 'Business Operations'),
-    ('CORP', 'Corporate', 'Corporate and Executive'),
-    ('LEGAL', 'Legal', 'Legal and Compliance'),
-    ('RND', 'Research & Development', 'R&D and Engineering');
+    ('FIN', 'Finance', 'Financial operations, accounting, and monetary transactions'),
+    ('HR', 'Human Resources', 'Employee data, HR processes, and personnel management'),
+    ('IT', 'Information Technology', 'IT systems, infrastructure, and technical operations'),
+    ('SEC', 'Security', 'Physical and information security, access controls'),
+    ('OPS', 'Operations', 'Business operations and process management'),
+    ('LEG', 'Legal', 'Legal compliance, contracts, and regulatory matters'),
+    ('PRO', 'Procurement', 'Purchasing, vendor management, and supply chain'),
+    ('MKT', 'Marketing', 'Marketing activities, campaigns, and communications'),
+    ('RND', 'Research & Development', 'R&D activities, innovation, and product development'),
+    ('QA', 'Quality Assurance', 'Quality control, testing, and compliance verification'),
+    ('ENV', 'Environmental', 'Environmental compliance and sustainability'),
+    ('SAF', 'Health & Safety', 'Workplace health and safety compliance'),
+    ('EXT', 'External', 'External partnerships, third-party relationships'),
+    ('GOV', 'Governance', 'Corporate governance and board-level matters'),
+    ('GEN', 'General', 'General audits not fitting other categories');
 
 -- Insert a default admin user (password: admin123)
 -- bcrypt hash generated with: passlib.hash.bcrypt.hash("admin123")

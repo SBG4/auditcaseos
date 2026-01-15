@@ -110,6 +110,7 @@ def create_application() -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
         debug=settings.debug,
+        redirect_slashes=False,
     )
 
     # Configure CORS middleware for development

@@ -16,11 +16,11 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.3.0</version>
+    <version>0.4.0</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-15</last_updated>
-    <current_phase>2</current_phase>
-    <overall_progress>phase_2_in_progress</overall_progress>
+    <current_phase>3</current_phase>
+    <overall_progress>phase_3_in_progress</overall_progress>
   </metadata>
 
   <!-- ============================================== -->
@@ -62,6 +62,7 @@ KEY PRINCIPLES:
 5. Use async/await patterns throughout Python code
 6. Follow REST best practices for API design
 7. Write clean, typed, documented code
+8. **MANDATORY**: Commit and push ALL changes to git before ending ANY session
 
 QUALITY BAR:
 - Stack must run without manual code edits after setting .env
@@ -418,6 +419,30 @@ Do not skip ahead or implement multiple features at once."
         </example>
       </practice>
     </best_practices>
+
+    <!-- MANDATORY RULES - These MUST be followed without exception -->
+    <mandatory_rules>
+      <rule id="1" name="git_commit_before_handover" severity="CRITICAL">
+        <description>
+          ALWAYS commit and push all changes to git before ending a session or handing
+          control back to the user. No exceptions. This ensures all work is preserved
+          and the repository stays in sync.
+        </description>
+        <actions>
+          <action>1. Stage all modified/new files: git add -A</action>
+          <action>2. Commit with descriptive message summarizing changes</action>
+          <action>3. Push to remote: git push</action>
+          <action>4. Verify push succeeded before ending session</action>
+        </actions>
+        <trigger>Before ANY session end, task completion, or user handover</trigger>
+      </rule>
+      <rule id="2" name="update_spec_on_completion" severity="HIGH">
+        <description>
+          Update PROJECT_SPEC.xml to reflect completed features and changes.
+          Keep the spec as the single source of truth.
+        </description>
+      </rule>
+    </mandatory_rules>
 
     <!-- Session Start Template -->
     <session_template>
@@ -1273,13 +1298,14 @@ $$ LANGUAGE plpgsql;
   <!-- ============================================== -->
   <!-- PHASE 3: FRONTEND & COLLABORATION - PENDING    -->
   <!-- ============================================== -->
-  <phase number="3" name="Frontend and Collaboration" status="PENDING">
+  <phase number="3" name="Frontend and Collaboration" status="IN_PROGRESS">
     <description>React frontend, real-time collaboration, advanced analytics</description>
 
     <feature_group name="React Frontend">
-      <feature id="3.1" status="PENDING">
+      <feature id="3.1" status="COMPLETED">
         <name>Frontend Setup</name>
         <description>React application with Vite, TypeScript, TailwindCSS</description>
+        <completion_date>2026-01-15</completion_date>
         <tech_stack>
           <framework>React 18</framework>
           <bundler>Vite</bundler>
@@ -1288,14 +1314,60 @@ $$ LANGUAGE plpgsql;
           <state>React Query + Context</state>
           <routing>React Router v6</routing>
         </tech_stack>
+        <files_created>
+          <file>frontend/package.json</file>
+          <file>frontend/vite.config.ts</file>
+          <file>frontend/tsconfig.json</file>
+          <file>frontend/tailwind.config.js</file>
+          <file>frontend/index.html</file>
+          <file>frontend/Dockerfile</file>
+          <file>frontend/nginx.conf</file>
+          <file>frontend/src/main.tsx</file>
+          <file>frontend/src/App.tsx</file>
+          <file>frontend/src/types/index.ts</file>
+          <file>frontend/src/services/api.ts</file>
+          <file>frontend/src/context/AuthContext.tsx</file>
+          <file>frontend/src/hooks/useAuth.ts</file>
+          <file>frontend/src/components/layout/*</file>
+          <file>frontend/src/components/common/*</file>
+        </files_created>
+        <files_modified>
+          <file>docker-compose.yml - Added frontend service</file>
+        </files_modified>
+        <tested>true</tested>
       </feature>
-      <feature id="3.2" status="PENDING">
+      <feature id="3.2" status="COMPLETED">
         <name>Dashboard Page</name>
         <description>Main dashboard with case overview and statistics</description>
+        <completion_date>2026-01-15</completion_date>
+        <files_created>
+          <file>frontend/src/pages/Dashboard.tsx</file>
+        </files_created>
+        <features>
+          <feature>Case statistics (total, open, in progress, closed)</feature>
+          <feature>Recent cases list</feature>
+          <feature>Critical cases requiring attention</feature>
+        </features>
+        <tested>true</tested>
       </feature>
-      <feature id="3.3" status="PENDING">
+      <feature id="3.3" status="COMPLETED">
         <name>Case List Page</name>
         <description>Searchable, filterable case list</description>
+        <completion_date>2026-01-15</completion_date>
+        <files_created>
+          <file>frontend/src/pages/CaseList.tsx</file>
+          <file>frontend/src/pages/CaseDetail.tsx</file>
+          <file>frontend/src/pages/CaseCreate.tsx</file>
+          <file>frontend/src/pages/Login.tsx</file>
+        </files_created>
+        <features>
+          <feature>Search by title and case number</feature>
+          <feature>Filter by status and severity</feature>
+          <feature>Sortable table view</feature>
+          <feature>Case detail with tabs (overview, evidence, findings, timeline)</feature>
+          <feature>Create new case form</feature>
+        </features>
+        <tested>true</tested>
       </feature>
       <feature id="3.4" status="PENDING">
         <name>Case Detail Page</name>
@@ -1352,22 +1424,22 @@ $$ LANGUAGE plpgsql;
   <progress>
     <summary>
       <total_features>37</total_features>
-      <completed>24</completed>
+      <completed>27</completed>
       <in_progress>0</in_progress>
-      <pending>13</pending>
-      <completion_percentage>65</completion_percentage>
+      <pending>10</pending>
+      <completion_percentage>73</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="2" features_total="12" features_completed="12" status="COMPLETED"/>
-      <phase number="3" features_total="13" features_completed="0" status="PENDING"/>
+      <phase number="3" features_total="13" features_completed="3" status="IN_PROGRESS"/>
     </phase_status>
 
     <next_steps>
-      <step priority="1" feature_id="3.1">Frontend Setup</step>
-      <step priority="2" feature_id="3.2">Dashboard Page</step>
-      <step priority="3" feature_id="3.3">Case List Page</step>
+      <step priority="1" feature_id="3.4">Case Detail Page enhancements</step>
+      <step priority="2" feature_id="3.5">Case Create/Edit Form improvements</step>
+      <step priority="3" feature_id="3.6">Reports Page</step>
     </next_steps>
   </progress>
 
@@ -1375,6 +1447,24 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-15" version="0.4.0" phase="3">
+      <changes>
+        <change type="added">Feature 3.1: React Frontend Setup with Vite, TypeScript, TailwindCSS</change>
+        <change type="added">Feature 3.2: Dashboard Page with case statistics and recent cases</change>
+        <change type="added">Feature 3.3: Case List Page with search and filtering</change>
+        <change type="added">Login page with JWT authentication</change>
+        <change type="added">Case Detail page with tabs (overview, evidence, findings, timeline)</change>
+        <change type="added">Case Create form with severity/status selection</change>
+        <change type="added">React Query for server state management</change>
+        <change type="added">Axios API client with auth interceptors</change>
+        <change type="added">AuthContext for authentication state</change>
+        <change type="added">Reusable components (Button, Badge, Card, Layout)</change>
+        <change type="added">Nginx reverse proxy for API requests</change>
+        <change type="added">Multi-stage Docker build for frontend</change>
+        <change type="added">Frontend service at http://localhost:13000</change>
+        <change type="milestone">Phase 3 Started - Frontend foundations complete</change>
+      </changes>
+    </entry>
     <entry date="2026-01-15" version="0.3.0" phase="2">
       <changes>
         <change type="added">Feature 2.11: DOCX Report Generator with python-docx</change>
