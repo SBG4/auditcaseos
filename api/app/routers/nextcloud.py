@@ -267,12 +267,18 @@ async def create_share_link(
 @router.get(
     "/case/{case_id}/url",
     summary="Get case folder URL",
-    description="Get the Nextcloud web URL for a case folder.",
+    description="Get the Nextcloud web URL for a case folder. Creates the folder if it doesn't exist.",
 )
 async def get_case_folder_url(
     case_id: str,
     current_user: CurrentUser = None,
 ) -> dict[str, str]:
-    """Get the web URL for a case folder."""
+    """Get the web URL for a case folder. Auto-creates the folder if needed."""
+    # Ensure folder exists before returning URL
+    try:
+        await nextcloud_service.create_case_folder(case_id)
+    except Exception as e:
+        logger.warning(f"Could not ensure Nextcloud folder for {case_id}: {e}")
+
     url = await nextcloud_service.get_case_folder_url(case_id)
     return {"case_id": case_id, "url": url}

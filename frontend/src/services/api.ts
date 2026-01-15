@@ -123,7 +123,7 @@ export const casesApi = {
 // Evidence API
 export const evidenceApi = {
   list: async (caseId: string): Promise<Evidence[]> => {
-    const response = await api.get<Evidence[]>(`/evidence/case/${caseId}`);
+    const response = await api.get<Evidence[]>(`/evidence/cases/${caseId}`);
     return response.data;
   },
 
@@ -134,7 +134,7 @@ export const evidenceApi = {
       formData.append('description', description);
     }
 
-    const response = await api.post<Evidence>(`/evidence/case/${caseId}`, formData, {
+    const response = await api.post<Evidence>(`/evidence/cases/${caseId}/upload`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
