@@ -21,6 +21,7 @@ import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
 import Card, { CardHeader } from '../components/common/Card';
 import type { Evidence, Finding, TimelineEvent, CaseStatus, Severity } from '../types';
+import { getEvidenceType } from '../types';
 
 type TabType = 'overview' | 'evidence' | 'findings' | 'timeline' | 'ai';
 
@@ -65,7 +66,7 @@ export default function CaseDetail() {
     retry: false,
   });
 
-  const { data: nextcloudUrl } = useQuery({
+  const { data: nextcloudUrl, isLoading: nextcloudLoading } = useQuery({
     queryKey: ['nextcloud-url', caseData?.case_id],
     queryFn: () => nextcloudApi.getCaseFolderUrl(caseData!.case_id),
     enabled: !!caseData?.case_id,
@@ -180,15 +181,15 @@ export default function CaseDetail() {
           </div>
         </div>
         <div className="flex gap-2">
-          {nextcloudUrl?.url && (
-            <Button
-              variant="secondary"
-              onClick={() => window.open(nextcloudUrl.url, '_blank')}
-            >
-              <FolderOpenIcon className="w-4 h-4 mr-2" />
-              Nextcloud
-            </Button>
-          )}
+          <Button
+            variant="secondary"
+            onClick={() => nextcloudUrl?.url && window.open(nextcloudUrl.url, '_blank')}
+            isLoading={nextcloudLoading}
+            disabled={!nextcloudUrl?.url && !nextcloudLoading}
+          >
+            <FolderOpenIcon className="w-4 h-4 mr-2" />
+            Nextcloud
+          </Button>
           <div className="relative">
             <Button
               variant="secondary"
@@ -475,7 +476,7 @@ export default function CaseDetail() {
                           </span>
                         </div>
                       </div>
-                      <Badge value={item.evidence_type} />
+                      <Badge value={getEvidenceType(item.mime_type)} />
                     </div>
                     {item.description && (
                       <p className="mt-2 text-sm text-gray-600">{item.description}</p>

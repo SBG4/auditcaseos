@@ -128,17 +128,30 @@ export type EvidenceType = 'DOCUMENT' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'LOG' | 'E
 export interface Evidence {
   id: string;
   case_id: string;
+  case_id_str?: string;
   file_name: string;
   file_path: string;
   file_size: number;
-  file_type: string;
   mime_type: string;
-  evidence_type: EvidenceType;
   file_hash?: string;
   description?: string;
   extracted_text?: string;
   uploaded_by: string;
-  uploaded_at: string;
+  uploaded_by_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Helper to derive evidence type from mime_type
+export function getEvidenceType(mimeType?: string): EvidenceType {
+  if (!mimeType) return 'OTHER';
+  if (mimeType.startsWith('image/')) return 'IMAGE';
+  if (mimeType.startsWith('video/')) return 'VIDEO';
+  if (mimeType.startsWith('audio/')) return 'AUDIO';
+  if (mimeType.includes('pdf') || mimeType.includes('document') || mimeType.includes('word')) return 'DOCUMENT';
+  if (mimeType.includes('text/')) return 'LOG';
+  if (mimeType.includes('message') || mimeType.includes('email')) return 'EMAIL';
+  return 'OTHER';
 }
 
 // Finding types

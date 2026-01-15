@@ -23,12 +23,15 @@ const severityColors: Record<Severity, string> = {
 };
 
 export default function Badge({ variant = 'default', value, size = 'sm' }: BadgeProps) {
+  // Handle undefined/null values gracefully
+  const displayValue = value || 'UNKNOWN';
+
   let colorClass = 'bg-gray-100 text-gray-800';
 
-  if (variant === 'status' && value in statusColors) {
-    colorClass = statusColors[value as CaseStatus];
-  } else if (variant === 'severity' && value in severityColors) {
-    colorClass = severityColors[value as Severity];
+  if (variant === 'status' && displayValue in statusColors) {
+    colorClass = statusColors[displayValue as CaseStatus];
+  } else if (variant === 'severity' && displayValue in severityColors) {
+    colorClass = severityColors[displayValue as Severity];
   }
 
   const sizeClass = size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-sm';
@@ -41,7 +44,7 @@ export default function Badge({ variant = 'default', value, size = 'sm' }: Badge
         ${sizeClass}
       `}
     >
-      {value.replace('_', ' ')}
+      {displayValue.replace(/_/g, ' ')}
     </span>
   );
 }

@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import Layout from './components/layout/Layout';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import CaseList from './pages/CaseList';
@@ -25,24 +26,26 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route
-        path="/"
-        element={
-          <PrivateRoute>
-            <Layout />
-          </PrivateRoute>
-        }
-      >
-        <Route index element={<Dashboard />} />
-        <Route path="cases" element={<CaseList />} />
-        <Route path="cases/new" element={<CaseCreate />} />
-        <Route path="cases/:id" element={<CaseDetail />} />
-        <Route path="reports" element={<Reports />} />
-        <Route path="admin" element={<Admin />} />
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <ErrorBoundary>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <Layout />
+            </PrivateRoute>
+          }
+        >
+          <Route index element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
+          <Route path="cases" element={<ErrorBoundary><CaseList /></ErrorBoundary>} />
+          <Route path="cases/new" element={<ErrorBoundary><CaseCreate /></ErrorBoundary>} />
+          <Route path="cases/:id" element={<ErrorBoundary><CaseDetail /></ErrorBoundary>} />
+          <Route path="reports" element={<ErrorBoundary><Reports /></ErrorBoundary>} />
+          <Route path="admin" element={<ErrorBoundary><Admin /></ErrorBoundary>} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </ErrorBoundary>
   );
 }
