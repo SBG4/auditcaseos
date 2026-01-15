@@ -128,6 +128,9 @@ services:
       NEXTCLOUD_URL: http://nextcloud
       NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER:-admin}
       NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD:-admin123}
+      ONLYOFFICE_URL: http://localhost:18082
+      ONLYOFFICE_INTERNAL_URL: http://onlyoffice
+      ONLYOFFICE_JWT_SECRET: ${ONLYOFFICE_JWT_SECRET:-auditcaseos-onlyoffice-secret}
     ports:
       - "18000:8000"
     depends_on:
@@ -171,7 +174,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-auditcaseos_secret}
       NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER:-admin}
       NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD:-admin123}
-      NEXTCLOUD_TRUSTED_DOMAINS: "localhost localhost:18081 nextcloud"
+      NEXTCLOUD_TRUSTED_DOMAINS: "localhost localhost:18081 nextcloud onlyoffice"
       OVERWRITEPROTOCOL: http
     volumes:
       - nextcloud_data:/var/www/html
@@ -190,6 +193,29 @@ services:
       start_period: 120s
     restart: unless-stopped
 
+  # ONLYOFFICE Document Server for in-browser document editing
+  onlyoffice:
+    image: onlyoffice/documentserver:latest
+    container_name: auditcaseos-onlyoffice
+    environment:
+      JWT_ENABLED: "true"
+      JWT_SECRET: ${ONLYOFFICE_JWT_SECRET:-auditcaseos-onlyoffice-secret}
+      JWT_HEADER: Authorization
+      JWT_IN_BODY: "true"
+    volumes:
+      - onlyoffice_data:/var/www/onlyoffice/Data
+      - onlyoffice_logs:/var/log/onlyoffice
+      - onlyoffice_fonts:/usr/share/fonts/truetype/custom
+    ports:
+      - "18082:80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   minio_data:
@@ -202,3 +228,6 @@ volumes:
   nextcloud_data:
   nextcloud_apps:
   nextcloud_config:
+  onlyoffice_data:
+  onlyoffice_logs:
+  onlyoffice_fonts:

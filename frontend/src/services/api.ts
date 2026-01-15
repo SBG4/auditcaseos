@@ -347,6 +347,64 @@ export const nextcloudApi = {
   },
 };
 
+// ONLYOFFICE API
+export const onlyofficeApi = {
+  health: async (): Promise<{
+    available: boolean;
+    version?: string;
+    build?: string;
+    external_url?: string;
+    error?: string;
+  }> => {
+    const response = await api.get('/onlyoffice/health');
+    return response.data;
+  },
+
+  getExtensions: async (): Promise<{
+    documents: string[];
+    spreadsheets: string[];
+    presentations: string[];
+    editable: string[];
+  }> => {
+    const response = await api.get('/onlyoffice/extensions');
+    return response.data;
+  },
+
+  getEditUrl: async (filePath: string): Promise<{
+    file_path: string;
+    edit_url: string;
+    document_type?: string;
+    is_editable: boolean;
+    is_viewable: boolean;
+  }> => {
+    const response = await api.get('/onlyoffice/edit-url', {
+      params: { file_path: filePath },
+    });
+    return response.data;
+  },
+
+  getCaseDocuments: async (caseId: string, subfolder?: string): Promise<{
+    case_id: string;
+    documents: Array<{
+      file_path: string;
+      edit_url: string;
+      document_type?: string;
+      is_editable: boolean;
+      is_viewable: boolean;
+    }>;
+    total: number;
+  }> => {
+    const params = subfolder ? { subfolder } : {};
+    const response = await api.get(`/onlyoffice/case/${caseId}/documents`, { params });
+    return response.data;
+  },
+
+  getEditorUrl: async (): Promise<{ editor_url: string }> => {
+    const response = await api.get('/onlyoffice/editor-url');
+    return response.data;
+  },
+};
+
 // Users API (Admin only)
 export const usersApi = {
   list: async (params?: { skip?: number; limit?: number }): Promise<UsersListResponse> => {

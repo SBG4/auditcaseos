@@ -16,7 +16,7 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.4.5</version>
+    <version>0.4.6</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-15</last_updated>
     <current_phase>3</current_phase>
@@ -1500,9 +1500,48 @@ $$ LANGUAGE plpgsql;
         </docker_config>
         <tested>true</tested>
       </feature>
-      <feature id="3.9" status="PENDING">
+      <feature id="3.9" status="COMPLETED">
         <name>ONLYOFFICE Integration</name>
-        <description>In-browser document editing</description>
+        <description>In-browser document editing via ONLYOFFICE Document Server</description>
+        <completion_date>2026-01-15</completion_date>
+        <files_created>
+          <file>api/app/services/onlyoffice_service.py</file>
+          <file>api/app/routers/onlyoffice.py</file>
+          <file>scripts/test-onlyoffice.sh - 24 integration tests</file>
+        </files_created>
+        <files_modified>
+          <file>docker-compose.yml - Added ONLYOFFICE Document Server service</file>
+          <file>.env.example - Added ONLYOFFICE_JWT_SECRET</file>
+          <file>api/app/config.py - Added ONLYOFFICE settings</file>
+          <file>api/app/main.py - Registered onlyoffice router</file>
+          <file>api/app/routers/__init__.py - Added onlyoffice_router</file>
+          <file>api/app/services/__init__.py - Added OnlyOfficeService</file>
+          <file>frontend/src/services/api.ts - Added onlyofficeApi</file>
+          <file>frontend/src/pages/CaseDetail.tsx - Added Edit/View buttons for documents</file>
+        </files_modified>
+        <features>
+          <feature>ONLYOFFICE Document Server (onlyoffice/documentserver) on port 18082</feature>
+          <feature>JWT authentication between services</feature>
+          <feature>Nextcloud ONLYOFFICE connector app integration</feature>
+          <feature>Edit/View buttons on evidence items for supported file types</feature>
+          <feature>Document type detection (word, cell, slide)</feature>
+          <feature>Editable formats: .docx, .xlsx, .pptx, .odt, .ods, .odp</feature>
+          <feature>Viewable formats: .pdf, .doc, .xls, .ppt, .txt, .rtf, .csv, .html</feature>
+        </features>
+        <api_endpoints>
+          <endpoint method="GET" path="/api/v1/onlyoffice/health">ONLYOFFICE health check</endpoint>
+          <endpoint method="GET" path="/api/v1/onlyoffice/extensions">Supported file extensions</endpoint>
+          <endpoint method="GET" path="/api/v1/onlyoffice/editor-url">ONLYOFFICE editor base URL</endpoint>
+          <endpoint method="GET" path="/api/v1/onlyoffice/edit-url">Get Nextcloud edit URL for file</endpoint>
+          <endpoint method="GET" path="/api/v1/onlyoffice/case/{case_id}/documents">List editable case documents</endpoint>
+        </api_endpoints>
+        <docker_config>
+          <image>onlyoffice/documentserver:latest</image>
+          <port>18082</port>
+          <jwt_enabled>true</jwt_enabled>
+        </docker_config>
+        <test_script>scripts/test-onlyoffice.sh (24 tests)</test_script>
+        <tested>true</tested>
       </feature>
       <feature id="3.10" status="PENDING">
         <name>Real-time Updates</name>
@@ -1558,22 +1597,22 @@ $$ LANGUAGE plpgsql;
   <progress>
     <summary>
       <total_features>38</total_features>
-      <completed>33</completed>
+      <completed>34</completed>
       <in_progress>0</in_progress>
-      <pending>5</pending>
-      <completion_percentage>87</completion_percentage>
+      <pending>4</pending>
+      <completion_percentage>89</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="2" features_total="12" features_completed="12" status="COMPLETED"/>
-      <phase number="3" features_total="14" features_completed="9" status="IN_PROGRESS"/>
+      <phase number="3" features_total="14" features_completed="10" status="IN_PROGRESS"/>
     </phase_status>
 
     <next_steps>
-      <step priority="1" feature_id="3.9">ONLYOFFICE Integration</step>
-      <step priority="2" feature_id="3.10">Real-time Updates (WebSocket)</step>
-      <step priority="3" feature_id="3.11">Analytics Dashboard</step>
+      <step priority="1" feature_id="3.10">Real-time Updates (WebSocket)</step>
+      <step priority="2" feature_id="3.11">Analytics Dashboard</step>
+      <step priority="3" feature_id="3.12">Workflow Automation</step>
     </next_steps>
   </progress>
 
@@ -1581,6 +1620,24 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-15" version="0.4.6" phase="3">
+      <changes>
+        <change type="added">Feature 3.9: ONLYOFFICE Integration for in-browser document editing</change>
+        <change type="added">ONLYOFFICE Document Server service (onlyoffice/documentserver) on port 18082</change>
+        <change type="added">JWT authentication between ONLYOFFICE, Nextcloud, and API</change>
+        <change type="added">Nextcloud ONLYOFFICE connector app auto-configuration</change>
+        <change type="added">GET /api/v1/onlyoffice/health - ONLYOFFICE health check</change>
+        <change type="added">GET /api/v1/onlyoffice/extensions - Supported file extensions</change>
+        <change type="added">GET /api/v1/onlyoffice/edit-url - Get Nextcloud edit URL for documents</change>
+        <change type="added">GET /api/v1/onlyoffice/case/{case_id}/documents - List editable case documents</change>
+        <change type="added">Edit/View buttons on evidence items in Case Detail page</change>
+        <change type="added">Document type detection (word, cell, slide)</change>
+        <change type="added">Support for .docx, .xlsx, .pptx, .odt, .ods, .odp (editable)</change>
+        <change type="added">Support for .pdf, .doc, .xls, .ppt, .txt, .rtf, .csv (viewable)</change>
+        <change type="added">scripts/test-onlyoffice.sh - 24 integration tests</change>
+        <change type="milestone">ONLYOFFICE integration complete - 67 total tests pass (43 + 24)</change>
+      </changes>
+    </entry>
     <entry date="2026-01-15" version="0.4.5" phase="3">
       <changes>
         <change type="added">Feature 3.14: Evidence-Nextcloud Bidirectional Sync</change>
@@ -1785,6 +1842,7 @@ $$ LANGUAGE plpgsql;
       <url name="MinIO Console">http://localhost:19001</url>
       <url name="Paperless">http://localhost:18080</url>
       <url name="Nextcloud">http://localhost:18081</url>
+      <url name="ONLYOFFICE">http://localhost:18082</url>
       <url name="Frontend">http://localhost:13000</url>
     </urls>
 
@@ -1799,7 +1857,8 @@ $$ LANGUAGE plpgsql;
     <testing>
       <test_script name="Comprehensive tests">scripts/test-all.sh (19 tests)</test_script>
       <test_script name="Evidence-Nextcloud sync">scripts/test-evidence-sync.sh (24 tests)</test_script>
-      <total_tests>43</total_tests>
+      <test_script name="ONLYOFFICE integration">scripts/test-onlyoffice.sh (24 tests)</test_script>
+      <total_tests>67</total_tests>
     </testing>
   </quick_reference>
 </project>

@@ -15,8 +15,9 @@ import {
   UserIcon,
   ComputerDesktopIcon,
   FolderOpenIcon,
+  PencilSquareIcon,
 } from '@heroicons/react/24/outline';
-import { casesApi, evidenceApi, findingsApi, timelineApi, aiApi, reportsApi, nextcloudApi } from '../services/api';
+import { casesApi, evidenceApi, findingsApi, timelineApi, aiApi, reportsApi, nextcloudApi, onlyofficeApi } from '../services/api';
 import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
 import Card, { CardHeader } from '../components/common/Card';
@@ -73,6 +74,44 @@ export default function CaseDetail() {
     retry: false,
     staleTime: 1000 * 60 * 30, // Cache for 30 minutes
   });
+
+  const { data: onlyofficeExtensions } = useQuery({
+    queryKey: ['onlyoffice-extensions'],
+    queryFn: () => onlyofficeApi.getExtensions(),
+    staleTime: 1000 * 60 * 60, // Cache for 1 hour
+  });
+
+  // Helper to check if a file is editable in ONLYOFFICE
+  const isOnlyOfficeEditable = (filename: string): boolean => {
+    if (!onlyofficeExtensions) return false;
+    const lowerFilename = filename.toLowerCase();
+    return onlyofficeExtensions.editable.some(ext => lowerFilename.endsWith(ext));
+  };
+
+  // Helper to check if a file is viewable in ONLYOFFICE
+  const isOnlyOfficeViewable = (filename: string): boolean => {
+    if (!onlyofficeExtensions) return false;
+    const lowerFilename = filename.toLowerCase();
+    const allViewable = [
+      ...onlyofficeExtensions.documents,
+      ...onlyofficeExtensions.spreadsheets,
+      ...onlyofficeExtensions.presentations,
+    ];
+    return allViewable.some(ext => lowerFilename.endsWith(ext));
+  };
+
+  // Open file in ONLYOFFICE via Nextcloud
+  const handleEditInOnlyOffice = async (filename: string) => {
+    if (!caseData?.case_id) return;
+    const filePath = `AuditCases/${caseData.case_id}/Evidence/${filename}`;
+    try {
+      const result = await onlyofficeApi.getEditUrl(filePath);
+      window.open(result.edit_url, '_blank');
+    } catch (error) {
+      console.error('Failed to get ONLYOFFICE edit URL:', error);
+      alert('Failed to open document in ONLYOFFICE. Please try again.');
+    }
+  };
 
   const deleteCase = useMutation({
     mutationFn: () => casesApi.delete(id!),
@@ -476,7 +515,20 @@ export default function CaseDetail() {
                           </span>
                         </div>
                       </div>
-                      <Badge value={getEvidenceType(item.mime_type)} />
+                      <div className="flex items-center gap-2">
+                        {isOnlyOfficeViewable(item.file_name) && (
+                          <Button
+                            size="sm"
+                            variant={isOnlyOfficeEditable(item.file_name) ? 'primary' : 'secondary'}
+                            onClick={() => handleEditInOnlyOffice(item.file_name)}
+                            title={isOnlyOfficeEditable(item.file_name) ? 'Edit in ONLYOFFICE' : 'View in ONLYOFFICE'}
+                          >
+                            <PencilSquareIcon className="w-4 h-4 mr-1" />
+                            {isOnlyOfficeEditable(item.file_name) ? 'Edit' : 'View'}
+                          </Button>
+                        )}
+                        <Badge value={getEvidenceType(item.mime_type)} />
+                      </div>
                     </div>
                     {item.description && (
                       <p className="mt-2 text-sm text-gray-600">{item.description}</p>

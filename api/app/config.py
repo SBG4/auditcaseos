@@ -67,6 +67,11 @@ class Settings(BaseSettings):
     nextcloud_admin_user: str = "admin"
     nextcloud_admin_password: str = "admin123"
 
+    # ONLYOFFICE settings
+    onlyoffice_url: str = "http://localhost:18082"
+    onlyoffice_internal_url: str = "http://onlyoffice"
+    onlyoffice_jwt_secret: str = "auditcaseos-onlyoffice-secret"
+
     @property
     def async_database_url(self) -> str:
         """Return the database URL configured for async operations."""
