@@ -16,7 +16,7 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.4.9</version>
+    <version>0.5.0</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-15</last_updated>
     <current_phase>3</current_phase>
@@ -929,6 +929,272 @@ auditcaseos/
         <item>[ ] Tested with container restart to ensure config persists</item>
       </implementation_checklist>
     </implementation_guidelines>
+
+    <!-- ============================================== -->
+    <!-- AI AGENT USAGE GUIDELINES                      -->
+    <!-- ============================================== -->
+    <ai_agent_guidelines>
+      <purpose>
+        Guidelines for using Claude Code Task agents effectively to improve
+        accuracy, verify information, and parallelize work. These patterns
+        prevent errors by cross-checking sources and distributing research.
+      </purpose>
+
+      <!-- WHEN TO USE MULTI-AGENTS -->
+      <when_to_use_agents>
+        <scenario id="AGENT-USE-1" priority="HIGH">
+          <name>Research from Multiple Sources</name>
+          <description>When gathering information that needs verification from official sources</description>
+          <pattern>Launch parallel agents, each researching from different authoritative sources</pattern>
+          <example>Research best practices: Agent 1 → official docs, Agent 2 → RFC specs, Agent 3 → security guidelines</example>
+        </scenario>
+
+        <scenario id="AGENT-USE-2" priority="HIGH">
+          <name>Cross-Verification of Facts</name>
+          <description>When accuracy is critical and information must be verified</description>
+          <pattern>Launch multiple agents researching the same topic from different angles, compare results</pattern>
+          <example>Verify API behavior: Agent 1 → read documentation, Agent 2 → test actual endpoints</example>
+        </scenario>
+
+        <scenario id="AGENT-USE-3" priority="MEDIUM">
+          <name>Large Codebase Exploration</name>
+          <description>When exploring unfamiliar code or searching across many files</description>
+          <pattern>Use Explore agent type for codebase searches instead of manual Glob/Grep</pattern>
+          <example>Finding error handling patterns across the codebase</example>
+        </scenario>
+
+        <scenario id="AGENT-USE-4" priority="MEDIUM">
+          <name>Independent Parallel Tasks</name>
+          <description>When multiple tasks have no dependencies on each other</description>
+          <pattern>Launch all independent tasks as parallel agents, collect results</pattern>
+          <example>Testing multiple endpoints, checking multiple services, running multiple searches</example>
+        </scenario>
+
+        <scenario id="AGENT-USE-5" priority="HIGH">
+          <name>Debugging Complex Issues</name>
+          <description>When root cause is unclear and multiple areas need investigation</description>
+          <pattern>Launch agents to investigate different potential causes simultaneously</pattern>
+          <example>ONLYOFFICE not working: Agent 1 → check server health, Agent 2 → check Nextcloud config, Agent 3 → check network</example>
+        </scenario>
+      </when_to_use_agents>
+
+      <!-- AGENT TYPES AND USAGE -->
+      <agent_types>
+        <agent type="Explore" subagent_type="Explore">
+          <purpose>Fast codebase exploration, file searches, understanding code structure</purpose>
+          <use_when>
+            <case>Searching for keywords, patterns, or files across the codebase</case>
+            <case>Understanding how a feature is implemented</case>
+            <case>Finding all usages of a function or class</case>
+            <case>Answering questions about codebase structure</case>
+          </use_when>
+          <thoroughness>Specify: "quick" for basic, "medium" for moderate, "very thorough" for comprehensive</thoroughness>
+        </agent>
+
+        <agent type="Plan" subagent_type="Plan">
+          <purpose>Designing implementation strategies and architectural decisions</purpose>
+          <use_when>
+            <case>Planning a new feature implementation</case>
+            <case>Designing system architecture</case>
+            <case>Evaluating trade-offs between approaches</case>
+          </use_when>
+        </agent>
+
+        <agent type="general-purpose" subagent_type="general-purpose">
+          <purpose>Complex multi-step tasks, web research, comprehensive analysis</purpose>
+          <use_when>
+            <case>Researching external documentation</case>
+            <case>Web searches for best practices</case>
+            <case>Multi-step investigations</case>
+            <case>Tasks requiring multiple tool types</case>
+          </use_when>
+        </agent>
+      </agent_types>
+
+      <!-- PARALLEL EXECUTION PATTERNS -->
+      <parallel_patterns>
+        <pattern id="PARALLEL-1" name="Research Parallelization">
+          <description>Split research across multiple authoritative sources</description>
+          <implementation>
+            <![CDATA[
+Launch in single message with multiple Task tool calls:
+- Agent 1: "Research [topic] from [official-docs-1]. Only use authoritative sources."
+- Agent 2: "Research [topic] from [official-docs-2]. Include source URLs."
+- Agent 3: "Research [topic] from [standards-body]. Verify against specs."
+            ]]>
+          </implementation>
+          <benefit>Faster research, cross-verified information, multiple perspectives</benefit>
+        </pattern>
+
+        <pattern id="PARALLEL-2" name="Verification Pattern">
+          <description>Verify critical information from multiple angles</description>
+          <implementation>
+            <![CDATA[
+Launch agents that approach the same question differently:
+- Agent 1: "Check official documentation for [behavior]"
+- Agent 2: "Test [behavior] by making actual API calls"
+- Agent 3: "Search codebase for how [behavior] is implemented"
+Compare results - if they disagree, investigate further.
+            ]]>
+          </implementation>
+          <benefit>Catches documentation errors, implementation bugs, misunderstandings</benefit>
+        </pattern>
+
+        <pattern id="PARALLEL-3" name="Investigation Pattern">
+          <description>Debug issues by investigating multiple potential causes</description>
+          <implementation>
+            <![CDATA[
+When issue root cause is unknown, launch parallel investigations:
+- Agent 1: "Check [component-1] health, logs, and configuration"
+- Agent 2: "Check [component-2] connectivity and settings"
+- Agent 3: "Check [component-3] for errors or misconfigurations"
+Combine findings to identify root cause.
+            ]]>
+          </implementation>
+          <benefit>Faster debugging, no sequential bottleneck, comprehensive coverage</benefit>
+        </pattern>
+
+        <pattern id="PARALLEL-4" name="Source Validation Pattern">
+          <description>Ensure information comes from legitimate, authoritative sources</description>
+          <implementation>
+            <![CDATA[
+When researching best practices or technical specifications:
+1. Specify ONLY official sources in agent prompts:
+   - "Only use [official-domain.com]"
+   - "Search site:[authoritative-source.org]"
+2. Require source URLs in responses:
+   - "Return SOURCE URLs for each recommendation"
+3. Cross-check with multiple agents using different official sources
+4. Reject information without verifiable sources
+            ]]>
+          </implementation>
+          <benefit>Prevents misinformation, ensures accuracy, traceable recommendations</benefit>
+        </pattern>
+      </parallel_patterns>
+
+      <!-- AGENT BEST PRACTICES -->
+      <agent_best_practices>
+        <rule id="AGENT-BP-1" severity="HIGH">
+          Always specify the subagent_type parameter when using Task tool
+        </rule>
+        <rule id="AGENT-BP-2" severity="HIGH">
+          Launch multiple independent agents in a SINGLE message with multiple Task tool calls
+        </rule>
+        <rule id="AGENT-BP-3" severity="HIGH">
+          For research tasks, require agents to return SOURCE URLs for verification
+        </rule>
+        <rule id="AGENT-BP-4" severity="HIGH">
+          Restrict research agents to official/authoritative domains only
+        </rule>
+        <rule id="AGENT-BP-5" severity="MEDIUM">
+          Use run_in_background=true for long-running agents, continue working on other tasks
+        </rule>
+        <rule id="AGENT-BP-6" severity="MEDIUM">
+          Use TaskOutput with block=true only when you need results to proceed
+        </rule>
+        <rule id="AGENT-BP-7" severity="MEDIUM">
+          Provide detailed prompts with clear instructions - agents start fresh without conversation context
+        </rule>
+        <rule id="AGENT-BP-8" severity="LOW">
+          Use haiku model for quick, straightforward tasks to minimize cost/latency
+        </rule>
+      </agent_best_practices>
+
+      <!-- AUTHORITATIVE SOURCES BY DOMAIN -->
+      <authoritative_sources>
+        <domain name="Python/FastAPI">
+          <source>fastapi.tiangolo.com</source>
+          <source>docs.python.org</source>
+          <source>docs.pydantic.dev</source>
+          <source>docs.sqlalchemy.org</source>
+        </domain>
+        <domain name="React/TypeScript">
+          <source>react.dev</source>
+          <source>typescriptlang.org</source>
+          <source>vitejs.dev</source>
+          <source>tailwindcss.com</source>
+        </domain>
+        <domain name="Docker/DevOps">
+          <source>docs.docker.com</source>
+          <source>owasp.org</source>
+          <source>opentelemetry.io</source>
+        </domain>
+        <domain name="API Standards">
+          <source>rfc-editor.org</source>
+          <source>spec.openapis.org</source>
+          <source>jsonapi.org</source>
+        </domain>
+        <domain name="Database">
+          <source>postgresql.org</source>
+          <source>redis.io</source>
+        </domain>
+        <domain name="Integrations">
+          <source>api.onlyoffice.com</source>
+          <source>docs.nextcloud.com</source>
+          <source>min.io/docs</source>
+        </domain>
+      </authoritative_sources>
+
+      <!-- ANTI-PATTERNS TO AVOID -->
+      <agent_anti_patterns>
+        <anti_pattern id="AGENT-ANTI-1">
+          <name>Sequential When Parallel Is Possible</name>
+          <problem>Launching agents one at a time, waiting for each to complete</problem>
+          <solution>Launch all independent agents in a single message</solution>
+        </anti_pattern>
+
+        <anti_pattern id="AGENT-ANTI-2">
+          <name>Unverified Single-Source Research</name>
+          <problem>Trusting information from a single agent without verification</problem>
+          <solution>Use multiple agents researching same topic from different sources</solution>
+        </anti_pattern>
+
+        <anti_pattern id="AGENT-ANTI-3">
+          <name>Unrestricted Web Research</name>
+          <problem>Allowing agents to use any web source (blogs, forums, outdated articles)</problem>
+          <solution>Restrict to official documentation domains, require source URLs</solution>
+        </anti_pattern>
+
+        <anti_pattern id="AGENT-ANTI-4">
+          <name>Vague Agent Prompts</name>
+          <problem>Giving agents unclear instructions leading to irrelevant results</problem>
+          <solution>Provide specific, detailed prompts with clear deliverables</solution>
+        </anti_pattern>
+
+        <anti_pattern id="AGENT-ANTI-5">
+          <name>Blocking on Non-Critical Agents</name>
+          <problem>Using block=true when you could continue working on other tasks</problem>
+          <solution>Use run_in_background=true, continue working, check results when needed</solution>
+        </anti_pattern>
+      </agent_anti_patterns>
+
+      <!-- EXAMPLE MULTI-AGENT WORKFLOWS -->
+      <example_workflows>
+        <workflow name="Research Best Practices">
+          <step order="1">Identify topic areas needing research (backend, frontend, devops, etc.)</step>
+          <step order="2">Launch parallel agents, each targeting different official documentation</step>
+          <step order="3">Require each agent to include source URLs for every recommendation</step>
+          <step order="4">Collect results, cross-reference for consistency</step>
+          <step order="5">Compile verified information, discard unsourced claims</step>
+        </workflow>
+
+        <workflow name="Debug Production Issue">
+          <step order="1">Identify all components that could cause the issue</step>
+          <step order="2">Launch parallel investigation agents for each component</step>
+          <step order="3">Each agent checks: health, logs, configuration, connectivity</step>
+          <step order="4">Combine findings to identify root cause</step>
+          <step order="5">Verify fix with test agent before deploying</step>
+        </workflow>
+
+        <workflow name="Implement New Feature">
+          <step order="1">Use Explore agent to understand existing codebase patterns</step>
+          <step order="2">Use Plan agent to design implementation approach</step>
+          <step order="3">Research best practices with parallel agents (if needed)</step>
+          <step order="4">Implement following established patterns</step>
+          <step order="5">Use agents to verify: tests pass, no regressions, browser works</step>
+        </workflow>
+      </example_workflows>
+    </ai_agent_guidelines>
 
     <!-- ============================================== -->
     <!-- DEVELOPMENT BEST PRACTICES                     -->
@@ -2072,6 +2338,19 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-15" version="0.5.0" phase="3">
+      <changes>
+        <change type="added">AI Agent Usage Guidelines section for Claude Code Task agents</change>
+        <change type="added">5 scenarios for when to use multi-agents (research, verification, debugging, etc.)</change>
+        <change type="added">Agent types documentation (Explore, Plan, general-purpose)</change>
+        <change type="added">4 parallel execution patterns (research, verification, investigation, validation)</change>
+        <change type="added">8 agent best practice rules</change>
+        <change type="added">Authoritative sources list by domain (6 domains, 15+ official sources)</change>
+        <change type="added">5 anti-patterns to avoid with solutions</change>
+        <change type="added">3 example workflows (research, debug, implement)</change>
+        <change type="milestone">AI-assisted development framework - comprehensive agent guidelines</change>
+      </changes>
+    </entry>
     <entry date="2026-01-15" version="0.4.9" phase="3">
       <changes>
         <change type="added">Comprehensive Development Best Practices section from official documentation</change>
