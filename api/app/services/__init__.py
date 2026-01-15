@@ -1,5 +1,6 @@
 """Service layer for AuditCaseOS API."""
 
+from .analytics_service import AnalyticsService
 from .audit_service import AuditService
 from .case_service import CaseService
 from .embedding_service import EmbeddingService
@@ -13,6 +14,7 @@ from .storage_service import StorageService
 from .websocket_service import ConnectionManager
 
 __all__ = [
+    "AnalyticsService",
     "AuditService",
     "CaseService",
     "ConnectionManager",

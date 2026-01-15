@@ -2289,9 +2289,53 @@ $$ LANGUAGE plpgsql;
     </feature_group>
 
     <feature_group name="Advanced Features">
-      <feature id="3.11" status="PENDING">
+      <feature id="3.11" status="COMPLETED">
         <name>Analytics Dashboard</name>
-        <description>Visual analytics and reporting</description>
+        <description>Visual analytics with charts showing case statistics, trends, evidence/findings breakdowns, entity insights, and user activity metrics</description>
+        <completion_date>2026-01-15</completion_date>
+        <files_created>
+          <file>api/app/schemas/analytics.py - Response models for analytics</file>
+          <file>api/app/services/analytics_service.py - Analytics aggregation service</file>
+          <file>api/app/routers/analytics.py - Analytics REST endpoints</file>
+          <file>frontend/src/pages/Analytics.tsx - Analytics dashboard page</file>
+        </files_created>
+        <files_modified>
+          <file>api/app/main.py - Registered analytics router</file>
+          <file>api/app/routers/__init__.py - Export analytics_router</file>
+          <file>api/app/services/__init__.py - Export AnalyticsService</file>
+          <file>frontend/src/types/index.ts - Added analytics types</file>
+          <file>frontend/src/services/api.ts - Added analyticsApi</file>
+          <file>frontend/src/App.tsx - Added analytics route</file>
+          <file>frontend/package.json - Added recharts dependency</file>
+        </files_modified>
+        <api_endpoints>
+          <endpoint method="GET" path="/api/v1/analytics/overview">Dashboard overview stats</endpoint>
+          <endpoint method="GET" path="/api/v1/analytics/cases">Case stats by status/severity/type/scope</endpoint>
+          <endpoint method="GET" path="/api/v1/analytics/trends">Case creation/closure trends over time</endpoint>
+          <endpoint method="GET" path="/api/v1/analytics/evidence-findings">Evidence and findings breakdown</endpoint>
+          <endpoint method="GET" path="/api/v1/analytics/entities">Entity extraction insights</endpoint>
+          <endpoint method="GET" path="/api/v1/analytics/activity">User activity from audit log</endpoint>
+          <endpoint method="GET" path="/api/v1/analytics/full">Complete analytics in one call</endpoint>
+        </api_endpoints>
+        <features>
+          <feature>Overview stat cards (total/open/critical/resolved cases, evidence, findings, entities)</feature>
+          <feature>Period selector (7/30/90/365 days)</feature>
+          <feature>Case trends line chart (created vs closed over time)</feature>
+          <feature>Status distribution pie chart</feature>
+          <feature>Severity distribution horizontal bar chart</feature>
+          <feature>Case type bar chart</feature>
+          <feature>Department/scope breakdown</feature>
+          <feature>Evidence type pie chart</feature>
+          <feature>Findings severity bar chart</feature>
+          <feature>Entity type distribution</feature>
+          <feature>Top entities table</feature>
+          <feature>User activity bar chart</feature>
+          <feature>Top active users list</feature>
+        </features>
+        <dependencies>
+          <dependency>recharts - React charting library</dependency>
+        </dependencies>
+        <tested>true</tested>
       </feature>
       <feature id="3.12" status="PENDING">
         <name>Workflow Automation</name>
@@ -2336,16 +2380,16 @@ $$ LANGUAGE plpgsql;
   <progress>
     <summary>
       <total_features>38</total_features>
-      <completed>34</completed>
+      <completed>35</completed>
       <in_progress>0</in_progress>
-      <pending>4</pending>
-      <completion_percentage>89</completion_percentage>
+      <pending>3</pending>
+      <completion_percentage>92</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="2" features_total="12" features_completed="12" status="COMPLETED"/>
-      <phase number="3" features_total="14" features_completed="10" status="IN_PROGRESS"/>
+      <phase number="3" features_total="14" features_completed="11" status="IN_PROGRESS"/>
     </phase_status>
 
     <next_steps>
@@ -2359,6 +2403,25 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-15" version="0.5.2" phase="3">
+      <changes>
+        <change type="added">Feature 3.11: Analytics Dashboard - COMPLETE</change>
+        <change type="added">Backend analytics service with aggregation queries (analytics_service.py)</change>
+        <change type="added">Analytics REST API with 7 endpoints (/analytics/*)</change>
+        <change type="added">Analytics page with Recharts visualization library</change>
+        <change type="added">Overview stat cards (total/open/critical/resolved cases, evidence, findings, entities)</change>
+        <change type="added">Period selector (7/30/90/365 days)</change>
+        <change type="added">Case trends line chart (created vs closed over time)</change>
+        <change type="added">Status distribution pie chart</change>
+        <change type="added">Severity distribution horizontal bar chart</change>
+        <change type="added">Case type and department/scope bar charts</change>
+        <change type="added">Evidence type pie chart</change>
+        <change type="added">Findings severity bar chart</change>
+        <change type="added">Entity type distribution and top entities table</change>
+        <change type="added">User activity bar chart and top active users list</change>
+        <change type="milestone">Feature 3.11 Analytics Dashboard - 35/38 features complete (92%)</change>
+      </changes>
+    </entry>
     <entry date="2026-01-15" version="0.5.1" phase="3">
       <changes>
         <change type="added">Feature 3.10: Real-time Updates (WebSocket) - COMPLETE</change>

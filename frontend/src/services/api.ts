@@ -19,6 +19,13 @@ import type {
   UserCreate,
   UserUpdate,
   UsersListResponse,
+  DashboardOverview,
+  CaseStatsResponse,
+  TrendsResponse,
+  EvidenceFindingsStats,
+  EntityInsightsResponse,
+  UserActivityResponse,
+  FullAnalyticsResponse,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
@@ -436,6 +443,53 @@ export const usersApi = {
     const response = await api.post<{ message: string }>('/auth/change-password', {
       current_password: currentPassword,
       new_password: newPassword,
+    });
+    return response.data;
+  },
+};
+
+// Analytics API
+export const analyticsApi = {
+  getOverview: async (): Promise<DashboardOverview> => {
+    const response = await api.get<DashboardOverview>('/analytics/overview');
+    return response.data;
+  },
+
+  getCaseStats: async (scope?: string): Promise<CaseStatsResponse> => {
+    const params = scope ? { scope } : {};
+    const response = await api.get<CaseStatsResponse>('/analytics/cases', { params });
+    return response.data;
+  },
+
+  getTrends: async (days: number = 30, granularity: string = 'day'): Promise<TrendsResponse> => {
+    const response = await api.get<TrendsResponse>('/analytics/trends', {
+      params: { days, granularity },
+    });
+    return response.data;
+  },
+
+  getEvidenceFindings: async (): Promise<EvidenceFindingsStats> => {
+    const response = await api.get<EvidenceFindingsStats>('/analytics/evidence-findings');
+    return response.data;
+  },
+
+  getEntityInsights: async (entityType?: string, limit: number = 10): Promise<EntityInsightsResponse> => {
+    const params: Record<string, string | number> = { limit };
+    if (entityType) params.entity_type = entityType;
+    const response = await api.get<EntityInsightsResponse>('/analytics/entities', { params });
+    return response.data;
+  },
+
+  getUserActivity: async (days: number = 30, limit: number = 10): Promise<UserActivityResponse> => {
+    const response = await api.get<UserActivityResponse>('/analytics/activity', {
+      params: { days, limit },
+    });
+    return response.data;
+  },
+
+  getFullAnalytics: async (days: number = 30): Promise<FullAnalyticsResponse> => {
+    const response = await api.get<FullAnalyticsResponse>('/analytics/full', {
+      params: { days },
     });
     return response.data;
   },

@@ -244,3 +244,120 @@ export interface PaginatedResponse<T> {
 export interface ApiError {
   detail: string | { msg: string; type: string }[];
 }
+
+// Analytics types
+export interface StatusCount {
+  status: string;
+  count: number;
+  percentage: number;
+}
+
+export interface SeverityCount {
+  severity: string;
+  count: number;
+  percentage: number;
+}
+
+export interface TypeCount {
+  type: string;
+  count: number;
+  percentage: number;
+}
+
+export interface ScopeCount {
+  scope_code: string;
+  scope_name: string;
+  count: number;
+  percentage: number;
+}
+
+export interface TrendDataPoint {
+  date: string;
+  created: number;
+  closed: number;
+}
+
+export interface EntityTypeStats {
+  entity_type: string;
+  count: number;
+  unique_values: number;
+}
+
+export interface TopEntity {
+  value: string;
+  entity_type: string;
+  occurrence_count: number;
+  case_count: number;
+}
+
+export interface UserActivityStat {
+  user_id: string;
+  user_email: string;
+  action_count: number;
+  last_activity: string;
+}
+
+export interface ActionCount {
+  action: string;
+  count: number;
+}
+
+export interface DashboardOverview {
+  total_cases: number;
+  open_cases: number;
+  in_progress_cases: number;
+  closed_cases: number;
+  critical_cases: number;
+  high_severity_cases: number;
+  total_evidence: number;
+  total_findings: number;
+  total_entities: number;
+  avg_resolution_days: number | null;
+}
+
+export interface CaseStatsResponse {
+  by_status: StatusCount[];
+  by_severity: SeverityCount[];
+  by_type: TypeCount[];
+  by_scope: ScopeCount[];
+  total: number;
+}
+
+export interface TrendsResponse {
+  data: TrendDataPoint[];
+  period_days: number;
+  granularity: string;
+  total_created: number;
+  total_closed: number;
+}
+
+export interface EvidenceFindingsStats {
+  evidence_by_type: TypeCount[];
+  evidence_by_status: StatusCount[];
+  findings_by_severity: SeverityCount[];
+  findings_by_status: StatusCount[];
+  total_evidence: number;
+  total_findings: number;
+}
+
+export interface EntityInsightsResponse {
+  by_type: EntityTypeStats[];
+  top_entities: TopEntity[];
+  total_entities: number;
+}
+
+export interface UserActivityResponse {
+  by_action: ActionCount[];
+  top_users: UserActivityStat[];
+  total_actions: number;
+  period_days: number;
+}
+
+export interface FullAnalyticsResponse {
+  overview: DashboardOverview;
+  case_stats: CaseStatsResponse;
+  trends: TrendsResponse;
+  evidence_findings: EvidenceFindingsStats;
+  entities: EntityInsightsResponse;
+  user_activity: UserActivityResponse;
+}
