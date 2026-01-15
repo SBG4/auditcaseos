@@ -25,6 +25,7 @@ from app.services.audit_service import audit_service
 from app.services.case_service import case_service
 from app.services.storage_service import storage_service
 from app.services.nextcloud_service import nextcloud_service
+from app.services.websocket_service import connection_manager
 
 logger = logging.getLogger(__name__)
 
@@ -209,6 +210,22 @@ async def upload_evidence(
             logger.info(f"Evidence synced to Nextcloud: {nc_path}")
         except Exception as nc_error:
             logger.warning(f"Failed to sync evidence to Nextcloud (non-fatal): {nc_error}")
+
+        # Broadcast evidence upload to case viewers
+        try:
+            await connection_manager.send_case_update(
+                case_id=case_data["case_id"],
+                update_type="evidence_added",
+                data={
+                    "evidence_id": str(evidence_data.get("id")),
+                    "file_name": file.filename or "unknown",
+                    "file_size": file_size,
+                    "mime_type": file.content_type,
+                },
+                triggered_by=str(user_id),
+            )
+        except Exception as ws_error:
+            logger.debug(f"WebSocket broadcast skipped: {ws_error}")
 
         now = datetime.utcnow()
         return EvidenceUploadResponse(

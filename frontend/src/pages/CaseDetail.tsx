@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -16,7 +16,11 @@ import {
   ComputerDesktopIcon,
   FolderOpenIcon,
   PencilSquareIcon,
+  EyeIcon,
+  SignalIcon,
 } from '@heroicons/react/24/outline';
+import { useWebSocket } from '../hooks/useWebSocket';
+import type { WebSocketMessage } from '../services/websocket';
 import { casesApi, evidenceApi, findingsApi, timelineApi, aiApi, reportsApi, nextcloudApi, onlyofficeApi } from '../services/api';
 import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
@@ -34,6 +38,51 @@ export default function CaseDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [uploadDescription, setUploadDescription] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // WebSocket for real-time updates
+  const { isConnected, viewers, connect, disconnect, subscribe } = useWebSocket();
+
+  // Connect to WebSocket when case ID changes
+  useEffect(() => {
+    if (id) {
+      connect(id);
+    }
+    return () => {
+      disconnect();
+    };
+  }, [id, connect, disconnect]);
+
+  // Handle real-time updates
+  const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
+    if (message.case_id !== id) return;
+
+    switch (message.type) {
+      case 'case_updated':
+        queryClient.invalidateQueries({ queryKey: ['case', id] });
+        break;
+      case 'evidence_added':
+      case 'evidence_deleted':
+        queryClient.invalidateQueries({ queryKey: ['evidence', id] });
+        break;
+      case 'finding_added':
+      case 'finding_updated':
+        queryClient.invalidateQueries({ queryKey: ['findings', id] });
+        break;
+      case 'timeline_added':
+        queryClient.invalidateQueries({ queryKey: ['timeline', id] });
+        break;
+      case 'status_changed':
+        queryClient.invalidateQueries({ queryKey: ['case', id] });
+        queryClient.invalidateQueries({ queryKey: ['cases'] });
+        break;
+    }
+  }, [id, queryClient]);
+
+  // Subscribe to WebSocket messages
+  useEffect(() => {
+    const unsubscribe = subscribe(handleWebSocketMessage);
+    return unsubscribe;
+  }, [subscribe, handleWebSocketMessage]);
 
   const { data: caseData, isLoading } = useQuery({
     queryKey: ['case', id],
@@ -215,8 +264,40 @@ export default function CaseDetail() {
               <h1 className="text-2xl font-bold text-gray-900">{caseData.title}</h1>
               <Badge variant="status" value={caseData.status} />
               <Badge variant="severity" value={caseData.severity} />
+              {/* Real-time connection indicator */}
+              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
+                isConnected ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+              }`}>
+                <SignalIcon className="w-3 h-3" />
+                {isConnected ? 'Live' : 'Offline'}
+              </div>
             </div>
-            <p className="mt-1 text-sm text-gray-500">{caseData.case_id}</p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-sm text-gray-500">{caseData.case_id}</p>
+              {/* Presence indicator - who's viewing */}
+              {viewers.length > 0 && (
+                <div className="flex items-center gap-1 text-xs text-gray-500">
+                  <EyeIcon className="w-3.5 h-3.5" />
+                  <span>{viewers.length} viewing:</span>
+                  <div className="flex -space-x-1">
+                    {viewers.slice(0, 5).map((viewer) => (
+                      <div
+                        key={viewer.user_id}
+                        className="w-5 h-5 rounded-full bg-primary-500 border border-white flex items-center justify-center text-white text-[10px] font-medium"
+                        title={viewer.name || viewer.email}
+                      >
+                        {(viewer.name || viewer.email).charAt(0).toUpperCase()}
+                      </div>
+                    ))}
+                    {viewers.length > 5 && (
+                      <div className="w-5 h-5 rounded-full bg-gray-400 border border-white flex items-center justify-center text-white text-[10px]">
+                        +{viewers.length - 5}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex gap-2">

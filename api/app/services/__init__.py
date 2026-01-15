@@ -10,10 +10,12 @@ from .onlyoffice_service import OnlyOfficeService
 from .paperless_service import PaperlessService
 from .report_service import ReportService
 from .storage_service import StorageService
+from .websocket_service import ConnectionManager
 
 __all__ = [
     "AuditService",
     "CaseService",
+    "ConnectionManager",
     "EmbeddingService",
     "EntityService",
     "NextcloudService",

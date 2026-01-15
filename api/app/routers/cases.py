@@ -31,6 +31,7 @@ from app.schemas.common import (
 )
 from app.services.audit_service import audit_service
 from app.services.case_service import case_service
+from app.services.websocket_service import connection_manager
 
 logger = logging.getLogger(__name__)
 
@@ -208,6 +209,23 @@ async def create_case(
 
         # Build full response
         response = await case_service.build_case_response(db, created_case)
+
+        # Broadcast new case creation (for dashboard updates)
+        try:
+            await connection_manager.send_case_update(
+                case_id=created_case["case_id"],
+                update_type="case_created",
+                data={
+                    "case_id": created_case["case_id"],
+                    "title": created_case["title"],
+                    "status": created_case.get("status"),
+                    "severity": created_case.get("severity"),
+                },
+                triggered_by=str(owner_id),
+            )
+        except Exception as ws_error:
+            logger.debug(f"WebSocket broadcast skipped: {ws_error}")
+
         return response
 
     except HTTPException:
@@ -351,6 +369,24 @@ async def update_case(
 
         # Build full response
         response = await case_service.build_case_response(db, updated_case)
+
+        # Broadcast case update to viewers
+        try:
+            await connection_manager.send_case_update(
+                case_id=updated_case["case_id"],
+                update_type="case_updated",
+                data={
+                    "case_id": updated_case["case_id"],
+                    "updated_fields": list(update_dict.keys()),
+                    "title": updated_case.get("title"),
+                    "status": updated_case.get("status"),
+                    "severity": updated_case.get("severity"),
+                },
+                triggered_by=str(current_user["id"]),
+            )
+        except Exception as ws_error:
+            logger.debug(f"WebSocket broadcast skipped: {ws_error}")
+
         return response
 
     except HTTPException:
@@ -541,6 +577,22 @@ async def add_timeline_event(
         row = result.fetchone()
         event_data = dict(row._mapping) if row else {}
 
+        # Broadcast timeline event to case viewers
+        try:
+            await connection_manager.send_case_update(
+                case_id=case_data["case_id"],
+                update_type="timeline_added",
+                data={
+                    "event_id": str(event_data.get("id")),
+                    "event_type": event_type,
+                    "description": description[:100],  # Truncate for notification
+                    "event_time": str(event_time),
+                },
+                triggered_by=str(user_id),
+            )
+        except Exception as ws_error:
+            logger.debug(f"WebSocket broadcast skipped: {ws_error}")
+
         return event_data
 
     except HTTPException:
@@ -673,6 +725,21 @@ async def add_finding(
             new_values={"title": title, "severity": severity.value, "case_id": case_data["case_id"]},
             user_ip=client_ip,
         )
+
+        # Broadcast finding to case viewers
+        try:
+            await connection_manager.send_case_update(
+                case_id=case_data["case_id"],
+                update_type="finding_added",
+                data={
+                    "finding_id": str(finding_data.get("id")),
+                    "title": title,
+                    "severity": severity.value,
+                },
+                triggered_by=str(user_id),
+            )
+        except Exception as ws_error:
+            logger.debug(f"WebSocket broadcast skipped: {ws_error}")
 
         return finding_data
 

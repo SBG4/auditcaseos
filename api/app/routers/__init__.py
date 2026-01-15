@@ -13,6 +13,7 @@ from .reports import router as reports_router
 from .scopes import router as scopes_router
 from .sync import router as sync_router
 from .users import router as users_router
+from .websocket import router as websocket_router
 
 __all__ = [
     "ai_router",
@@ -25,4 +26,5 @@ __all__ = [
     "scopes_router",
     "sync_router",
     "users_router",
+    "websocket_router",
 ]
