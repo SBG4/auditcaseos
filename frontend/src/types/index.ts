@@ -1,18 +1,45 @@
 // User types
+export type UserRole = 'admin' | 'auditor' | 'reviewer' | 'viewer';
+
 export interface User {
   id: string;
   email: string;
   username: string;
   full_name: string;
-  role: 'admin' | 'auditor' | 'reviewer' | 'viewer';
+  role: UserRole;
+  department?: string;
   is_active: boolean;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface UserBrief {
   id: string;
   full_name: string;
   email: string;
+}
+
+export interface UserCreate {
+  username: string;
+  email: string;
+  password: string;
+  full_name: string;
+  role?: UserRole;
+  department?: string;
+}
+
+export interface UserUpdate {
+  email?: string;
+  full_name?: string;
+  role?: UserRole;
+  department?: string;
+  is_active?: boolean;
+}
+
+export interface UsersListResponse {
+  items: User[];
+  total: number;
+  skip: number;
+  limit: number;
 }
 
 // Auth types

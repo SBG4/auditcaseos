@@ -15,6 +15,10 @@ import type {
   TimelineEvent,
   Entity,
   ReportTemplate,
+  User,
+  UserCreate,
+  UserUpdate,
+  UsersListResponse,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
@@ -284,6 +288,42 @@ export const syncApi = {
 
   syncCase: async (caseId: string): Promise<{ synced: number; failed: number }> => {
     const response = await api.post(`/sync/case/${caseId}`);
+    return response.data;
+  },
+};
+
+// Users API (Admin only)
+export const usersApi = {
+  list: async (params?: { skip?: number; limit?: number }): Promise<UsersListResponse> => {
+    const response = await api.get<UsersListResponse>('/auth/users', { params });
+    return response.data;
+  },
+
+  get: async (userId: string): Promise<User> => {
+    const response = await api.get<User>(`/auth/users/${userId}`);
+    return response.data;
+  },
+
+  create: async (data: UserCreate): Promise<User> => {
+    const response = await api.post<User>('/auth/register', data);
+    return response.data;
+  },
+
+  update: async (userId: string, data: UserUpdate): Promise<User> => {
+    const response = await api.patch<User>(`/auth/users/${userId}`, data);
+    return response.data;
+  },
+
+  deactivate: async (userId: string): Promise<{ message: string }> => {
+    const response = await api.delete<{ message: string }>(`/auth/users/${userId}`);
+    return response.data;
+  },
+
+  changePassword: async (currentPassword: string, newPassword: string): Promise<{ message: string }> => {
+    const response = await api.post<{ message: string }>('/auth/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
     return response.data;
   },
 };

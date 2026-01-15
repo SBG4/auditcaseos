@@ -16,7 +16,7 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.4.0</version>
+    <version>0.4.2</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-15</last_updated>
     <current_phase>3</current_phase>
@@ -1422,9 +1422,35 @@ $$ LANGUAGE plpgsql;
         </features>
         <tested>true</tested>
       </feature>
-      <feature id="3.7" status="PENDING">
+      <feature id="3.7" status="COMPLETED">
         <name>Admin Pages</name>
         <description>User and system administration</description>
+        <completion_date>2026-01-15</completion_date>
+        <files_created>
+          <file>frontend/src/pages/Admin.tsx</file>
+        </files_created>
+        <files_modified>
+          <file>frontend/src/App.tsx - Added admin route</file>
+          <file>frontend/src/services/api.ts - Added usersApi</file>
+          <file>frontend/src/types/index.ts - Added user management types</file>
+          <file>api/app/routers/auth.py - Added user CRUD endpoints</file>
+          <file>api/app/services/auth_service.py - Added update/deactivate methods</file>
+        </files_modified>
+        <features>
+          <feature>User listing with search and filter</feature>
+          <feature>User creation with role assignment</feature>
+          <feature>User profile editing</feature>
+          <feature>User deactivation (soft delete)</feature>
+          <feature>User statistics dashboard (total, active, by role)</feature>
+          <feature>Admin-only access control</feature>
+        </features>
+        <api_endpoints>
+          <endpoint method="GET" path="/api/v1/auth/users">List all users (paginated)</endpoint>
+          <endpoint method="GET" path="/api/v1/auth/users/{user_id}">Get user by ID</endpoint>
+          <endpoint method="PATCH" path="/api/v1/auth/users/{user_id}">Update user</endpoint>
+          <endpoint method="DELETE" path="/api/v1/auth/users/{user_id}">Deactivate user</endpoint>
+        </api_endpoints>
+        <tested>true</tested>
       </feature>
     </feature_group>
 
@@ -1465,22 +1491,22 @@ $$ LANGUAGE plpgsql;
   <progress>
     <summary>
       <total_features>37</total_features>
-      <completed>30</completed>
+      <completed>31</completed>
       <in_progress>0</in_progress>
-      <pending>7</pending>
-      <completion_percentage>81</completion_percentage>
+      <pending>6</pending>
+      <completion_percentage>84</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="2" features_total="12" features_completed="12" status="COMPLETED"/>
-      <phase number="3" features_total="13" features_completed="6" status="IN_PROGRESS"/>
+      <phase number="3" features_total="13" features_completed="7" status="IN_PROGRESS"/>
     </phase_status>
 
     <next_steps>
-      <step priority="1" feature_id="3.7">Admin Pages (user management)</step>
-      <step priority="2" feature_id="3.8">Nextcloud Integration</step>
-      <step priority="3" feature_id="3.9">ONLYOFFICE Integration</step>
+      <step priority="1" feature_id="3.8">Nextcloud Integration</step>
+      <step priority="2" feature_id="3.9">ONLYOFFICE Integration</step>
+      <step priority="3" feature_id="3.10">Real-time Updates (WebSocket)</step>
     </next_steps>
   </progress>
 
@@ -1488,6 +1514,22 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-15" version="0.4.2" phase="3">
+      <changes>
+        <change type="added">Feature 3.7: Admin Pages with user management</change>
+        <change type="added">Admin dashboard with user statistics (total, active, by role)</change>
+        <change type="added">User listing with search functionality</change>
+        <change type="added">User creation form with role and department assignment</change>
+        <change type="added">User profile editing (email, name, role, department)</change>
+        <change type="added">User deactivation (soft delete) with protection against self-deactivation</change>
+        <change type="added">GET /api/v1/auth/users - List users (paginated)</change>
+        <change type="added">GET /api/v1/auth/users/{id} - Get user by ID</change>
+        <change type="added">PATCH /api/v1/auth/users/{id} - Update user</change>
+        <change type="added">DELETE /api/v1/auth/users/{id} - Deactivate user</change>
+        <change type="added">usersApi in frontend for admin operations</change>
+        <change type="milestone">Phase 3 progress: 7/13 features complete (54%)</change>
+      </changes>
+    </entry>
     <entry date="2026-01-15" version="0.4.1" phase="3">
       <changes>
         <change type="added">Feature 3.4: Case Detail Page Enhancements with AI Analysis tab</change>

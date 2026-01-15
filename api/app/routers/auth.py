@@ -391,23 +391,138 @@ async def change_password(
     return MessageResponse(message="Password changed successfully")
 
 
+class UserUpdate(BaseSchema):
+    """Schema for updating a user."""
+
+    email: EmailStr | None = None
+    full_name: str | None = Field(None, min_length=1, max_length=255)
+    role: str | None = Field(None, pattern="^(admin|auditor|reviewer|viewer)$")
+    department: str | None = Field(None, max_length=100)
+    is_active: bool | None = None
+
+
+class UsersListResponse(BaseSchema):
+    """Paginated users list response."""
+
+    items: list[UserResponse]
+    total: int
+    skip: int
+    limit: int
+
+
 @router.get(
     "/users",
-    response_model=list[UserResponse],
+    response_model=UsersListResponse,
     summary="List all users (admin only)",
-    description="Returns a list of all users. Requires admin privileges.",
+    description="Returns a paginated list of all users. Requires admin privileges.",
 )
 async def list_users(
     db: DbSession,
     admin: AdminUser,
     skip: int = 0,
     limit: int = 50,
-) -> list[UserResponse]:
+) -> UsersListResponse:
     """List all users (admin only)."""
     users = await auth_service.list_users(db, skip=skip, limit=limit)
+    total = await auth_service.count_users(db)
 
-    return [
-        UserResponse(
+    return UsersListResponse(
+        items=[
+            UserResponse(
+                id=str(user["id"]),
+                username=user["username"],
+                email=user["email"],
+                full_name=user["full_name"],
+                role=str(user["role"]),
+                department=user.get("department"),
+                is_active=user.get("is_active", True),
+            )
+            for user in users
+        ],
+        total=total,
+        skip=skip,
+        limit=limit,
+    )
+
+
+@router.get(
+    "/users/{user_id}",
+    response_model=UserResponse,
+    summary="Get user by ID (admin only)",
+    description="Returns a specific user by ID. Requires admin privileges.",
+)
+async def get_user(
+    db: DbSession,
+    user_id: str,
+    admin: AdminUser,
+) -> UserResponse:
+    """Get a user by ID (admin only)."""
+    user = await auth_service.get_user_by_id(db, user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    return UserResponse(
+        id=str(user["id"]),
+        username=user["username"],
+        email=user["email"],
+        full_name=user["full_name"],
+        role=str(user["role"]),
+        department=user.get("department"),
+        is_active=user.get("is_active", True),
+    )
+
+
+@router.patch(
+    "/users/{user_id}",
+    response_model=UserResponse,
+    summary="Update user (admin only)",
+    description="Update a user's profile. Requires admin privileges.",
+)
+async def update_user(
+    db: DbSession,
+    request: Request,
+    user_id: str,
+    user_data: UserUpdate,
+    admin: AdminUser,
+) -> UserResponse:
+    """Update a user (admin only)."""
+    try:
+        user = await auth_service.update_user(
+            db=db,
+            user_id=user_id,
+            email=user_data.email,
+            full_name=user_data.full_name,
+            role=user_data.role,
+            department=user_data.department,
+            is_active=user_data.is_active,
+        )
+
+        if not user:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
+        # Log user update
+        client_ip = request.client.host if request.client else None
+        try:
+            await audit_service.log_action(
+                db=db,
+                action="UPDATE",
+                entity_type="user",
+                entity_id=user_id,
+                user_id=admin["id"],
+                new_values=user_data.model_dump(exclude_none=True),
+                user_ip=client_ip,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to log user update: {e}")
+
+        return UserResponse(
             id=str(user["id"]),
             username=user["username"],
             email=user["email"],
@@ -416,5 +531,54 @@ async def list_users(
             department=user.get("department"),
             is_active=user.get("is_active", True),
         )
-        for user in users
-    ]
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+@router.delete(
+    "/users/{user_id}",
+    response_model=MessageResponse,
+    summary="Deactivate user (admin only)",
+    description="Deactivate a user account. Requires admin privileges.",
+)
+async def deactivate_user(
+    db: DbSession,
+    request: Request,
+    user_id: str,
+    admin: AdminUser,
+) -> MessageResponse:
+    """Deactivate a user (admin only). Cannot deactivate yourself."""
+    # Prevent self-deactivation
+    if str(admin["id"]) == user_id:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail="Cannot deactivate your own account",
+        )
+
+    success = await auth_service.deactivate_user(db, user_id)
+
+    if not success:
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    # Log user deactivation
+    client_ip = request.client.host if request.client else None
+    try:
+        await audit_service.log_action(
+            db=db,
+            action="DEACTIVATE",
+            entity_type="user",
+            entity_id=user_id,
+            user_id=admin["id"],
+            user_ip=client_ip,
+        )
+    except Exception as e:
+        logger.warning(f"Failed to log user deactivation: {e}")
+
+    return MessageResponse(message="User deactivated successfully")

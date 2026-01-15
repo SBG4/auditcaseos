@@ -7,6 +7,7 @@ import CaseList from './pages/CaseList';
 import CaseDetail from './pages/CaseDetail';
 import CaseCreate from './pages/CaseCreate';
 import Reports from './pages/Reports';
+import Admin from './pages/Admin';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="cases/new" element={<CaseCreate />} />
         <Route path="cases/:id" element={<CaseDetail />} />
         <Route path="reports" element={<Reports />} />
+        <Route path="admin" element={<Admin />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -315,6 +315,150 @@ class AuthService:
             logger.error(f"Failed to list users: {e}")
             raise
 
+    async def update_user(
+        self,
+        db: AsyncSession,
+        user_id: UUID | str,
+        email: str | None = None,
+        full_name: str | None = None,
+        role: str | None = None,
+        department: str | None = None,
+        is_active: bool | None = None,
+    ) -> dict[str, Any] | None:
+        """
+        Update a user's profile (admin only).
+
+        Args:
+            db: Database session
+            user_id: User UUID
+            email: New email (optional)
+            full_name: New full name (optional)
+            role: New role (optional)
+            department: New department (optional)
+            is_active: New active status (optional)
+
+        Returns:
+            Updated user dict or None if not found
+
+        Raises:
+            ValueError: If email already exists for another user
+        """
+        try:
+            # Check if user exists
+            existing = await self.get_user_by_id(db, user_id)
+            if not existing:
+                return None
+
+            # If updating email, check uniqueness
+            if email and email != existing["email"]:
+                email_user = await self.get_user_by_email(db, email)
+                if email_user and str(email_user["id"]) != str(user_id):
+                    raise ValueError(f"Email '{email}' already exists")
+
+            # Build dynamic update
+            updates = []
+            params: dict[str, Any] = {"user_id": str(user_id)}
+
+            if email is not None:
+                updates.append("email = :email")
+                params["email"] = email
+            if full_name is not None:
+                updates.append("full_name = :full_name")
+                params["full_name"] = full_name
+            if role is not None:
+                updates.append("role = CAST(:role AS user_role)")
+                params["role"] = role
+            if department is not None:
+                updates.append("department = :department")
+                params["department"] = department
+            if is_active is not None:
+                updates.append("is_active = :is_active")
+                params["is_active"] = is_active
+
+            if not updates:
+                return existing
+
+            updates.append("updated_at = CURRENT_TIMESTAMP")
+
+            query = text(f"""
+                UPDATE users
+                SET {', '.join(updates)}
+                WHERE id = :user_id
+                RETURNING id, username, email, full_name, role, department, is_active, created_at, updated_at
+            """)
+
+            result = await db.execute(query, params)
+            await db.commit()
+
+            row = result.fetchone()
+            if row:
+                logger.info(f"Updated user {user_id}")
+                return dict(row._mapping)
+            return None
+
+        except ValueError:
+            raise
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Failed to update user: {e}")
+            raise
+
+    async def deactivate_user(
+        self,
+        db: AsyncSession,
+        user_id: UUID | str,
+    ) -> bool:
+        """
+        Deactivate a user account (soft delete).
+
+        Args:
+            db: Database session
+            user_id: User UUID
+
+        Returns:
+            True if deactivated, False if user not found
+        """
+        try:
+            query = text("""
+                UPDATE users
+                SET is_active = false, updated_at = CURRENT_TIMESTAMP
+                WHERE id = :user_id
+                RETURNING id
+            """)
+
+            result = await db.execute(query, {"user_id": str(user_id)})
+            await db.commit()
+
+            row = result.fetchone()
+            if row:
+                logger.info(f"Deactivated user {user_id}")
+                return True
+            return False
+
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Failed to deactivate user: {e}")
+            raise
+
+    async def count_users(self, db: AsyncSession) -> int:
+        """
+        Count total users.
+
+        Args:
+            db: Database session
+
+        Returns:
+            Total user count
+        """
+        try:
+            query = text("SELECT COUNT(*) FROM users")
+            result = await db.execute(query)
+            row = result.fetchone()
+            return row[0] if row else 0
+        except Exception as e:
+            logger.error(f"Failed to count users: {e}")
+            raise
+
 
 # Singleton instance
 auth_service = AuthService()
