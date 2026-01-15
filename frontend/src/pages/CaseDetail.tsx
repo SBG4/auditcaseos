@@ -66,9 +66,9 @@ export default function CaseDetail() {
   });
 
   const { data: nextcloudUrl } = useQuery({
-    queryKey: ['nextcloud-url', id],
-    queryFn: () => nextcloudApi.getCaseFolderUrl(id!),
-    enabled: !!id,
+    queryKey: ['nextcloud-url', caseData?.case_id],
+    queryFn: () => nextcloudApi.getCaseFolderUrl(caseData!.case_id),
+    enabled: !!caseData?.case_id,
     retry: false,
     staleTime: 1000 * 60 * 30, // Cache for 30 minutes
   });

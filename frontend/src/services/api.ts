@@ -123,8 +123,8 @@ export const casesApi = {
 // Evidence API
 export const evidenceApi = {
   list: async (caseId: string): Promise<Evidence[]> => {
-    const response = await api.get<Evidence[]>(`/evidence/cases/${caseId}`);
-    return response.data;
+    const response = await api.get<{ items: Evidence[]; total: number; case_id: string }>(`/evidence/cases/${caseId}`);
+    return response.data.items;
   },
 
   upload: async (caseId: string, file: File, description?: string): Promise<Evidence> => {
