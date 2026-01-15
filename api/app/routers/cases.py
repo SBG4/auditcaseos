@@ -197,6 +197,15 @@ async def create_case(
             user_ip=client_ip,
         )
 
+        # Create Nextcloud folder structure for the case (non-blocking)
+        try:
+            from app.services.nextcloud_service import nextcloud_service
+            await nextcloud_service.create_case_folder(created_case["case_id"])
+            logger.info(f"Created Nextcloud folder for case {created_case['case_id']}")
+        except Exception as e:
+            # Don't fail case creation if Nextcloud is unavailable
+            logger.warning(f"Failed to create Nextcloud folder for case {created_case['case_id']}: {e}")
+
         # Build full response
         response = await case_service.build_case_response(db, created_case)
         return response

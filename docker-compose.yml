@@ -11,6 +11,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./configs/postgres/00-create-paperless-db.sh:/docker-entrypoint-initdb.d/00-create-paperless-db.sh:ro
       - ./configs/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./configs/postgres/02-create-nextcloud-db.sh:/docker-entrypoint-initdb.d/02-create-nextcloud-db.sh:ro
     ports:
       - "15432:5432"
     healthcheck:
@@ -124,6 +125,9 @@ services:
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       PAPERLESS_URL: http://paperless:8000
       PAPERLESS_API_TOKEN: ${PAPERLESS_API_TOKEN:-}
+      NEXTCLOUD_URL: http://nextcloud
+      NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER:-admin}
+      NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD:-admin123}
     ports:
       - "18000:8000"
     depends_on:
@@ -156,6 +160,36 @@ services:
       retries: 3
     restart: unless-stopped
 
+  # Nextcloud for file collaboration
+  nextcloud:
+    image: nextcloud:29-apache
+    container_name: auditcaseos-nextcloud
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${NEXTCLOUD_DB:-nextcloud}
+      POSTGRES_USER: ${POSTGRES_USER:-auditcaseos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-auditcaseos_secret}
+      NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER:-admin}
+      NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD:-admin123}
+      NEXTCLOUD_TRUSTED_DOMAINS: "localhost nextcloud"
+      OVERWRITEPROTOCOL: http
+    volumes:
+      - nextcloud_data:/var/www/html
+      - nextcloud_apps:/var/www/html/custom_apps
+      - nextcloud_config:/var/www/html/config
+    ports:
+      - "18081:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/status.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   minio_data:
@@ -165,3 +199,6 @@ volumes:
   paperless_media:
   paperless_export:
   paperless_consume:
+  nextcloud_data:
+  nextcloud_apps:
+  nextcloud_config:

@@ -14,8 +14,9 @@ import {
   ArrowUpTrayIcon,
   UserIcon,
   ComputerDesktopIcon,
+  FolderOpenIcon,
 } from '@heroicons/react/24/outline';
-import { casesApi, evidenceApi, findingsApi, timelineApi, aiApi, reportsApi } from '../services/api';
+import { casesApi, evidenceApi, findingsApi, timelineApi, aiApi, reportsApi, nextcloudApi } from '../services/api';
 import Button from '../components/common/Button';
 import Badge from '../components/common/Badge';
 import Card, { CardHeader } from '../components/common/Card';
@@ -62,6 +63,14 @@ export default function CaseDetail() {
     enabled: !!id && activeTab === 'ai',
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
     retry: false,
+  });
+
+  const { data: nextcloudUrl } = useQuery({
+    queryKey: ['nextcloud-url', id],
+    queryFn: () => nextcloudApi.getCaseFolderUrl(id!),
+    enabled: !!id,
+    retry: false,
+    staleTime: 1000 * 60 * 30, // Cache for 30 minutes
   });
 
   const deleteCase = useMutation({
@@ -171,6 +180,15 @@ export default function CaseDetail() {
           </div>
         </div>
         <div className="flex gap-2">
+          {nextcloudUrl?.url && (
+            <Button
+              variant="secondary"
+              onClick={() => window.open(nextcloudUrl.url, '_blank')}
+            >
+              <FolderOpenIcon className="w-4 h-4 mr-2" />
+              Nextcloud
+            </Button>
+          )}
           <div className="relative">
             <Button
               variant="secondary"

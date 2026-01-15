@@ -4,6 +4,7 @@ from .audit_service import AuditService
 from .case_service import CaseService
 from .embedding_service import EmbeddingService
 from .entity_service import EntityService
+from .nextcloud_service import NextcloudService
 from .ollama_service import OllamaService
 from .paperless_service import PaperlessService
 from .report_service import ReportService
@@ -14,6 +15,7 @@ __all__ = [
     "CaseService",
     "EmbeddingService",
     "EntityService",
+    "NextcloudService",
     "OllamaService",
     "PaperlessService",
     "ReportService",

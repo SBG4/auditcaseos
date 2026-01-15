@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     paperless_url: str = "http://localhost:18080"
     paperless_api_token: str = ""
 
+    # Nextcloud settings
+    nextcloud_url: str = "http://localhost:18081"
+    nextcloud_admin_user: str = "admin"
+    nextcloud_admin_password: str = "admin123"
+
     @property
     def async_database_url(self) -> str:
         """Return the database URL configured for async operations."""

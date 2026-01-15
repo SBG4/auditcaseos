@@ -16,7 +16,7 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.4.2</version>
+    <version>0.4.3</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-15</last_updated>
     <current_phase>3</current_phase>
@@ -1455,9 +1455,50 @@ $$ LANGUAGE plpgsql;
     </feature_group>
 
     <feature_group name="Collaboration">
-      <feature id="3.8" status="PENDING">
+      <feature id="3.8" status="COMPLETED">
         <name>Nextcloud Integration</name>
-        <description>File storage and collaboration platform</description>
+        <description>File storage and collaboration platform with WebDAV</description>
+        <completion_date>2026-01-15</completion_date>
+        <files_created>
+          <file>api/app/services/nextcloud_service.py</file>
+          <file>api/app/routers/nextcloud.py</file>
+          <file>configs/postgres/02-create-nextcloud-db.sh</file>
+        </files_created>
+        <files_modified>
+          <file>docker-compose.yml - Added Nextcloud service</file>
+          <file>.env.example - Added Nextcloud environment variables</file>
+          <file>api/app/config.py - Added Nextcloud settings</file>
+          <file>api/app/main.py - Registered nextcloud router</file>
+          <file>api/app/routers/__init__.py - Added nextcloud_router</file>
+          <file>api/app/services/__init__.py - Added NextcloudService</file>
+          <file>api/app/routers/cases.py - Auto-create Nextcloud folder on case creation</file>
+          <file>frontend/src/services/api.ts - Added nextcloudApi</file>
+          <file>frontend/src/pages/CaseDetail.tsx - Added Nextcloud button</file>
+        </files_modified>
+        <features>
+          <feature>Nextcloud Docker service with PostgreSQL database</feature>
+          <feature>WebDAV-based file operations (create, upload, list, delete)</feature>
+          <feature>Automatic case folder creation (AuditCases/{case_id}/Evidence|Reports|Notes)</feature>
+          <feature>OCS API for share link creation</feature>
+          <feature>Frontend "Open in Nextcloud" button on case detail page</feature>
+        </features>
+        <api_endpoints>
+          <endpoint method="GET" path="/api/v1/nextcloud/health">Nextcloud health check</endpoint>
+          <endpoint method="POST" path="/api/v1/nextcloud/folders">Create folder</endpoint>
+          <endpoint method="POST" path="/api/v1/nextcloud/case/{case_id}/folder">Create case folder structure</endpoint>
+          <endpoint method="GET" path="/api/v1/nextcloud/folders">List folder contents</endpoint>
+          <endpoint method="GET" path="/api/v1/nextcloud/case/{case_id}/files">List case files</endpoint>
+          <endpoint method="POST" path="/api/v1/nextcloud/case/{case_id}/upload">Upload to case folder</endpoint>
+          <endpoint method="DELETE" path="/api/v1/nextcloud/files">Delete file/folder</endpoint>
+          <endpoint method="POST" path="/api/v1/nextcloud/share">Create share link</endpoint>
+          <endpoint method="GET" path="/api/v1/nextcloud/case/{case_id}/url">Get case folder URL</endpoint>
+        </api_endpoints>
+        <docker_config>
+          <image>nextcloud:29-apache</image>
+          <port>18081</port>
+          <depends_on>postgres</depends_on>
+        </docker_config>
+        <tested>true</tested>
       </feature>
       <feature id="3.9" status="PENDING">
         <name>ONLYOFFICE Integration</name>
@@ -1491,22 +1532,22 @@ $$ LANGUAGE plpgsql;
   <progress>
     <summary>
       <total_features>37</total_features>
-      <completed>31</completed>
+      <completed>32</completed>
       <in_progress>0</in_progress>
-      <pending>6</pending>
-      <completion_percentage>84</completion_percentage>
+      <pending>5</pending>
+      <completion_percentage>86</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="2" features_total="12" features_completed="12" status="COMPLETED"/>
-      <phase number="3" features_total="13" features_completed="7" status="IN_PROGRESS"/>
+      <phase number="3" features_total="13" features_completed="8" status="IN_PROGRESS"/>
     </phase_status>
 
     <next_steps>
-      <step priority="1" feature_id="3.8">Nextcloud Integration</step>
-      <step priority="2" feature_id="3.9">ONLYOFFICE Integration</step>
-      <step priority="3" feature_id="3.10">Real-time Updates (WebSocket)</step>
+      <step priority="1" feature_id="3.9">ONLYOFFICE Integration</step>
+      <step priority="2" feature_id="3.10">Real-time Updates (WebSocket)</step>
+      <step priority="3" feature_id="3.11">Analytics Dashboard</step>
     </next_steps>
   </progress>
 
@@ -1514,6 +1555,24 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-15" version="0.4.3" phase="3">
+      <changes>
+        <change type="added">Feature 3.8: Nextcloud Integration for file collaboration</change>
+        <change type="added">Nextcloud Docker service (nextcloud:29-apache) on port 18081</change>
+        <change type="added">WebDAV-based file operations (create, upload, list, delete)</change>
+        <change type="added">Automatic case folder creation on case creation</change>
+        <change type="added">Case folder structure: AuditCases/{case_id}/Evidence|Reports|Notes</change>
+        <change type="added">GET /api/v1/nextcloud/health - Nextcloud health check</change>
+        <change type="added">POST /api/v1/nextcloud/case/{case_id}/folder - Create case folders</change>
+        <change type="added">GET /api/v1/nextcloud/case/{case_id}/files - List case files</change>
+        <change type="added">POST /api/v1/nextcloud/case/{case_id}/upload - Upload to case</change>
+        <change type="added">GET /api/v1/nextcloud/case/{case_id}/url - Get case folder URL</change>
+        <change type="added">POST /api/v1/nextcloud/share - Create share links (OCS API)</change>
+        <change type="added">"Open in Nextcloud" button on Case Detail page</change>
+        <change type="added">nextcloudApi in frontend services</change>
+        <change type="milestone">Phase 3 progress: 8/13 features complete (62%)</change>
+      </changes>
+    </entry>
     <entry date="2026-01-15" version="0.4.2" phase="3">
       <changes>
         <change type="added">Feature 3.7: Admin Pages with user management</change>
@@ -1682,6 +1741,7 @@ $$ LANGUAGE plpgsql;
       <url name="Health Check">http://localhost:18000/health</url>
       <url name="MinIO Console">http://localhost:19001</url>
       <url name="Paperless">http://localhost:18080</url>
+      <url name="Nextcloud">http://localhost:18081</url>
       <url name="Frontend">http://localhost:13000</url>
     </urls>
 
@@ -1689,6 +1749,7 @@ $$ LANGUAGE plpgsql;
       <credential service="MinIO" user="minioadmin" pass="minioadmin123"/>
       <credential service="PostgreSQL" user="auditcaseos" pass="auditcaseos_secret"/>
       <credential service="Paperless" user="admin" pass="admin123"/>
+      <credential service="Nextcloud" user="admin" pass="admin123"/>
       <credential service="API (default admin)" user="admin" pass="admin123"/>
     </credentials>
   </quick_reference>

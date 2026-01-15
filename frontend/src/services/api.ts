@@ -292,6 +292,61 @@ export const syncApi = {
   },
 };
 
+// Nextcloud API
+export const nextcloudApi = {
+  health: async (): Promise<{
+    available: boolean;
+    installed?: boolean;
+    version?: string;
+    maintenance?: boolean;
+  }> => {
+    const response = await api.get('/nextcloud/health');
+    return response.data;
+  },
+
+  createCaseFolder: async (caseId: string): Promise<{
+    case_id: string;
+    folders_created: string[];
+    success: boolean;
+    folder_url?: string;
+  }> => {
+    const response = await api.post(`/nextcloud/case/${caseId}/folder`);
+    return response.data;
+  },
+
+  getCaseFolderUrl: async (caseId: string): Promise<{ case_id: string; url: string }> => {
+    const response = await api.get(`/nextcloud/case/${caseId}/url`);
+    return response.data;
+  },
+
+  listCaseFiles: async (caseId: string, subfolder?: string): Promise<{
+    path: string;
+    items: Array<{
+      name: string;
+      path: string;
+      is_directory: boolean;
+      content_type?: string;
+      size: number;
+      last_modified?: string;
+    }>;
+    count: number;
+  }> => {
+    const params = subfolder ? { subfolder } : {};
+    const response = await api.get(`/nextcloud/case/${caseId}/files`, { params });
+    return response.data;
+  },
+
+  uploadToCaseFolder: async (caseId: string, file: File, subfolder: string = 'Evidence'): Promise<{ message: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await api.post(`/nextcloud/case/${caseId}/upload?subfolder=${subfolder}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+};
+
 // Users API (Admin only)
 export const usersApi = {
   list: async (params?: { skip?: number; limit?: number }): Promise<UsersListResponse> => {
