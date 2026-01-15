@@ -6,6 +6,7 @@ from .embedding_service import EmbeddingService
 from .entity_service import EntityService
 from .ollama_service import OllamaService
 from .paperless_service import PaperlessService
+from .report_service import ReportService
 from .storage_service import StorageService
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     "EntityService",
     "OllamaService",
     "PaperlessService",
+    "ReportService",
     "StorageService",
 ]

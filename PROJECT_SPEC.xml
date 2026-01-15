@@ -16,7 +16,7 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.2.5</version>
+    <version>0.3.0</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-15</last_updated>
     <current_phase>2</current_phase>
@@ -907,7 +907,7 @@ $$ LANGUAGE plpgsql;
   <!-- ============================================== -->
   <!-- PHASE 2: DOCUMENT INTELLIGENCE - IN PROGRESS   -->
   <!-- ============================================== -->
-  <phase number="2" name="Document Intelligence" status="IN_PROGRESS">
+  <phase number="2" name="Document Intelligence" status="COMPLETED">
     <description>OCR, entity extraction, real RAG implementation, and report generation</description>
 
     <feature_group name="Database Integration">
@@ -1204,39 +1204,59 @@ $$ LANGUAGE plpgsql;
     </feature_group>
 
     <feature_group name="Report Generation">
-      <feature id="2.11" status="PENDING">
+      <feature id="2.11" status="COMPLETED">
         <name>DOCX Report Generator</name>
         <description>Generate Word documents from case data</description>
         <priority>6</priority>
+        <completion_date>2026-01-15</completion_date>
         <tasks>
-          <task>Create api/app/services/report_service.py</task>
-          <task>Create DOCX template structure</task>
-          <task>Implement executive summary section</task>
-          <task>Implement case details section</task>
-          <task>Implement timeline section</task>
-          <task>Implement findings section with severity</task>
-          <task>Implement evidence list with hashes</task>
-          <task>Implement similar cases appendix</task>
-          <task>Implement recommendations section</task>
+          <task status="done">Create api/app/services/report_service.py</task>
+          <task status="done">Create DOCX template structure</task>
+          <task status="done">Implement executive summary section</task>
+          <task status="done">Implement case details section</task>
+          <task status="done">Implement timeline section</task>
+          <task status="done">Implement findings section with severity</task>
+          <task status="done">Implement evidence list with hashes</task>
+          <task status="done">Implement similar cases appendix</task>
+          <task status="done">Implement recommendations section (via AI summary)</task>
         </tasks>
-        <files_to_create>
+        <files_created>
           <file>api/app/services/report_service.py</file>
           <file>api/app/routers/reports.py</file>
-        </files_to_create>
+        </files_created>
+        <files_modified>
+          <file>api/app/main.py</file>
+          <file>api/app/routers/__init__.py</file>
+          <file>api/app/services/__init__.py</file>
+        </files_modified>
         <new_endpoints>
           <endpoint method="GET" path="/api/v1/reports/case/{case_id}.docx">Generate DOCX report</endpoint>
+          <endpoint method="GET" path="/api/v1/reports/templates">List available templates</endpoint>
+          <endpoint method="GET" path="/api/v1/reports/health">Report service health check</endpoint>
         </new_endpoints>
+        <service_methods>
+          <method>generate_report() - Main report generation with template selection</method>
+          <method>_add_cover_page() - Cover page with case ID and classification</method>
+          <method>_add_executive_summary() - AI-generated executive summary</method>
+          <method>_add_case_details() - Full case metadata table</method>
+          <method>_add_timeline() - Chronological event listing</method>
+          <method>_add_findings() - Severity-sorted findings</method>
+          <method>_add_evidence_list() - Evidence with file hashes</method>
+          <method>_add_similar_cases() - Related cases appendix</method>
+          <method>_add_entities_appendix() - Extracted entities list</method>
+        </service_methods>
+        <tested>true</tested>
       </feature>
-      <feature id="2.12" status="PENDING">
+      <feature id="2.12" status="COMPLETED">
         <name>Report Templates</name>
         <description>Configurable report templates</description>
         <priority>6</priority>
+        <completion_date>2026-01-15</completion_date>
         <tasks>
-          <task>Create templates directory</task>
-          <task>Create standard report template</task>
-          <task>Create executive summary template</task>
-          <task>Create detailed investigation template</task>
-          <task>Create compliance report template</task>
+          <task status="done">Implement STANDARD template (programmatic)</task>
+          <task status="done">Implement EXECUTIVE_SUMMARY template</task>
+          <task status="done">Implement DETAILED template with entities appendix</task>
+          <task status="done">Implement COMPLIANCE template</task>
         </tasks>
         <templates>
           <template name="STANDARD">Full case report with all sections</template>
@@ -1244,6 +1264,8 @@ $$ LANGUAGE plpgsql;
           <template name="DETAILED">Comprehensive investigation report</template>
           <template name="COMPLIANCE">Regulatory compliance focused</template>
         </templates>
+        <note>Templates implemented programmatically in report_service.py rather than as separate DOCX files for maximum flexibility</note>
+        <tested>true</tested>
       </feature>
     </feature_group>
   </phase>
@@ -1330,22 +1352,22 @@ $$ LANGUAGE plpgsql;
   <progress>
     <summary>
       <total_features>37</total_features>
-      <completed>22</completed>
+      <completed>24</completed>
       <in_progress>0</in_progress>
-      <pending>15</pending>
-      <completion_percentage>59</completion_percentage>
+      <pending>13</pending>
+      <completion_percentage>65</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
-      <phase number="2" features_total="12" features_completed="10" status="IN_PROGRESS"/>
+      <phase number="2" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="3" features_total="13" features_completed="0" status="PENDING"/>
     </phase_status>
 
     <next_steps>
-      <step priority="1" feature_id="2.11">DOCX Report Generator</step>
-      <step priority="2" feature_id="2.12">Report Templates</step>
-      <step priority="3" feature_id="3.1">Frontend Setup</step>
+      <step priority="1" feature_id="3.1">Frontend Setup</step>
+      <step priority="2" feature_id="3.2">Dashboard Page</step>
+      <step priority="3" feature_id="3.3">Case List Page</step>
     </next_steps>
   </progress>
 
@@ -1353,6 +1375,18 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-15" version="0.3.0" phase="2">
+      <changes>
+        <change type="added">Feature 2.11: DOCX Report Generator with python-docx</change>
+        <change type="added">Feature 2.12: Four report templates (STANDARD, EXECUTIVE_SUMMARY, DETAILED, COMPLIANCE)</change>
+        <change type="added">GET /api/v1/reports/case/{case_id}.docx - Generate DOCX report</change>
+        <change type="added">GET /api/v1/reports/templates - List available templates</change>
+        <change type="added">GET /api/v1/reports/health - Report service health check</change>
+        <change type="added">Report sections: cover page, executive summary, case details, timeline, findings, evidence, similar cases, entities</change>
+        <change type="added">Severity-colored findings, watermark support, AI-generated summaries in reports</change>
+        <change type="milestone">Phase 2 (Document Intelligence) COMPLETED - All 12 features done</change>
+      </changes>
+    </entry>
     <entry date="2026-01-15" version="0.2.5" phase="2">
       <changes>
         <change type="added">Feature 2.10: AI Case Summarization with Ollama llama3.2</change>
