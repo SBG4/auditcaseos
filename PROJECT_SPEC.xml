@@ -16,7 +16,7 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.4.8</version>
+    <version>0.4.9</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-15</last_updated>
     <current_phase>3</current_phase>
@@ -929,6 +929,255 @@ auditcaseos/
         <item>[ ] Tested with container restart to ensure config persists</item>
       </implementation_checklist>
     </implementation_guidelines>
+
+    <!-- ============================================== -->
+    <!-- DEVELOPMENT BEST PRACTICES                     -->
+    <!-- ============================================== -->
+    <!--
+      Compiled from official documentation sources only:
+      - FastAPI (fastapi.tiangolo.com)
+      - Pydantic (docs.pydantic.dev)
+      - SQLAlchemy (docs.sqlalchemy.org)
+      - React (react.dev)
+      - TypeScript (typescriptlang.org)
+      - Docker (docs.docker.com)
+      - OWASP (owasp.org)
+      - OpenTelemetry (opentelemetry.io)
+      - PostgreSQL (postgresql.org)
+      - RFC Standards (rfc-editor.org)
+      - OpenAPI (spec.openapis.org)
+      - JSON:API (jsonapi.org)
+    -->
+    <development_best_practices>
+
+      <!-- ========== PYTHON/FASTAPI BACKEND ========== -->
+      <backend_python>
+        <section name="Async Patterns">
+          <rule id="PY-ASYNC-1">Use async def for I/O-bound operations (database, API calls, file I/O)</rule>
+          <rule id="PY-ASYNC-2">Use regular def for CPU-bound operations (runs in threadpool automatically)</rule>
+          <rule id="PY-ASYNC-3">Use regular def when libraries don't support await (safe default)</rule>
+          <rule id="PY-ASYNC-4">Use lifespan parameter instead of deprecated on_startup/on_shutdown</rule>
+          <rule id="PY-ASYNC-5">Use BackgroundTasks for simple async; Celery for heavy computation</rule>
+          <source>https://fastapi.tiangolo.com/async/</source>
+        </section>
+
+        <section name="Dependency Injection">
+          <rule id="PY-DI-1">Use Annotated syntax: CommonsDep = Annotated[dict, Depends(common_parameters)]</rule>
+          <rule id="PY-DI-2">Use yield dependencies for resource management (DB sessions, connections)</rule>
+          <rule id="PY-DI-3">Use app.dependency_overrides for testing</rule>
+          <rule id="PY-DI-4">Dependencies are cached per-request by default</rule>
+          <source>https://fastapi.tiangolo.com/tutorial/dependencies/</source>
+        </section>
+
+        <section name="Pydantic v2 Models">
+          <rule id="PY-PYDANTIC-1">Use ConfigDict instead of class Config: model_config = ConfigDict(...)</rule>
+          <rule id="PY-PYDANTIC-2">Use frozen=True for immutable models</rule>
+          <rule id="PY-PYDANTIC-3">Use extra="forbid" to reject unknown fields</rule>
+          <rule id="PY-PYDANTIC-4">Use @field_validator (not deprecated @validator) for single field validation</rule>
+          <rule id="PY-PYDANTIC-5">Use @model_validator for cross-field validation</rule>
+          <rule id="PY-PYDANTIC-6">Use mode="before" or mode="after" for validation timing</rule>
+          <source>https://docs.pydantic.dev/latest/concepts/models/</source>
+        </section>
+
+        <section name="SQLAlchemy 2.0 Async">
+          <rule id="PY-DB-1">Use create_async_engine() and async_sessionmaker for async operations</rule>
+          <rule id="PY-DB-2">Set expire_on_commit=False for async sessions (REQUIRED)</rule>
+          <rule id="PY-DB-3">Use selectinload() for one-to-many/many-to-many relationships (recommended default)</rule>
+          <rule id="PY-DB-4">Use joinedload() for many-to-one relationships</rule>
+          <rule id="PY-DB-5">NEVER use lazy loading in async - use eager loading always</rule>
+          <rule id="PY-DB-6">One AsyncSession per task - critical for asyncio concurrency</rule>
+          <source>https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html</source>
+        </section>
+
+        <section name="Error Handling">
+          <rule id="PY-ERR-1">Use HTTPException with status codes from fastapi.status</rule>
+          <rule id="PY-ERR-2">Pass JSON-serializable detail (can be dict, list, not just strings)</rule>
+          <rule id="PY-ERR-3">Override RequestValidationError handler for custom validation responses</rule>
+          <rule id="PY-ERR-4">Register handler for Starlette's HTTPException to catch all HTTP errors</rule>
+          <source>https://fastapi.tiangolo.com/tutorial/handling-errors/</source>
+        </section>
+
+        <section name="Security">
+          <rule id="PY-SEC-1">CORS: Explicitly list allowed origins (avoid ["*"] in production)</rule>
+          <rule id="PY-SEC-2">Use OAuth2PasswordBearer for standard OAuth2 password flow</rule>
+          <rule id="PY-SEC-3">Use bcrypt or passlib for password hashing</rule>
+          <rule id="PY-SEC-4">JWT is signed, not encrypted - don't store sensitive data in payload</rule>
+          <rule id="PY-SEC-5">Use Pydantic models with Field() constraints for input validation</rule>
+          <source>https://fastapi.tiangolo.com/tutorial/security/</source>
+        </section>
+      </backend_python>
+
+      <!-- ========== REACT/TYPESCRIPT FRONTEND ========== -->
+      <frontend_react>
+        <section name="React Hooks Rules">
+          <rule id="REACT-HOOK-1">Only call Hooks at the top level - never in loops, conditions, or nested functions</rule>
+          <rule id="REACT-HOOK-2">Custom hooks must start with "use" followed by capital letter</rule>
+          <rule id="REACT-HOOK-3">useEffect is an escape hatch - avoid for data fetching, use libraries instead</rule>
+          <rule id="REACT-HOOK-4">Use useReducer + Context for complex state management</rule>
+          <source>https://react.dev/reference/rules/rules-of-hooks</source>
+        </section>
+
+        <section name="React 19 Features">
+          <rule id="REACT-19-1">Use 'use' Hook for reading resources in render (can be in conditionals)</rule>
+          <rule id="REACT-19-2">Use useOptimistic for optimistic UI updates</rule>
+          <rule id="REACT-19-3">Use useActionState for form submissions and mutations</rule>
+          <rule id="REACT-19-4">ref is now a prop - forwardRef no longer required (deprecated)</rule>
+          <rule id="REACT-19-5">Use startTransition for non-urgent updates to prevent UI jank</rule>
+          <source>https://react.dev/blog/2024/12/05/react-19</source>
+        </section>
+
+        <section name="Performance">
+          <rule id="REACT-PERF-1">React Compiler (v1.0) handles memoization automatically - trust it first</rule>
+          <rule id="REACT-PERF-2">Use memo() only when profiling shows expensive re-renders with same props</rule>
+          <rule id="REACT-PERF-3">Use useMemo() for expensive calculations with rarely-changing dependencies</rule>
+          <rule id="REACT-PERF-4">Use useCallback() only when passing functions to memo components</rule>
+          <rule id="REACT-PERF-5">Most performance problems come from Effect chains - remove unnecessary dependencies</rule>
+          <source>https://react.dev/reference/react/memo</source>
+        </section>
+
+        <section name="TypeScript Strict Mode">
+          <rule id="TS-STRICT-1">Enable strict: true in tsconfig.json (enables all strict checks)</rule>
+          <rule id="TS-STRICT-2">NEVER use any - use unknown when type is truly unknown</rule>
+          <rule id="TS-STRICT-3">Use object not Object for non-primitive types</rule>
+          <rule id="TS-STRICT-4">Generic type parameters must be used meaningfully - if only used once, remove it</rule>
+          <rule id="TS-STRICT-5">Enable exactOptionalPropertyTypes for stricter optional handling</rule>
+          <source>https://www.typescriptlang.org/tsconfig/strict.html</source>
+        </section>
+
+        <section name="State Management">
+          <rule id="REACT-STATE-1">Group related state together - if always updated together, merge into one</rule>
+          <rule id="REACT-STATE-2">Avoid redundant state - calculate from props/existing state during render</rule>
+          <rule id="REACT-STATE-3">Avoid deeply nested state - prefer flat structures</rule>
+          <rule id="REACT-STATE-4">Separate contexts for state and dispatch when using Context + Reducer</rule>
+          <source>https://react.dev/learn/choosing-the-state-structure</source>
+        </section>
+
+        <section name="Testing">
+          <rule id="REACT-TEST-1">Use @testing-library/react (react-test-renderer is deprecated)</rule>
+          <rule id="REACT-TEST-2">Avoid shallow rendering - depends on React internals</rule>
+          <rule id="REACT-TEST-3">Import act from 'react' not 'react-dom/test-utils' (React 19+)</rule>
+          <rule id="REACT-TEST-4">Use StrictMode in development to catch cleanup issues</rule>
+          <source>https://react.dev/blog/2024/04/25/react-19-upgrade-guide</source>
+        </section>
+
+        <section name="TailwindCSS">
+          <rule id="TW-1">Use framework components for reusable styles - prefer over @apply</rule>
+          <rule id="TW-2">Use @apply sparingly - only for small elements where partials feel heavy</rule>
+          <rule id="TW-3">Don't over-extract - ensure you're using something more than once</rule>
+          <rule id="TW-4">Use container queries for portable, reusable components</rule>
+          <rule id="TW-5">Use dark: variant with prefers-color-scheme or manual toggle</rule>
+          <source>https://tailwindcss.com/docs/reusing-styles</source>
+        </section>
+      </frontend_react>
+
+      <!-- ========== DOCKER/DEVOPS ========== -->
+      <devops_docker>
+        <section name="Dockerfile Optimization">
+          <rule id="DOCKER-BUILD-1">Use multi-stage builds - separate build and runtime stages</rule>
+          <rule id="DOCKER-BUILD-2">Order layers by change frequency - rarely-changing first, frequently-changing last</rule>
+          <rule id="DOCKER-BUILD-3">Copy dependency files first (package.json), install, then copy source</rule>
+          <rule id="DOCKER-BUILD-4">Use --mount=type=cache for persistent build caches</rule>
+          <rule id="DOCKER-BUILD-5">Use COPY --link for better layer caching with --cache-from</rule>
+          <source>https://docs.docker.com/build/building/best-practices/</source>
+        </section>
+
+        <section name="Container Security (OWASP)">
+          <rule id="DOCKER-SEC-1" severity="CRITICAL">Run as non-root user - use USER directive with explicit UID/GID</rule>
+          <rule id="DOCKER-SEC-2" severity="CRITICAL">Use read-only filesystem - prevents container breakout</rule>
+          <rule id="DOCKER-SEC-3" severity="CRITICAL">Never mount Docker socket (/var/run/docker.sock)</rule>
+          <rule id="DOCKER-SEC-4">Drop all capabilities, add only needed: --cap-drop ALL --cap-add NET_BIND_SERVICE</rule>
+          <rule id="DOCKER-SEC-5">Enable no-new-privileges: security_opt: - no-new-privileges:true</rule>
+          <rule id="DOCKER-SEC-6">Use tmpfs for /tmp with noexec,nosuid flags</rule>
+          <rule id="DOCKER-SEC-7">Never embed secrets in images - use Docker secrets or env files</rule>
+          <source>https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html</source>
+        </section>
+
+        <section name="Health Checks">
+          <rule id="DOCKER-HEALTH-1">Always define healthcheck with test, interval, timeout, retries, start_period</rule>
+          <rule id="DOCKER-HEALTH-2">Use condition: service_healthy in depends_on for startup order</rule>
+          <rule id="DOCKER-HEALTH-3">PostgreSQL: pg_isready -U $USER -d $DB</rule>
+          <rule id="DOCKER-HEALTH-4">Redis: redis-cli ping</rule>
+          <rule id="DOCKER-HEALTH-5">HTTP: curl -f http://localhost/health || exit 1</rule>
+          <source>https://docs.docker.com/compose/how-tos/startup-order/</source>
+        </section>
+
+        <section name="Logging and Observability">
+          <rule id="DOCKER-LOG-1">Use local logging driver - performs log-rotation by default</rule>
+          <rule id="DOCKER-LOG-2">Redirect app logs to stdout/stderr with symlinks</rule>
+          <rule id="DOCKER-LOG-3">Run OpenTelemetry Collector as non-root with read-only filesystem</rule>
+          <rule id="DOCKER-LOG-4">Bind Collector to localhost by default (v0.104.0+)</rule>
+          <rule id="DOCKER-LOG-5">Send telemetry to Collector, not directly to backend</rule>
+          <source>https://opentelemetry.io/docs/security/config-best-practices/</source>
+        </section>
+
+        <section name="Secrets Management">
+          <rule id="DOCKER-SECRET-1">Use Docker secrets instead of environment variables</rule>
+          <rule id="DOCKER-SECRET-2">Secrets mount as /run/secrets/secret_name with restricted permissions</rule>
+          <rule id="DOCKER-SECRET-3">Grant secrets access per-service explicitly</rule>
+          <rule id="DOCKER-SECRET-4">For production: use Docker Swarm secrets (encrypted at rest)</rule>
+          <source>https://docs.docker.com/compose/how-tos/use-secrets/</source>
+        </section>
+      </devops_docker>
+
+      <!-- ========== API DESIGN ========== -->
+      <api_design>
+        <section name="HTTP Methods (RFC 9110)">
+          <rule id="API-HTTP-1">GET, HEAD, OPTIONS are safe and idempotent - use for reads</rule>
+          <rule id="API-HTTP-2">PUT, DELETE are idempotent but not safe - use for replacements and deletions</rule>
+          <rule id="API-HTTP-3">POST is NOT idempotent - repeated requests may create multiple resources</rule>
+          <rule id="API-HTTP-4">PATCH is for partial updates - not guaranteed idempotent</rule>
+          <source>https://www.rfc-editor.org/rfc/rfc9110</source>
+        </section>
+
+        <section name="Error Responses (RFC 9457)">
+          <rule id="API-ERR-1">Use Content-Type: application/problem+json</rule>
+          <rule id="API-ERR-2">Include: type (URI), title, status, detail, instance</rule>
+          <rule id="API-ERR-3">Extend with custom fields for problem-specific data</rule>
+          <rule id="API-ERR-4">400 for structural problems; 422 for validation/business rule errors</rule>
+          <rule id="API-ERR-5">401 for unauthenticated; 403 for unauthorized</rule>
+          <source>https://www.rfc-editor.org/rfc/rfc9457.html</source>
+        </section>
+
+        <section name="Pagination (JSON:API)">
+          <rule id="API-PAGE-1">Use page query parameter family: page[number], page[size] or page[offset], page[limit]</rule>
+          <rule id="API-PAGE-2">Include pagination links in links object: self, first, prev, next, last</rule>
+          <rule id="API-PAGE-3">Put total count in meta: totalPages, totalRecords</rule>
+          <rule id="API-PAGE-4">self link must contain all query parameters used to generate response</rule>
+          <source>https://jsonapi.org/format/</source>
+        </section>
+      </api_design>
+
+      <!-- ========== DATABASE (PostgreSQL) ========== -->
+      <database_postgresql>
+        <section name="Indexing">
+          <rule id="DB-IDX-1">B-tree is default - use for equality and range queries, ORDER BY</rule>
+          <rule id="DB-IDX-2">GIN for full-text search, arrays, JSONB</rule>
+          <rule id="DB-IDX-3">BRIN for very large tables with natural ordering (time-series)</rule>
+          <rule id="DB-IDX-4">Use partial indexes to index only relevant rows: WHERE status = 'active'</rule>
+          <rule id="DB-IDX-5">Use covering indexes (INCLUDE) for index-only scans</rule>
+          <rule id="DB-IDX-6">Multicolumn index column order matters for query optimization</rule>
+          <source>https://www.postgresql.org/docs/current/indexes.html</source>
+        </section>
+
+        <section name="Connection Pooling">
+          <rule id="DB-POOL-1">Use PgBouncer with transaction pooling for web applications</rule>
+          <rule id="DB-POOL-2">Set server_reset_query = DISCARD ALL</rule>
+          <rule id="DB-POOL-3">Remove application-level pooling when using PgBouncer</rule>
+          <rule id="DB-POOL-4">Run multiple PgBouncer instances on multi-core systems</rule>
+          <source>https://wiki.postgresql.org/</source>
+        </section>
+
+        <section name="Query Optimization">
+          <rule id="DB-OPT-1">Use EXPLAIN ANALYZE to identify slow queries</rule>
+          <rule id="DB-OPT-2">Keep statistics current: ANALYZE table_name</rule>
+          <rule id="DB-OPT-3">Increase work_mem if EXPLAIN shows "external merge Disk"</rule>
+          <rule id="DB-OPT-4">Lower random_page_cost for SSDs (1.1 instead of default 4.0)</rule>
+          <rule id="DB-OPT-5">Set effective_cache_size to expected available memory cache</rule>
+          <source>https://www.postgresql.org/docs/current/performance-tips.html</source>
+        </section>
+      </database_postgresql>
+
+    </development_best_practices>
   </architecture>
 
   <!-- ============================================== -->
@@ -1823,6 +2072,18 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-15" version="0.4.9" phase="3">
+      <changes>
+        <change type="added">Comprehensive Development Best Practices section from official documentation</change>
+        <change type="added">Python/FastAPI: Async patterns, DI, Pydantic v2, SQLAlchemy 2.0 async, security</change>
+        <change type="added">React/TypeScript: Hooks rules, React 19, performance, strict typing, testing</change>
+        <change type="added">Docker/DevOps: Multi-stage builds, OWASP security, health checks, observability</change>
+        <change type="added">API Design: HTTP methods (RFC 9110), error formats (RFC 9457), pagination (JSON:API)</change>
+        <change type="added">PostgreSQL: Indexing strategies, connection pooling, query optimization</change>
+        <change type="added">All rules include source URLs from official documentation</change>
+        <change type="milestone">Best practices framework - 80+ rules from 12 authoritative sources</change>
+      </changes>
+    </entry>
     <entry date="2026-01-15" version="0.4.8" phase="3">
       <changes>
         <change type="added">Comprehensive Implementation Guidelines section in PROJECT_SPEC.xml</change>
