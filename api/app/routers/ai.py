@@ -307,9 +307,10 @@ Summary:"""
     description="Use Ollama to generate an AI-powered summary of an audit case.",
 )
 async def summarize_case(
-    case_id: str,
+    db: DbSession,
+    current_user: CurrentUser,
+    case_id: str = Path(..., description="Case ID (SCOPE-TYPE-SEQ format)"),
     request: CaseSummaryRequest | None = None,
-    model: str = Query("llama2", description="Ollama model to use"),
 ) -> CaseSummaryResponse:
     """
     Generate an AI-powered summary of an audit case using Ollama.
@@ -326,13 +327,8 @@ async def summarize_case(
     - **include_findings**: Include case findings in analysis (default: true)
     - **include_timeline**: Include timeline events in analysis (default: true)
     - **include_evidence**: Include evidence metadata in analysis (default: false)
-    - **max_length**: Maximum summary length in words (default: 500)
-    - **language**: Output language code (default: en)
 
-    Query Parameters:
-    - **model**: Ollama model to use (default: llama2)
-
-    Requires Ollama to be running locally on port 11434.
+    Requires Ollama to be running with llama3.2 model.
 
     Returns:
         CaseSummaryResponse: AI-generated case summary
@@ -345,48 +341,53 @@ async def summarize_case(
         request = CaseSummaryRequest()
 
     # Check if Ollama is available
-    if not await ollama_client.is_available():
+    if not await ollama_service.health_check():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Ollama service is not available. Please ensure Ollama is running.",
+            detail="Ollama service is not available. Please ensure Ollama is running with llama3.2 model.",
         )
-
-    # TODO: Verify case exists
-    # case = await get_case_from_db(case_id)
-    # if not case:
-    #     raise HTTPException(status_code=404, detail=f"Case '{case_id}' not found")
-
-    # Build context from case data
-    context = await build_case_context(
-        case_id,
-        request.include_findings,
-        request.include_timeline,
-    )
-
-    # Build prompt
-    prompt = build_summary_prompt(context, request.max_length, request.language)
 
     try:
-        # Generate summary using Ollama
-        summary_text = await ollama_client.generate(prompt, model)
+        # Get case data from database
+        case_data = await case_service.get_case(db, case_id)
+        if not case_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Case '{case_id}' not found",
+            )
 
-        # Parse response (simplified - actual implementation would parse structured output)
+        # Get findings if requested
+        if request.include_findings:
+            findings = await case_service.get_case_findings(db, case_data["id"])
+            case_data["findings"] = findings
+
+        # Get timeline if requested
+        if request.include_timeline:
+            timeline = await case_service.get_case_timeline(db, case_data["id"])
+            case_data["timeline_events"] = timeline
+
+        # Generate structured summary using Ollama
+        result = await ollama_service.summarize_case_structured(
+            case_data=case_data,
+            include_findings=request.include_findings,
+            include_timeline=request.include_timeline,
+        )
+
         return CaseSummaryResponse(
-            case_id=case_id,
-            summary=summary_text,
-            key_points=["Key point extraction not implemented"],
-            risk_assessment="Risk assessment not implemented",
-            recommended_actions=["Action extraction not implemented"],
-            model_used=model,
+            case_id=case_data["case_id"],
+            summary=result.get("summary", "Unable to generate summary"),
+            key_points=result.get("key_points", []),
+            risk_assessment=result.get("risk_assessment"),
+            recommended_actions=result.get("recommended_actions", []),
+            model_used=result.get("model_used", ollama_service.model),
             generated_at=datetime.utcnow(),
-            confidence_score=0.0,
+            confidence_score=result.get("confidence_score", 0.5),
         )
-    except NotImplementedError:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Ollama integration not yet implemented",
-        )
+
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Error generating summary for case {case_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error generating summary: {str(e)}",
@@ -500,7 +501,7 @@ async def find_similar_cases(
     "/health",
     response_model=AIHealthResponse,
     summary="Check AI services health",
-    description="Check the availability of AI services (Ollama and RAG).",
+    description="Check the availability of AI services (Ollama and RAG/Embeddings).",
 )
 async def check_ai_health() -> AIHealthResponse:
     """
@@ -508,7 +509,7 @@ async def check_ai_health() -> AIHealthResponse:
 
     Returns the status of:
     - **Ollama**: Local LLM service for text generation
-    - **RAG**: Vector similarity search service
+    - **RAG**: Vector similarity search service (via embeddings)
 
     This endpoint is useful for:
     - Monitoring AI service availability
@@ -518,15 +519,18 @@ async def check_ai_health() -> AIHealthResponse:
     Returns:
         AIHealthResponse: Status of AI services
     """
-    ollama_available = await ollama_client.is_available()
-    ollama_models = await ollama_client.list_models() if ollama_available else []
-    rag_available = await rag_service.is_available()
+    ollama_available = await ollama_service.health_check()
+    ollama_models = await ollama_service.list_models() if ollama_available else []
+
+    # Check embedding service for RAG
+    embedding_health = await embedding_service.health_check()
+    rag_available = embedding_health.get("embedding_works", False)
 
     return AIHealthResponse(
         ollama_available=ollama_available,
         ollama_models=ollama_models,
         rag_available=rag_available,
-        embedding_model=rag_service.embedding_model if rag_available else None,
+        embedding_model=embedding_health.get("model") if rag_available else None,
     )
 
 

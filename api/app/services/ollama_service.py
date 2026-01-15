@@ -416,6 +416,148 @@ Case Information:
             logger.error(f"Failed to generate report section '{section_type}': {e}")
             raise
 
+    async def summarize_case_structured(
+        self,
+        case_data: dict[str, Any],
+        include_findings: bool = True,
+        include_timeline: bool = True,
+    ) -> dict[str, Any]:
+        """
+        Generate a structured summary of an audit case.
+
+        Returns a dictionary with:
+        - summary: Concise case overview
+        - key_points: List of important facts
+        - risk_assessment: Risk level and reasoning
+        - recommended_actions: List of suggested next steps
+        - confidence_score: AI confidence in analysis (0-1)
+
+        Args:
+            case_data: Case data dictionary
+            include_findings: Include findings in analysis
+            include_timeline: Include timeline in analysis
+
+        Returns:
+            Structured summary dictionary
+        """
+        context = self._format_case_context(case_data)
+        case_id = case_data.get("case_id", "unknown")
+
+        system_prompt = """You are an expert audit analyst. Analyze the case and provide a structured assessment.
+You must respond in EXACTLY this format with no deviations:
+
+SUMMARY:
+[2-3 sentence overview of the case]
+
+KEY_POINTS:
+- [First key point]
+- [Second key point]
+- [Third key point]
+
+RISK_ASSESSMENT:
+[LOW/MEDIUM/HIGH/CRITICAL]: [Brief explanation of risk level]
+
+RECOMMENDED_ACTIONS:
+- [First recommended action]
+- [Second recommended action]
+- [Third recommended action]
+
+Be objective, factual, and base your analysis only on the provided information."""
+
+        prompt = f"""Analyze this audit case and provide a structured assessment.
+
+{context}
+
+Provide your analysis:"""
+
+        try:
+            response = await self._generate(
+                prompt=prompt,
+                system_prompt=system_prompt,
+                temperature=0.4,
+                max_tokens=1500,
+            )
+
+            # Parse structured response
+            result = self._parse_structured_summary(response)
+            result["model_used"] = self.model
+
+            logger.info(f"Generated structured summary for case: {case_id}")
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to generate structured summary for {case_id}: {e}")
+            # Return default structure on failure
+            return {
+                "summary": f"Unable to generate summary: {str(e)}",
+                "key_points": [],
+                "risk_assessment": "UNKNOWN",
+                "recommended_actions": [],
+                "confidence_score": 0.0,
+                "model_used": self.model,
+                "error": str(e),
+            }
+
+    def _parse_structured_summary(self, response: str) -> dict[str, Any]:
+        """Parse the structured response from Ollama into a dictionary."""
+        result = {
+            "summary": "",
+            "key_points": [],
+            "risk_assessment": "",
+            "recommended_actions": [],
+            "confidence_score": 0.8,  # Default confidence
+        }
+
+        current_section = None
+        lines = response.strip().split("\n")
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+
+            # Check for section headers
+            if line.upper().startswith("SUMMARY:"):
+                current_section = "summary"
+                # Check if content is on same line
+                content = line[8:].strip()
+                if content:
+                    result["summary"] = content
+            elif line.upper().startswith("KEY_POINTS:") or line.upper().startswith("KEY POINTS:"):
+                current_section = "key_points"
+            elif line.upper().startswith("RISK_ASSESSMENT:") or line.upper().startswith("RISK ASSESSMENT:"):
+                current_section = "risk_assessment"
+                content = line.split(":", 1)[-1].strip()
+                if content:
+                    result["risk_assessment"] = content
+            elif line.upper().startswith("RECOMMENDED_ACTIONS:") or line.upper().startswith("RECOMMENDED ACTIONS:"):
+                current_section = "recommended_actions"
+            elif line.startswith("-") or line.startswith("•"):
+                # Bullet point
+                item = line[1:].strip()
+                if item:
+                    if current_section == "key_points":
+                        result["key_points"].append(item)
+                    elif current_section == "recommended_actions":
+                        result["recommended_actions"].append(item)
+            elif current_section == "summary" and not result["summary"]:
+                result["summary"] = line
+            elif current_section == "risk_assessment" and not result["risk_assessment"]:
+                result["risk_assessment"] = line
+
+        # Extract risk level from risk_assessment text
+        risk_text = result["risk_assessment"].upper()
+        if "CRITICAL" in risk_text:
+            result["confidence_score"] = 0.85
+        elif "HIGH" in risk_text:
+            result["confidence_score"] = 0.82
+        elif "MEDIUM" in risk_text:
+            result["confidence_score"] = 0.80
+        elif "LOW" in risk_text:
+            result["confidence_score"] = 0.78
+
+        return result
+
     async def health_check(self) -> bool:
         """
         Check if Ollama service is available.
@@ -429,6 +571,23 @@ Case Information:
                 return response.status_code == 200
         except Exception:
             return False
+
+    async def list_models(self) -> list[str]:
+        """
+        List available Ollama models.
+
+        Returns:
+            List of model names
+        """
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(f"{self.host}/api/tags")
+                if response.status_code == 200:
+                    data = response.json()
+                    return [m["name"] for m in data.get("models", [])]
+                return []
+        except Exception:
+            return []
 
 
 # Singleton instance

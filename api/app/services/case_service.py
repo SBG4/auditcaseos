@@ -546,5 +546,105 @@ class CaseService:
         }
 
 
+    async def get_case_findings(
+        self,
+        db: AsyncSession,
+        case_uuid: UUID | str,
+    ) -> list[dict[str, Any]]:
+        """
+        Get all findings for a case.
+
+        Args:
+            db: Database session
+            case_uuid: Case UUID (internal ID)
+
+        Returns:
+            List of findings
+        """
+        try:
+            query = text("""
+                SELECT id, title, description, severity, evidence_ids,
+                       created_by, created_at, updated_at
+                FROM findings
+                WHERE case_id = :case_uuid
+                ORDER BY
+                    CASE severity
+                        WHEN 'CRITICAL' THEN 1
+                        WHEN 'HIGH' THEN 2
+                        WHEN 'MEDIUM' THEN 3
+                        WHEN 'LOW' THEN 4
+                        ELSE 5
+                    END,
+                    created_at DESC
+            """)
+            result = await db.execute(query, {"case_uuid": str(case_uuid)})
+            rows = result.fetchall()
+            return [dict(row._mapping) for row in rows]
+        except Exception as e:
+            logger.error(f"Failed to get findings for case {case_uuid}: {e}")
+            return []
+
+    async def get_case_timeline(
+        self,
+        db: AsyncSession,
+        case_uuid: UUID | str,
+    ) -> list[dict[str, Any]]:
+        """
+        Get all timeline events for a case.
+
+        Args:
+            db: Database session
+            case_uuid: Case UUID (internal ID)
+
+        Returns:
+            List of timeline events ordered by event_time
+        """
+        try:
+            query = text("""
+                SELECT id, event_time, event_type, description,
+                       source, evidence_id, created_by, created_at
+                FROM timeline_events
+                WHERE case_id = :case_uuid
+                ORDER BY event_time ASC
+            """)
+            result = await db.execute(query, {"case_uuid": str(case_uuid)})
+            rows = result.fetchall()
+            return [dict(row._mapping) for row in rows]
+        except Exception as e:
+            logger.error(f"Failed to get timeline for case {case_uuid}: {e}")
+            return []
+
+    async def get_case_evidence(
+        self,
+        db: AsyncSession,
+        case_uuid: UUID | str,
+    ) -> list[dict[str, Any]]:
+        """
+        Get all evidence for a case.
+
+        Args:
+            db: Database session
+            case_uuid: Case UUID (internal ID)
+
+        Returns:
+            List of evidence items
+        """
+        try:
+            query = text("""
+                SELECT id, file_name, file_path, file_size, mime_type,
+                       file_hash, description, uploaded_by, uploaded_at,
+                       extracted_text, metadata
+                FROM evidence
+                WHERE case_id = :case_uuid
+                ORDER BY uploaded_at DESC
+            """)
+            result = await db.execute(query, {"case_uuid": str(case_uuid)})
+            rows = result.fetchall()
+            return [dict(row._mapping) for row in rows]
+        except Exception as e:
+            logger.error(f"Failed to get evidence for case {case_uuid}: {e}")
+            return []
+
+
 # Singleton instance
 case_service = CaseService()

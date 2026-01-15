@@ -16,7 +16,7 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.2.4</version>
+    <version>0.2.5</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-15</last_updated>
     <current_phase>2</current_phase>
@@ -1176,21 +1176,30 @@ $$ LANGUAGE plpgsql;
         </endpoints>
         <tested>true</tested>
       </feature>
-      <feature id="2.10" status="PENDING">
+      <feature id="2.10" status="COMPLETED">
         <name>AI Case Summarization</name>
         <description>Real AI summarization using Ollama</description>
         <priority>5</priority>
+        <completion_date>2026-01-15</completion_date>
         <tasks>
-          <task>Build case context from DB (title, description, findings, timeline)</task>
-          <task>Create summarization prompt template</task>
-          <task>Call Ollama generate API</task>
-          <task>Parse structured response (summary, key points, risk, recommendations)</task>
-          <task>Update /api/v1/ai/summarize/{case_id} endpoint</task>
+          <task status="done">Build case context from DB (title, description, findings, timeline)</task>
+          <task status="done">Create summarization prompt template</task>
+          <task status="done">Call Ollama generate API</task>
+          <task status="done">Parse structured response (summary, key points, risk, recommendations)</task>
+          <task status="done">Update /api/v1/ai/summarize/{case_id} endpoint</task>
         </tasks>
-        <files_to_modify>
+        <files_modified>
           <file>api/app/routers/ai.py</file>
           <file>api/app/services/ollama_service.py</file>
-        </files_to_modify>
+          <file>api/app/services/case_service.py</file>
+        </files_modified>
+        <service_methods>
+          <method>summarize_case_structured() - Generate structured summary with key_points, risk_assessment, recommendations</method>
+          <method>_parse_structured_summary() - Parse LLM response into structured dictionary</method>
+          <method>get_case_findings() - Fetch findings from DB for context</method>
+          <method>get_case_timeline() - Fetch timeline events for context</method>
+        </service_methods>
+        <tested>true</tested>
       </feature>
     </feature_group>
 
@@ -1321,22 +1330,22 @@ $$ LANGUAGE plpgsql;
   <progress>
     <summary>
       <total_features>37</total_features>
-      <completed>21</completed>
+      <completed>22</completed>
       <in_progress>0</in_progress>
-      <pending>16</pending>
-      <completion_percentage>57</completion_percentage>
+      <pending>15</pending>
+      <completion_percentage>59</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
-      <phase number="2" features_total="12" features_completed="9" status="IN_PROGRESS"/>
+      <phase number="2" features_total="12" features_completed="10" status="IN_PROGRESS"/>
       <phase number="3" features_total="13" features_completed="0" status="PENDING"/>
     </phase_status>
 
     <next_steps>
-      <step priority="1" feature_id="2.10">AI case summarization</step>
-      <step priority="2" feature_id="2.11">DOCX Report Generator</step>
-      <step priority="3" feature_id="2.12">Report Templates</step>
+      <step priority="1" feature_id="2.11">DOCX Report Generator</step>
+      <step priority="2" feature_id="2.12">Report Templates</step>
+      <step priority="3" feature_id="3.1">Frontend Setup</step>
     </next_steps>
   </progress>
 
@@ -1344,6 +1353,16 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-15" version="0.2.5" phase="2">
+      <changes>
+        <change type="added">Feature 2.10: AI Case Summarization with Ollama llama3.2</change>
+        <change type="added">POST /api/v1/ai/summarize/{case_id} - Generate structured case summary</change>
+        <change type="added">summarize_case_structured() method with key_points, risk_assessment, recommendations</change>
+        <change type="added">get_case_findings(), get_case_timeline(), get_case_evidence() context builders</change>
+        <change type="added">Structured LLM response parsing with confidence scores</change>
+        <change type="updated">GET /api/v1/ai/health - Real health checks for Ollama and embedding service</change>
+      </changes>
+    </entry>
     <entry date="2026-01-15" version="0.2.4" phase="2">
       <changes>
         <change type="added">Feature 2.8: Embedding Service with Ollama nomic-embed-text</change>
