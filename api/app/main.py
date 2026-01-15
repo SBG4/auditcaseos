@@ -125,13 +125,14 @@ def create_application() -> FastAPI:
     # Import and include routers
     # These imports are done here to avoid circular imports
     # Note: Routers define their own prefixes and tags
-    from app.routers import ai, auth, cases, evidence, health, scopes, sync, users
+    from app.routers import ai, auth, cases, entities, evidence, health, scopes, sync, users
 
     app.include_router(health.router, tags=["Health"])
     app.include_router(auth.router, prefix="/api/v1", tags=["Authentication"])
     app.include_router(users.router, prefix="/api/v1", tags=["Users"])
     app.include_router(cases.router, prefix="/api/v1", tags=["Cases"])
     app.include_router(evidence.router, prefix="/api/v1", tags=["Evidence"])
+    app.include_router(entities.router, prefix="/api/v1", tags=["Entities"])
     app.include_router(scopes.router, prefix="/api/v1", tags=["Scopes"])
     app.include_router(sync.router, prefix="/api/v1", tags=["Sync"])
     app.include_router(ai.router, prefix="/api/v1", tags=["AI"])

@@ -16,9 +16,9 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.2.2</version>
+    <version>0.2.3</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
-    <last_updated>2026-01-14</last_updated>
+    <last_updated>2026-01-15</last_updated>
     <current_phase>2</current_phase>
     <overall_progress>phase_2_in_progress</overall_progress>
   </metadata>
@@ -647,7 +647,7 @@ auditcaseos/
 │       │   ├── case.py
 │       │   ├── evidence.py
 │       │   ├── finding.py
-│       │   ├── entity.py          # Phase 2
+│       │   ├── entity.py          # Phase 2 - DONE
 │       │   └── report.py
 │       ├── routers/
 │       │   ├── __init__.py
@@ -657,7 +657,7 @@ auditcaseos/
 │       │   ├── users.py
 │       │   ├── scopes.py
 │       │   ├── sync.py            # Phase 2 - DONE
-│       │   ├── entities.py        # Phase 2
+│       │   ├── entities.py        # Phase 2 - DONE
 │       │   ├── reports.py         # Phase 2
 │       │   ├── ai.py
 │       │   └── health.py
@@ -667,7 +667,7 @@ auditcaseos/
 │       │   ├── case_service.py
 │       │   ├── storage_service.py
 │       │   ├── paperless_service.py  # Phase 2 - DONE
-│       │   ├── entity_service.py     # Phase 2
+│       │   ├── entity_service.py     # Phase 2 - DONE
 │       │   ├── embedding_service.py  # Phase 2
 │       │   ├── report_service.py     # Phase 2
 │       │   ├── ollama_service.py
@@ -1062,49 +1062,77 @@ $$ LANGUAGE plpgsql;
     </feature_group>
 
     <feature_group name="Entity Extraction">
-      <feature id="2.6" status="PENDING">
+      <feature id="2.6" status="COMPLETED">
         <name>Entity Extraction Service</name>
         <description>Extract structured entities from evidence text</description>
         <priority>4</priority>
         <tasks>
-          <task>Create api/app/services/entity_service.py</task>
-          <task>Implement regex patterns for employee IDs (EMP-[0-9]{6})</task>
-          <task>Implement hostname/computer name detection</task>
-          <task>Implement IP address extraction</task>
-          <task>Implement email address extraction</task>
-          <task>Implement department keyword matching</task>
+          <task status="done">Create api/app/services/entity_service.py</task>
+          <task status="done">Implement regex patterns for employee IDs (EMP-[0-9]{6})</task>
+          <task status="done">Implement hostname/computer name detection</task>
+          <task status="done">Implement IP address extraction</task>
+          <task status="done">Implement email address extraction</task>
+          <task status="done">Implement MAC address extraction</task>
+          <task status="done">Implement USB device identifier extraction</task>
         </tasks>
-        <files_to_create>
+        <files_created>
           <file>api/app/services/entity_service.py</file>
-        </files_to_create>
+        </files_created>
         <entity_patterns>
-          <pattern name="employee_id" regex="EMP-[0-9]{6}"/>
-          <pattern name="ip_address" regex="\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b"/>
+          <pattern name="employee_id" regex="\bEMP[-_]?\d{4,8}\b"/>
+          <pattern name="ip_address" regex="IPv4 and IPv6 addresses"/>
           <pattern name="email" regex="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"/>
-          <pattern name="hostname" regex="[A-Z]{2,4}-[A-Z0-9]{4,10}"/>
+          <pattern name="hostname" regex="WS|PC|DESKTOP|LAPTOP|SRV|SERVER patterns"/>
+          <pattern name="mac_address" regex="MAC address formats"/>
+          <pattern name="usb_device" regex="USB device identifiers"/>
         </entity_patterns>
+        <service_methods>
+          <method>extract_entities(text, entity_types) - Extract from text</method>
+          <method>extract_all_entities(text) - Extract all as flat list</method>
+          <method>store_entities(db, case_id, evidence_id, entities, source) - Store to DB</method>
+          <method>get_case_entities(db, case_id, entity_type, skip, limit) - Get entities</method>
+          <method>search_entities(db, value_pattern, entity_type, limit) - Search across cases</method>
+          <method>get_entity_summary(db, case_id) - Get counts by type</method>
+          <method>extract_and_store_from_evidence(db, case_id, evidence_id, text, source)</method>
+        </service_methods>
+        <tested>true</tested>
       </feature>
-      <feature id="2.7" status="PENDING">
+      <feature id="2.7" status="COMPLETED">
         <name>Entity Storage</name>
         <description>Store and query extracted entities</description>
         <priority>4</priority>
         <tasks>
-          <task>Create case_entities table in init.sql</task>
-          <task>Create Entity SQLAlchemy model</task>
-          <task>Create entity schemas</task>
-          <task>Implement entity router with search endpoints</task>
+          <task status="done">Create case_entities table in init.sql</task>
+          <task status="done">Create entity schemas</task>
+          <task status="done">Implement entity router with search endpoints</task>
+          <task status="done">Register router in main.py</task>
+          <task status="done">Update services/__init__.py</task>
+          <task status="done">Update routers/__init__.py</task>
         </tasks>
-        <files_to_create>
-          <file>api/app/models/entity.py</file>
+        <files_created>
           <file>api/app/schemas/entity.py</file>
           <file>api/app/routers/entities.py</file>
-        </files_to_create>
+        </files_created>
+        <files_modified>
+          <file>configs/postgres/init.sql - Added case_entities table</file>
+          <file>api/app/main.py - Added entities router</file>
+          <file>api/app/services/__init__.py - Added EntityService</file>
+          <file>api/app/routers/__init__.py - Added entities_router</file>
+        </files_modified>
         <new_endpoints>
-          <endpoint method="GET" path="/api/v1/entities/case/{case_id}">List entities for case</endpoint>
-          <endpoint method="GET" path="/api/v1/entities/search">Search cases by entity</endpoint>
-          <endpoint method="GET" path="/api/v1/entities/employee/{employee_id}">Find cases by employee</endpoint>
-          <endpoint method="GET" path="/api/v1/entities/computer/{hostname}">Find cases by computer</endpoint>
+          <endpoint method="POST" path="/api/v1/entities/extract">Extract entities from text (no storage)</endpoint>
+          <endpoint method="POST" path="/api/v1/entities/store">Extract and store entities for case</endpoint>
+          <endpoint method="GET" path="/api/v1/entities/case/{case_id}">List entities for case (paginated)</endpoint>
+          <endpoint method="GET" path="/api/v1/entities/case/{case_id}/summary">Get entity counts by type</endpoint>
+          <endpoint method="GET" path="/api/v1/entities/search">Search cases by entity value</endpoint>
         </new_endpoints>
+        <database_table>
+          <name>case_entities</name>
+          <columns>id, case_id, evidence_ids[], entity_type, value, source, occurrence_count, metadata, created_at, updated_at</columns>
+          <unique_constraint>case_id, entity_type, value</unique_constraint>
+        </database_table>
+        <tested>true</tested>
+      </feature>
       </feature>
     </feature_group>
 

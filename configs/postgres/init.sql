@@ -258,3 +258,33 @@ CREATE TRIGGER trigger_users_updated_at
 CREATE TRIGGER trigger_findings_updated_at
     BEFORE UPDATE ON findings
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Case Entities table (extracted entities from evidence)
+CREATE TABLE case_entities (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    case_id UUID NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
+    evidence_ids UUID[],                      -- Evidence items this entity was found in
+
+    entity_type VARCHAR(50) NOT NULL,         -- employee_id, ip_address, email, hostname, etc.
+    value VARCHAR(1000) NOT NULL,             -- The extracted entity value
+    source VARCHAR(255),                      -- Where it was extracted from
+    occurrence_count INTEGER DEFAULT 1,       -- How many times found
+
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+    -- Ensure unique entity per case
+    UNIQUE(case_id, entity_type, value)
+);
+
+-- Indexes for case_entities
+CREATE INDEX idx_case_entities_case_id ON case_entities(case_id);
+CREATE INDEX idx_case_entities_type ON case_entities(entity_type);
+CREATE INDEX idx_case_entities_value ON case_entities(value);
+CREATE INDEX idx_case_entities_case_type ON case_entities(case_id, entity_type);
+
+-- Trigger for case_entities updated_at
+CREATE TRIGGER trigger_case_entities_updated_at
+    BEFORE UPDATE ON case_entities
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
