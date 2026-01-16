@@ -13,6 +13,10 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 export BACKUP_DIR="${BACKUP_DIR:-$PROJECT_DIR/backups}"
 export RETENTION_DAYS="${RETENTION_DAYS:-7}"
 
+# MinIO credentials (used by backup-minio.sh when running inside container)
+export MINIO_ACCESS_KEY="${MINIO_ACCESS_KEY:-minioadmin}"
+export MINIO_SECRET_KEY="${MINIO_SECRET_KEY:-minioadmin123}"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -43,6 +47,9 @@ log_header() {
 # Create main backup directory
 mkdir -p "$BACKUP_DIR"
 
+# Save base backup directory
+BASE_BACKUP_DIR="$BACKUP_DIR"
+
 START_TIME=$(date +%s)
 POSTGRES_STATUS="SKIPPED"
 MINIO_STATUS="SKIPPED"
@@ -53,7 +60,7 @@ log_info "Retention: $RETENTION_DAYS days"
 
 # Run PostgreSQL backup
 log_header "PostgreSQL Backup"
-export BACKUP_DIR="$BACKUP_DIR/postgres"
+export BACKUP_DIR="$BASE_BACKUP_DIR/postgres"
 if "$SCRIPT_DIR/backup-database.sh"; then
     POSTGRES_STATUS="SUCCESS"
 else
@@ -63,7 +70,7 @@ fi
 
 # Run MinIO backup
 log_header "MinIO Backup"
-export BACKUP_DIR="$BACKUP_DIR/minio"
+export BACKUP_DIR="$BASE_BACKUP_DIR/minio"
 if "$SCRIPT_DIR/backup-minio.sh"; then
     MINIO_STATUS="SUCCESS"
 else
@@ -85,11 +92,11 @@ echo ""
 
 # List recent backups
 log_info "Recent PostgreSQL backups:"
-ls -lht "$PROJECT_DIR/backups/postgres/"*.dump 2>/dev/null | head -5 || echo "  No PostgreSQL backups found"
+ls -lht "$BASE_BACKUP_DIR/postgres/"*.dump 2>/dev/null | head -5 || echo "  No PostgreSQL backups found"
 echo ""
 
 log_info "Recent MinIO backups:"
-ls -dt "$PROJECT_DIR/backups/minio/"*_* 2>/dev/null | head -5 || echo "  No MinIO backups found"
+ls -dt "$BASE_BACKUP_DIR/minio/"*_* 2>/dev/null | head -5 || echo "  No MinIO backups found"
 echo ""
 
 # Exit with error if any backup failed

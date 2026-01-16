@@ -16,7 +16,7 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.7.2</version>
+    <version>0.7.3</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-16</last_updated>
     <current_phase>4</current_phase>
@@ -2807,6 +2807,41 @@ $$ LANGUAGE plpgsql;
         <dependency>After K8s manifests are validated</dependency>
       </feature>
     </feature_group>
+
+    <feature_group name="Admin GUI Enhancements">
+      <feature id="5.7" status="PLANNED">
+        <name>Remote Backup Storage</name>
+        <description>Support for remote backup destinations (S3, NFS, SMB, rsync)</description>
+        <priority>2</priority>
+        <tasks>
+          <task>Add backup_settings table with storage type, credentials, paths</task>
+          <task>Create backup API endpoints (CRUD, test connection, trigger, history)</task>
+          <task>Create BackupSettings.tsx admin page</task>
+          <task>Update backup scripts to read from database config</task>
+          <task>Add S3/MinIO remote storage support</task>
+          <task>Add NFS mount support</task>
+          <task>Add SMB/CIFS mount support</task>
+          <task>Add rsync over SSH support</task>
+        </tasks>
+        <research>
+          <source>https://docs.docker.com/engine/storage/volumes/ (NFS, CIFS)</source>
+          <source>https://min.io/docs/minio/linux/reference/minio-mc/mc-mirror.html</source>
+          <source>https://restic.readthedocs.io/en/stable/030_preparing_a_new_repo.html</source>
+        </research>
+      </feature>
+      <feature id="5.8" status="PLANNED">
+        <name>System Settings Admin Page</name>
+        <description>Centralized GUI for all system configuration</description>
+        <priority>2</priority>
+        <tasks>
+          <task>Create settings database table for key-value configuration</task>
+          <task>Create Settings API endpoints</task>
+          <task>Create SystemSettings.tsx admin page</task>
+          <task>Add sections: General, Security, Notifications, Integrations</task>
+          <task>Allow editing CORS origins, rate limits, feature flags</task>
+        </tasks>
+      </feature>
+    </feature_group>
   </phase>
 
   <!-- ============================================== -->
@@ -2814,19 +2849,19 @@ $$ LANGUAGE plpgsql;
   <!-- ============================================== -->
   <progress>
     <summary>
-      <total_features>59</total_features>
-      <completed>51</completed>
+      <total_features>61</total_features>
+      <completed>53</completed>
       <in_progress>0</in_progress>
       <pending>8</pending>
-      <completion_percentage>86</completion_percentage>
+      <completion_percentage>87</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="2" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="3" features_total="14" features_completed="14" status="COMPLETED"/>
-      <phase number="4" features_total="21" features_completed="13" status="IN_PROGRESS"/>
-      <phase number="5" features_total="6" features_completed="0" status="PLANNED"/>
+      <phase number="4" features_total="21" features_completed="15" status="IN_PROGRESS"/>
+      <phase number="5" features_total="8" features_completed="0" status="PLANNED"/>
     </phase_status>
 
     <next_steps>
@@ -2847,6 +2882,19 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-16" version="0.7.3" phase="4">
+      <changes>
+        <change type="added">scripts/test-backup.sh - Comprehensive test suite (42 tests)</change>
+        <change type="added">Feature 5.7: Remote Backup Storage - Added to Phase 5 roadmap</change>
+        <change type="added">Feature 5.8: System Settings Admin Page - Added to Phase 5 roadmap</change>
+        <change type="fixed">backup-minio.sh - Configure mc alias with credentials in container</change>
+        <change type="fixed">backup-all.sh - Fix BASE_BACKUP_DIR path for MinIO backups</change>
+        <change type="fixed">backup-all.sh - Add MINIO_ACCESS_KEY/SECRET_KEY exports</change>
+        <change type="updated">Phase 4 progress: 15/21 features (71%)</change>
+        <change type="updated">Phase 5 now has 8 features (added Admin GUI enhancements)</change>
+        <change type="updated">Total features: 61 (was 59)</change>
+      </changes>
+    </entry>
     <entry date="2026-01-16" version="0.7.2" phase="4">
       <changes>
         <change type="added">Feature 4.19: Backup Strategy - COMPLETE</change>

@@ -97,10 +97,13 @@ for bucket in "${BUCKETS[@]}"; do
         fi
     else
         # Using mc inside container - need to copy data out
-        # First mirror inside container, then copy out
+        # First configure mc alias inside container, then mirror
         CONTAINER_BACKUP_PATH="/tmp/backup_${bucket}_${DATE}"
 
-        if docker exec "$CONTAINER_NAME" mc mirror --preserve "local/${bucket}" "$CONTAINER_BACKUP_PATH" 2>/dev/null; then
+        # Configure mc alias with credentials inside the container
+        docker exec "$CONTAINER_NAME" mc alias set myminio http://localhost:9000 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY" --api S3v4 >/dev/null 2>&1
+
+        if docker exec "$CONTAINER_NAME" mc mirror --preserve "myminio/${bucket}" "$CONTAINER_BACKUP_PATH" 2>/dev/null; then
             # Copy from container to host
             docker cp "${CONTAINER_NAME}:${CONTAINER_BACKUP_PATH}/." "$BUCKET_BACKUP_DIR/"
             # Cleanup container temp
