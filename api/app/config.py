@@ -80,8 +80,7 @@ class Settings(BaseSettings):
     def _load_secrets_from_files(self) -> None:
         """Load sensitive settings from Docker secret files if they exist."""
         secret_mappings = {
-            "jwt_secret": "secret_key",
-            "jwt_secret": "SECRET_KEY",
+            "jwt_secret": ["secret_key", "SECRET_KEY"],  # Maps to both attributes
             "postgres_password": None,  # Used in database_url
             "minio_password": "minio_secret_key",
             "paperless_secret": None,  # Not directly used
@@ -90,10 +89,15 @@ class Settings(BaseSettings):
             "onlyoffice_jwt": "onlyoffice_jwt_secret",
         }
 
-        for secret_name, attr_name in secret_mappings.items():
+        for secret_name, attr_names in secret_mappings.items():
             secret_value = read_secret(secret_name)
-            if secret_value and attr_name:
-                object.__setattr__(self, attr_name, secret_value)
+            if secret_value and attr_names:
+                # Handle both single attribute and list of attributes
+                if isinstance(attr_names, list):
+                    for attr_name in attr_names:
+                        object.__setattr__(self, attr_name, secret_value)
+                else:
+                    object.__setattr__(self, attr_names, secret_value)
 
         # Special handling for database_url (contains password)
         db_password = read_secret("postgres_password")
