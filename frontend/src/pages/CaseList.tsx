@@ -20,7 +20,7 @@ export default function CaseList() {
       casesApi.list({
         status: statusFilter || undefined,
         severity: severityFilter || undefined,
-        limit: 100,
+        page_size: 100,
       }),
   });
 

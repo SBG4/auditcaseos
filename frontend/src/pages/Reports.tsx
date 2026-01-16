@@ -20,8 +20,8 @@ export default function Reports() {
   const [generatingFor, setGeneratingFor] = useState<string | null>(null);
 
   const { data: casesData, isLoading } = useQuery({
-    queryKey: ['cases', { limit: 100 }],
-    queryFn: () => casesApi.list({ limit: 100 }),
+    queryKey: ['cases', { page_size: 100 }],
+    queryFn: () => casesApi.list({ page_size: 100 }),
   });
 
   // Templates are predefined, no need to fetch from API

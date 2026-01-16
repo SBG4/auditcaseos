@@ -37,7 +37,7 @@ function StatCard({ title, value, icon: Icon, color }: StatCardProps) {
 export default function Dashboard() {
   const { data: cases, isLoading } = useQuery({
     queryKey: ['cases'],
-    queryFn: () => casesApi.list({ limit: 100 }),
+    queryFn: () => casesApi.list({ page_size: 100 }),
   });
 
   if (isLoading) {
@@ -50,7 +50,7 @@ export default function Dashboard() {
 
   const caseList = cases?.items || [];
   const stats = {
-    total: caseList.length,
+    total: cases?.total || 0,
     open: caseList.filter((c: Case) => c.status === 'OPEN').length,
     inProgress: caseList.filter((c: Case) => c.status === 'IN_PROGRESS').length,
     closed: caseList.filter((c: Case) => c.status === 'CLOSED').length,

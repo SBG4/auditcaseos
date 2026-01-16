@@ -109,8 +109,8 @@ export const authApi = {
 // Cases API
 export const casesApi = {
   list: async (params?: {
-    skip?: number;
-    limit?: number;
+    page?: number;
+    page_size?: number;
     status?: string;
     severity?: string;
     scope_code?: string;
