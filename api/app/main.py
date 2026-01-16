@@ -27,6 +27,7 @@ from app.config import get_settings
 from app.utils.logging import configure_logging, get_logger
 from app.utils.metrics import setup_prometheus
 from app.utils.rate_limit import limiter
+from app.utils.sentry import set_user_context, setup_sentry
 
 # Initialize structured logging
 configure_logging()
@@ -78,6 +79,41 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         return response
 
+
+class SentryUserContextMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware to attach user context to Sentry error reports.
+
+    Extracts the current user from the JWT token in the Authorization header
+    and sets the Sentry user context for error attribution.
+
+    This enables:
+    - Identifying which user triggered an error
+    - Filtering errors by user in Sentry dashboard
+    - User impact analysis for error prioritization
+    """
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        # Try to extract user from JWT token
+        try:
+            auth_header = request.headers.get("Authorization", "")
+            if auth_header.startswith("Bearer "):
+                token = auth_header[7:]
+                # Import here to avoid circular imports
+                from app.routers.auth import decode_access_token
+
+                token_data = decode_access_token(token)
+                if token_data and token_data.user_id:
+                    set_user_context(
+                        user_id=str(token_data.user_id),
+                        email=token_data.email,
+                    )
+        except Exception:
+            # Don't let user context extraction break the request
+            pass
+
+        response = await call_next(request)
+        return response
 
 
 def get_minio_client() -> Minio:
@@ -178,6 +214,14 @@ def create_application() -> FastAPI:
     """
     settings = get_settings()
 
+    # Initialize Sentry error tracking (before app creation for early error capture)
+    # Source: https://docs.sentry.io/platforms/python/integrations/fastapi/
+    sentry_enabled = setup_sentry(settings)
+    if sentry_enabled:
+        logger.info("Sentry error tracking enabled")
+    else:
+        logger.debug("Sentry disabled (no DSN configured)")
+
     # Conditionally disable docs in production
     # Source: FastAPI security best practices
     docs_url = None if settings.is_production else "/docs"
@@ -199,6 +243,10 @@ def create_application() -> FastAPI:
     # Add rate limiter state and exception handler
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+    # Add Sentry user context middleware (attaches user info to errors)
+    if sentry_enabled:
+        app.add_middleware(SentryUserContextMiddleware)
 
     # Add security headers middleware
     app.add_middleware(SecurityHeadersMiddleware)

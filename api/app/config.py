@@ -171,6 +171,18 @@ class Settings(BaseSettings):
     onlyoffice_internal_url: str = "http://onlyoffice"
     onlyoffice_jwt_secret: str = "auditcaseos-onlyoffice-secret"
 
+    # Sentry error tracking settings
+    # Leave sentry_dsn empty to disable Sentry (safe for development)
+    sentry_dsn: str = ""
+    sentry_environment: str = "development"
+    sentry_traces_sample_rate: float = 0.1  # 10% of requests for performance monitoring
+    sentry_release: str = "0.8.0"
+
+    @property
+    def sentry_enabled(self) -> bool:
+        """Check if Sentry is configured."""
+        return bool(self.sentry_dsn)
+
     @property
     def async_database_url(self) -> str:
         """Return the database URL configured for async operations."""

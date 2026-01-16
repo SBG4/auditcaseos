@@ -2617,16 +2617,32 @@ $$ LANGUAGE plpgsql;
         </tasks>
         <source>https://prometheus.io/docs/practices/</source>
       </feature>
-      <feature id="4.12" status="PENDING">
+      <feature id="4.12" status="COMPLETED">
         <name>Error Tracking</name>
         <description>Integrate Sentry for error tracking and alerting</description>
         <priority>3</priority>
+        <completion_date>2026-01-16</completion_date>
         <tasks>
-          <task>Install sentry-sdk</task>
-          <task>Configure DSN from environment</task>
-          <task>Add user context to errors</task>
-          <task>Configure release tracking</task>
+          <task status="done">Install sentry-sdk[fastapi]</task>
+          <task status="done">Configure DSN from environment</task>
+          <task status="done">Add user context to errors via middleware</task>
+          <task status="done">Configure release tracking</task>
         </tasks>
+        <files_created>
+          <file>api/app/utils/sentry.py</file>
+        </files_created>
+        <files_modified>
+          <file>api/requirements.txt</file>
+          <file>api/app/config.py</file>
+          <file>api/app/main.py</file>
+          <file>api/app/utils/__init__.py</file>
+          <file>docker-compose.yml</file>
+        </files_modified>
+        <configuration>
+          <setting name="SENTRY_DSN" default="" description="Sentry DSN (empty = disabled)"/>
+          <setting name="SENTRY_ENVIRONMENT" default="development" description="Environment name"/>
+          <setting name="SENTRY_TRACES_SAMPLE_RATE" default="0.1" description="Performance sampling rate"/>
+        </configuration>
         <source>https://docs.sentry.io/platforms/python/</source>
       </feature>
     </feature_group>
@@ -2860,24 +2876,23 @@ $$ LANGUAGE plpgsql;
   <progress>
     <summary>
       <total_features>61</total_features>
-      <completed>54</completed>
+      <completed>55</completed>
       <in_progress>0</in_progress>
-      <pending>7</pending>
-      <completion_percentage>89</completion_percentage>
+      <pending>6</pending>
+      <completion_percentage>90</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="2" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="3" features_total="14" features_completed="14" status="COMPLETED"/>
-      <phase number="4" features_total="21" features_completed="16" status="IN_PROGRESS"/>
+      <phase number="4" features_total="21" features_completed="17" status="IN_PROGRESS"/>
       <phase number="5" features_total="8" features_completed="0" status="PLANNED"/>
     </phase_status>
 
     <next_steps>
       <note>Phase 4: Production Hardening - Remaining Features</note>
       <step priority="1" feature_id="4.17">SSL/TLS (HTTPS)</step>
-      <step priority="2" feature_id="4.12">Error Tracking (Sentry)</step>
       <step priority="2" feature_id="4.14">Database Optimization (PgBouncer)</step>
       <step priority="2" feature_id="4.15">Redis Caching</step>
       <step priority="2" feature_id="4.20">Load Testing</step>

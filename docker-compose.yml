@@ -182,6 +182,10 @@ services:
       # INTERNAL: API/Nextcloud to ONLYOFFICE server-to-server
       ONLYOFFICE_INTERNAL_URL: http://onlyoffice
       ONLYOFFICE_JWT_SECRET: ${ONLYOFFICE_JWT_SECRET:-auditcaseos-onlyoffice-secret}
+      # Sentry error tracking (optional - leave empty to disable)
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-development}
+      SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.1}
     ports:
       - "18000:8000"
     depends_on:

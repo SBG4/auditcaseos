@@ -30,5 +30,6 @@ mypy>=1.8.0
 # Observability (Phase 4)
 structlog>=24.1.0
 prometheus-fastapi-instrumentator>=6.1.0
+sentry-sdk[fastapi]>=1.39.0
 # Database migrations (Phase 4)
 alembic>=1.14.0
