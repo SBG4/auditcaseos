@@ -1,58 +1,113 @@
-# AuditCaseOS - Claude Code Instructions
+# AuditCaseOS - Claude Code Memory
 
-## MANDATORY: Read PROJECT_SPEC.xml First
+## Quick Reference
 
-Before doing ANY work in this repository, you MUST:
+| Metric | Value |
+|--------|-------|
+| Version | 0.8.0 |
+| Phase | 4 (Production Hardening) - 71% complete |
+| Features | 53/61 (87%) |
+| Repo | https://github.com/SBG4/auditcaseos |
+| Stack | FastAPI + React + PostgreSQL + MinIO + Ollama + Paperless + Nextcloud + ONLYOFFICE |
 
-1. **Read the PROJECT_SPEC.xml** at the repo root
-2. **Check current version and phase** in `<metadata>`
-3. **Review implementation guidelines** in `<implementation_guidelines>`
-4. **Check feature status** to understand what's done vs pending
+## Commands
 
 ```bash
-# The spec is at:
-/Users/shiro/auditcaseos/PROJECT_SPEC.xml
+# Start services
+docker compose up -d
+
+# Run backup tests (42 tests)
+./scripts/test-backup.sh
+
+# Full backup
+./scripts/backup-all.sh
+
+# Rebuild API
+docker compose up -d --build api
+
+# Access database
+docker exec -it auditcaseos-db psql -U auditcaseos -d auditcaseos
 ```
 
-## Key Sections to Reference
+## Ports
 
-| Section | When to Use |
-|---------|-------------|
-| `<url_architecture>` | ANY work involving URLs, services, or Docker |
-| `<onlyoffice_configuration>` | ONLYOFFICE or Nextcloud integration |
-| `<failure_patterns>` | Before implementing new features |
-| `<implementation_checklist>` | Before marking features complete |
-| `<development_best_practices>` | Code style and patterns |
-| `<ai_agent_guidelines>` | When using Task tool with agents |
+| Service | Port | Internal URL |
+|---------|------|--------------|
+| API | 18000 | http://api:8000 |
+| Frontend | 13000 | http://frontend:80 |
+| Postgres | 15432 | postgres:5432 |
+| MinIO | 19000 | minio:9000 |
+| Paperless | 18080 | http://paperless:8000 |
+| Nextcloud | 18081 | http://nextcloud |
+| ONLYOFFICE | 18082 | http://onlyoffice |
 
-## Mandatory Rules (from PROJECT_SPEC.xml)
+## CRITICAL: URL Architecture
 
-1. **Git Commit Before Handover**: ALWAYS commit and push all changes before ending a session
-2. **Update Spec on Completion**: Update PROJECT_SPEC.xml when features are completed
-3. **URL Architecture**: Use INTERNAL URLs for server-to-server, EXTERNAL for browser
+| Type | When | Example |
+|------|------|---------|
+| INTERNAL | Container-to-container | `http://nextcloud` |
+| EXTERNAL | Browser access | `http://localhost:18081` |
 
-## Current Project State
+**Rules**:
+- NEVER use localhost inside containers
+- ALWAYS use service names for inter-container communication
+- URLs returned to browser MUST use external format
 
-- **Version**: 0.7.3
-- **Phase**: 4 - Production Hardening (71% complete, 15/21 features)
-- **Features**: 53/61 (87%)
-- **Repo**: https://github.com/SBG4/auditcaseos
-- **Stack**: FastAPI + React + PostgreSQL + MinIO + Ollama + Paperless + Nextcloud + ONLYOFFICE
-- **Ports**: API:18000, Frontend:13000, Postgres:15432, MinIO:19000/19001, Paperless:18080, Nextcloud:18081, ONLYOFFICE:18082
-- **CI Status**: All 4 jobs passing (Security, Backend, Frontend, Docker)
+## Case ID Format
 
-## Verification
+`SCOPE-TYPE-SEQ` (e.g., FIN-USB-0001)
 
-If the user asks "did you read the spec?", you should be able to answer:
-- Current version number
-- Current phase and status
-- Number of completed vs pending features
-- Recent changelog entries
+**Scopes**: FIN, HR, IT, SEC, OPS, CORP, LEGAL, RND, PRO, MKT, QA, ENV, SAF, EXT, GOV, GEN
 
-## When Making Changes
+## Failure Patterns (AVOID THESE)
 
-1. Follow patterns in `<development_best_practices>`
-2. Check `<failure_patterns>` to avoid known issues
-3. Use `<implementation_checklist>` before completing features
-4. Update `<changelog>` with your changes
-5. Commit and push before session ends
+| Pattern | Fix |
+|---------|-----|
+| localhost-in-container | Use service names |
+| internal-url-to-browser | Use external URLs for frontend |
+| string-replacement-urls | Use config, not string manipulation |
+| hardcoded-ports | Use environment variables |
+| missing-nginx-limits | Set client_max_body_size |
+
+## Documentation
+
+| File | Content |
+|------|---------|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, diagrams, URL rules |
+| [docs/FEATURES.md](docs/FEATURES.md) | All 61 features by phase |
+| [docs/CONVENTIONS.md](docs/CONVENTIONS.md) | Code style, patterns |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Progress tracking |
+| [docs/CHANGELOG.md](docs/CHANGELOG.md) | Version history |
+| [docs/AGENT_PATTERNS.md](docs/AGENT_PATTERNS.md) | AI agent guidelines |
+| [PROJECT_SPEC.xml](PROJECT_SPEC.xml) | Full spec (archived) |
+
+## Mandatory Rules
+
+1. **Commit and push before ending session** - No exceptions
+2. **Update version** in PROJECT_SPEC.xml when features complete
+3. **Run tests** before committing
+4. **Read relevant docs** before implementing features
+
+## Default Credentials
+
+| Service | User | Password |
+|---------|------|----------|
+| MinIO | minioadmin | minioadmin123 |
+| PostgreSQL | auditcaseos | auditcaseos_secret |
+| Paperless | admin | admin123 |
+| Nextcloud | admin | admin123 |
+| API Admin | admin@example.com | admin123 |
+
+## Implementation Checklist
+
+Before completing any feature:
+- [ ] URLs from config, not hardcoded
+- [ ] Internal URLs use Docker service names
+- [ ] External URLs use localhost:PORT
+- [ ] nginx body size limits configured
+- [ ] Tests verify browser functionality
+- [ ] Documentation updated
+
+## CI Status
+
+All 4 jobs passing: Security, Backend, Frontend, Docker

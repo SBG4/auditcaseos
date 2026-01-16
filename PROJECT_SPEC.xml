@@ -16,9 +16,10 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.7.3</version>
+    <version>0.8.0</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-16</last_updated>
+    <documentation_layer>See docs/ folder and CLAUDE.md for layered documentation</documentation_layer>
     <current_phase>4</current_phase>
     <overall_progress>phase_4_71_percent_15_of_21_complete</overall_progress>
   </metadata>
@@ -2882,6 +2883,23 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-16" version="0.8.0" phase="4">
+      <changes>
+        <change type="added">Layered Memory Architecture for Claude Code</change>
+        <change type="added">docs/ARCHITECTURE.md - System design, diagrams, URL rules</change>
+        <change type="added">docs/FEATURES.md - All 61 features by phase</change>
+        <change type="added">docs/CONVENTIONS.md - Code style, patterns from official sources</change>
+        <change type="added">docs/ROADMAP.md - Progress tracking and next steps</change>
+        <change type="added">docs/CHANGELOG.md - Version history</change>
+        <change type="added">docs/AGENT_PATTERNS.md - AI agent usage guidelines</change>
+        <change type="added">.claude/commands/build.md - Build command</change>
+        <change type="added">.claude/commands/test.md - Test command</change>
+        <change type="added">.claude/commands/backup.md - Backup command</change>
+        <change type="updated">CLAUDE.md - Rewritten as Layer 1 quick reference (~115 lines)</change>
+        <change type="updated">PROJECT_SPEC.xml now serves as versioned archive</change>
+        <change type="milestone">Context reduction: 48K tokens → ~3-5K per session (90% reduction)</change>
+      </changes>
+    </entry>
     <entry date="2026-01-16" version="0.7.3" phase="4">
       <changes>
         <change type="added">scripts/test-backup.sh - Comprehensive test suite (42 tests)</change>
