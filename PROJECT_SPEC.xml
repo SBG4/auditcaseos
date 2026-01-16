@@ -16,7 +16,7 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.5.2</version>
+    <version>0.5.3</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-15</last_updated>
     <current_phase>3</current_phase>
@@ -2337,9 +2337,62 @@ $$ LANGUAGE plpgsql;
         </dependencies>
         <tested>true</tested>
       </feature>
-      <feature id="3.12" status="PENDING">
+      <feature id="3.12" status="COMPLETED">
         <name>Workflow Automation</name>
         <description>Automated case state transitions and notifications</description>
+        <completion_date>2026-01-15</completion_date>
+        <files_created>
+          <file>api/app/schemas/workflow.py - Pydantic schemas for workflows and notifications</file>
+          <file>api/app/services/notification_service.py - Notification CRUD service</file>
+          <file>api/app/services/workflow_service.py - Workflow rule management service</file>
+          <file>api/app/services/workflow_executor.py - Workflow action execution engine</file>
+          <file>api/app/services/scheduler_service.py - APScheduler for time-based rules</file>
+          <file>api/app/routers/notifications.py - Notification endpoints for users</file>
+          <file>api/app/routers/workflows.py - Admin workflow management endpoints</file>
+          <file>frontend/src/components/notifications/NotificationCenter.tsx - Notification dropdown</file>
+          <file>frontend/src/pages/Workflows.tsx - Admin workflow management page</file>
+        </files_created>
+        <files_modified>
+          <file>configs/postgres/init.sql - Added workflow_rules, workflow_actions, notifications, workflow_history tables</file>
+          <file>api/app/routers/cases.py - Added workflow triggers on case events</file>
+          <file>api/app/routers/evidence.py - Added workflow triggers on evidence upload</file>
+          <file>api/app/services/websocket_service.py - Extended for notification broadcast</file>
+          <file>api/app/main.py - Registered workflow and notification routers, scheduler startup</file>
+          <file>api/requirements.txt - Added apscheduler</file>
+          <file>frontend/src/components/layout/Header.tsx - Integrated NotificationCenter</file>
+          <file>frontend/src/components/layout/Sidebar.tsx - Added Workflows link</file>
+          <file>frontend/src/App.tsx - Added /workflows route</file>
+          <file>frontend/src/types/index.ts - Added notification and workflow types</file>
+          <file>frontend/src/services/api.ts - Added notifications and workflows API</file>
+        </files_modified>
+        <features>
+          <feature>Workflow rules with 4 trigger types: STATUS_CHANGE, TIME_BASED, EVENT, CONDITION</feature>
+          <feature>Workflow actions: CHANGE_STATUS, ASSIGN_USER, ADD_TAG, SEND_NOTIFICATION, CREATE_TIMELINE</feature>
+          <feature>In-app notification system with priorities (LOW, NORMAL, HIGH, URGENT)</feature>
+          <feature>Real-time notification broadcast via WebSocket</feature>
+          <feature>APScheduler for time-based rule execution (every minute check)</feature>
+          <feature>Automatic notification cleanup (90 days retention)</feature>
+          <feature>Admin UI for workflow rule management</feature>
+          <feature>Notification center dropdown with unread count badge</feature>
+          <feature>Workflow execution history tracking</feature>
+          <feature>Manual workflow trigger capability</feature>
+        </features>
+        <api_endpoints>
+          <endpoint method="GET" path="/api/v1/notifications">List user notifications</endpoint>
+          <endpoint method="GET" path="/api/v1/notifications/unread-count">Get unread count</endpoint>
+          <endpoint method="PATCH" path="/api/v1/notifications/{id}/read">Mark as read</endpoint>
+          <endpoint method="POST" path="/api/v1/notifications/mark-all-read">Mark all as read</endpoint>
+          <endpoint method="GET" path="/api/v1/workflows/rules">List workflow rules</endpoint>
+          <endpoint method="POST" path="/api/v1/workflows/rules">Create workflow rule (admin)</endpoint>
+          <endpoint method="PATCH" path="/api/v1/workflows/rules/{id}">Update workflow rule (admin)</endpoint>
+          <endpoint method="DELETE" path="/api/v1/workflows/rules/{id}">Delete workflow rule (admin)</endpoint>
+          <endpoint method="POST" path="/api/v1/workflows/rules/{id}/toggle">Enable/disable rule (admin)</endpoint>
+          <endpoint method="GET" path="/api/v1/workflows/rules/{id}/actions">Get rule actions</endpoint>
+          <endpoint method="POST" path="/api/v1/workflows/rules/{id}/actions">Add action to rule (admin)</endpoint>
+          <endpoint method="GET" path="/api/v1/workflows/history">Get workflow execution history</endpoint>
+          <endpoint method="POST" path="/api/v1/workflows/rules/{id}/trigger/{case_id}">Manual trigger (admin)</endpoint>
+        </api_endpoints>
+        <tested>false</tested>
       </feature>
       <feature id="3.13" status="PENDING">
         <name>Advanced Search</name>
@@ -2380,21 +2433,20 @@ $$ LANGUAGE plpgsql;
   <progress>
     <summary>
       <total_features>38</total_features>
-      <completed>35</completed>
+      <completed>36</completed>
       <in_progress>0</in_progress>
-      <pending>3</pending>
-      <completion_percentage>92</completion_percentage>
+      <pending>2</pending>
+      <completion_percentage>95</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="2" features_total="12" features_completed="12" status="COMPLETED"/>
-      <phase number="3" features_total="14" features_completed="11" status="IN_PROGRESS"/>
+      <phase number="3" features_total="14" features_completed="12" status="IN_PROGRESS"/>
     </phase_status>
 
     <next_steps>
-      <step priority="1" feature_id="3.12">Workflow Automation</step>
-      <step priority="2" feature_id="3.13">Advanced Search</step>
+      <step priority="1" feature_id="3.13">Advanced Search</step>
     </next_steps>
   </progress>
 
@@ -2402,6 +2454,24 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-16" version="0.5.3" phase="3">
+      <changes>
+        <change type="added">Feature 3.12: Workflow Automation - COMPLETE</change>
+        <change type="added">Workflow rules engine with 4 trigger types (STATUS_CHANGE, TIME_BASED, EVENT, CONDITION)</change>
+        <change type="added">5 action types (CHANGE_STATUS, ASSIGN_USER, ADD_TAG, SEND_NOTIFICATION, CREATE_TIMELINE)</change>
+        <change type="added">In-app notification system with priorities (LOW, NORMAL, HIGH, URGENT)</change>
+        <change type="added">Real-time notification broadcast via WebSocket</change>
+        <change type="added">APScheduler service for time-based rule execution</change>
+        <change type="added">Admin workflow management API (CRUD for rules and actions)</change>
+        <change type="added">Workflow execution history tracking</change>
+        <change type="added">NotificationCenter component with unread count badge</change>
+        <change type="added">Workflows admin page for rule management</change>
+        <change type="added">Automatic workflow triggers on case creation, update, status change, evidence upload</change>
+        <change type="added">Template rendering for notification messages (case_id, status, severity, etc.)</change>
+        <change type="added">Manual workflow trigger capability for admins</change>
+        <change type="milestone">Feature 3.12 Workflow Automation - 36/38 features complete (95%)</change>
+      </changes>
+    </entry>
     <entry date="2026-01-15" version="0.5.2" phase="3">
       <changes>
         <change type="added">Feature 3.11: Analytics Dashboard - COMPLETE</change>

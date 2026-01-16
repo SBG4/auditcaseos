@@ -71,8 +71,10 @@ async def lifespan(app: FastAPI):
 
     Startup:
         - Initializes MinIO bucket for evidence storage
+        - Starts the workflow scheduler
 
     Shutdown:
+        - Stops the workflow scheduler
         - Performs cleanup operations
 
     Args:
@@ -89,10 +91,26 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"MinIO initialization skipped: {e}")
 
+    # Start workflow scheduler
+    try:
+        from app.services.scheduler_service import scheduler_service
+        scheduler_service.start()
+        logger.info("Workflow scheduler started")
+    except Exception as e:
+        logger.warning(f"Scheduler initialization skipped: {e}")
+
     yield
 
     # Shutdown
     logger.info("Shutting down AuditCaseOS API...")
+
+    # Stop workflow scheduler
+    try:
+        from app.services.scheduler_service import scheduler_service
+        scheduler_service.stop()
+        logger.info("Workflow scheduler stopped")
+    except Exception as e:
+        logger.warning(f"Error stopping scheduler: {e}")
 
 
 def create_application() -> FastAPI:
@@ -126,7 +144,7 @@ def create_application() -> FastAPI:
     # Import and include routers
     # These imports are done here to avoid circular imports
     # Note: Routers define their own prefixes and tags
-    from app.routers import ai, analytics, auth, cases, entities, evidence, health, nextcloud, onlyoffice, reports, scopes, sync, users, websocket
+    from app.routers import ai, analytics, auth, cases, entities, evidence, health, nextcloud, notifications, onlyoffice, reports, scopes, sync, users, websocket, workflows
 
     app.include_router(health.router, tags=["Health"])
     app.include_router(auth.router, prefix="/api/v1", tags=["Authentication"])
@@ -138,6 +156,8 @@ def create_application() -> FastAPI:
     app.include_router(sync.router, prefix="/api/v1", tags=["Sync"])
     app.include_router(ai.router, prefix="/api/v1", tags=["AI"])
     app.include_router(analytics.router, prefix="/api/v1", tags=["Analytics"])
+    app.include_router(notifications.router, prefix="/api/v1", tags=["Notifications"])
+    app.include_router(workflows.router, prefix="/api/v1", tags=["Workflows"])
     app.include_router(reports.router, prefix="/api/v1", tags=["Reports"])
     app.include_router(nextcloud.router, prefix="/api/v1", tags=["Nextcloud"])
     app.include_router(onlyoffice.router, prefix="/api/v1", tags=["ONLYOFFICE"])

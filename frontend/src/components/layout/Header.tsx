@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
 import {
   Bars3Icon,
-  BellIcon,
   UserCircleIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../hooks/useAuth';
+import NotificationCenter from '../notifications/NotificationCenter';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -30,9 +30,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-4">
-          <button className="p-2 text-gray-500 rounded-md hover:bg-gray-100">
-            <BellIcon className="w-6 h-6" />
-          </button>
+          <NotificationCenter />
 
           <div className="relative group">
             <button className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-100">

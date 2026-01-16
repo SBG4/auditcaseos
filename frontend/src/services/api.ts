@@ -26,6 +26,16 @@ import type {
   EntityInsightsResponse,
   UserActivityResponse,
   FullAnalyticsResponse,
+  Notification,
+  NotificationListResponse,
+  NotificationCountResponse,
+  WorkflowRule,
+  WorkflowRuleCreate,
+  WorkflowRuleUpdate,
+  WorkflowRuleListResponse,
+  WorkflowAction,
+  WorkflowHistory,
+  WorkflowHistoryListResponse,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
@@ -491,6 +501,144 @@ export const analyticsApi = {
     const response = await api.get<FullAnalyticsResponse>('/analytics/full', {
       params: { days },
     });
+    return response.data;
+  },
+};
+
+// Notifications API
+export const notificationsApi = {
+  list: async (params?: {
+    page?: number;
+    page_size?: number;
+    unread_only?: boolean;
+  }): Promise<NotificationListResponse> => {
+    const response = await api.get<NotificationListResponse>('/notifications', { params });
+    return response.data;
+  },
+
+  getUnreadCount: async (): Promise<NotificationCountResponse> => {
+    const response = await api.get<NotificationCountResponse>('/notifications/unread-count');
+    return response.data;
+  },
+
+  get: async (id: string): Promise<Notification> => {
+    const response = await api.get<Notification>(`/notifications/${id}`);
+    return response.data;
+  },
+
+  markAsRead: async (id: string): Promise<{ message: string; marked_count: number }> => {
+    const response = await api.patch<{ message: string; marked_count: number }>(
+      `/notifications/${id}/read`
+    );
+    return response.data;
+  },
+
+  markAllAsRead: async (): Promise<{ message: string; marked_count: number }> => {
+    const response = await api.post<{ message: string; marked_count: number }>(
+      '/notifications/mark-all-read'
+    );
+    return response.data;
+  },
+
+  delete: async (id: string): Promise<{ message: string }> => {
+    const response = await api.delete<{ message: string }>(`/notifications/${id}`);
+    return response.data;
+  },
+};
+
+// Workflows API (Admin only)
+export const workflowsApi = {
+  // Rules
+  listRules: async (params?: {
+    page?: number;
+    page_size?: number;
+    is_enabled?: boolean;
+    trigger_type?: string;
+  }): Promise<WorkflowRuleListResponse> => {
+    const response = await api.get<WorkflowRuleListResponse>('/workflows/rules', { params });
+    return response.data;
+  },
+
+  getRule: async (id: string): Promise<WorkflowRule> => {
+    const response = await api.get<WorkflowRule>(`/workflows/rules/${id}`);
+    return response.data;
+  },
+
+  createRule: async (data: WorkflowRuleCreate): Promise<WorkflowRule> => {
+    const response = await api.post<WorkflowRule>('/workflows/rules', data);
+    return response.data;
+  },
+
+  updateRule: async (id: string, data: WorkflowRuleUpdate): Promise<WorkflowRule> => {
+    const response = await api.patch<WorkflowRule>(`/workflows/rules/${id}`, data);
+    return response.data;
+  },
+
+  deleteRule: async (id: string): Promise<{ message: string }> => {
+    const response = await api.delete<{ message: string }>(`/workflows/rules/${id}`);
+    return response.data;
+  },
+
+  toggleRule: async (id: string, enabled: boolean): Promise<WorkflowRule> => {
+    const response = await api.post<WorkflowRule>(`/workflows/rules/${id}/toggle`, { enabled });
+    return response.data;
+  },
+
+  // Actions
+  getRuleActions: async (ruleId: string): Promise<WorkflowAction[]> => {
+    const response = await api.get<WorkflowAction[]>(`/workflows/rules/${ruleId}/actions`);
+    return response.data;
+  },
+
+  addAction: async (
+    ruleId: string,
+    data: { action_type: string; action_config: Record<string, unknown>; sequence?: number }
+  ): Promise<WorkflowAction> => {
+    const response = await api.post<WorkflowAction>(`/workflows/rules/${ruleId}/actions`, data);
+    return response.data;
+  },
+
+  updateAction: async (
+    actionId: string,
+    data: { action_config?: Record<string, unknown>; sequence?: number }
+  ): Promise<WorkflowAction> => {
+    const response = await api.patch<WorkflowAction>(`/workflows/actions/${actionId}`, data);
+    return response.data;
+  },
+
+  deleteAction: async (actionId: string): Promise<{ message: string }> => {
+    const response = await api.delete<{ message: string }>(`/workflows/actions/${actionId}`);
+    return response.data;
+  },
+
+  // History
+  getRuleHistory: async (
+    ruleId: string,
+    params?: { page?: number; page_size?: number }
+  ): Promise<WorkflowHistoryListResponse> => {
+    const response = await api.get<WorkflowHistoryListResponse>(
+      `/workflows/rules/${ruleId}/history`,
+      { params }
+    );
+    return response.data;
+  },
+
+  getAllHistory: async (params?: {
+    page?: number;
+    page_size?: number;
+    rule_id?: string;
+    case_id?: string;
+    success?: boolean;
+  }): Promise<WorkflowHistoryListResponse> => {
+    const response = await api.get<WorkflowHistoryListResponse>('/workflows/history', { params });
+    return response.data;
+  },
+
+  // Manual trigger
+  triggerRule: async (ruleId: string, caseId: string): Promise<WorkflowHistory> => {
+    const response = await api.post<WorkflowHistory>(
+      `/workflows/rules/${ruleId}/trigger/${caseId}`
+    );
     return response.data;
   },
 };

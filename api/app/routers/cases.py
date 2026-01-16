@@ -32,8 +32,72 @@ from app.schemas.common import (
 from app.services.audit_service import audit_service
 from app.services.case_service import case_service
 from app.services.websocket_service import connection_manager
+from app.services.workflow_service import workflow_service
+from app.services.workflow_executor import workflow_executor
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Workflow Trigger Helper
+# =============================================================================
+
+
+async def trigger_workflows(
+    db: AsyncSession,
+    trigger_type: str,
+    case_data: dict[str, Any],
+    trigger_data: dict[str, Any],
+    triggered_by: str,
+) -> None:
+    """
+    Trigger matching workflow rules for a case event.
+
+    This function is non-blocking - workflow failures don't affect the main operation.
+    """
+    try:
+        # Get matching rules
+        rules = await workflow_service.get_matching_rules(
+            db=db,
+            trigger_type=trigger_type,
+            case_data=case_data,
+            trigger_data=trigger_data,
+        )
+
+        for rule in rules:
+            try:
+                # Execute rule actions
+                result = await workflow_executor.execute_rule(
+                    db=db,
+                    rule=rule,
+                    case_data=case_data,
+                    trigger_data=trigger_data,
+                    triggered_by=triggered_by,
+                )
+
+                # Log execution
+                await workflow_service.log_execution(
+                    db=db,
+                    rule=rule,
+                    case_data=case_data,
+                    trigger_type=trigger_type,
+                    trigger_data=trigger_data,
+                    actions_executed=result["actions_executed"],
+                    success=result["success"],
+                    error_message=result.get("error_message"),
+                    triggered_by=triggered_by,
+                )
+
+                logger.info(
+                    f"Workflow '{rule['name']}' executed for case {case_data.get('case_id')} "
+                    f"- success: {result['success']}"
+                )
+
+            except Exception as rule_error:
+                logger.error(f"Failed to execute workflow rule {rule.get('id')}: {rule_error}")
+
+    except Exception as e:
+        logger.error(f"Failed to trigger workflows: {e}")
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
@@ -226,6 +290,18 @@ async def create_case(
         except Exception as ws_error:
             logger.debug(f"WebSocket broadcast skipped: {ws_error}")
 
+        # Trigger workflows for case creation
+        try:
+            await trigger_workflows(
+                db=db,
+                trigger_type="EVENT",
+                case_data=created_case,
+                trigger_data={"event": "case_created"},
+                triggered_by=f"event:case_created",
+            )
+        except Exception as wf_error:
+            logger.debug(f"Workflow trigger skipped: {wf_error}")
+
         return response
 
     except HTTPException:
@@ -386,6 +462,37 @@ async def update_case(
             )
         except Exception as ws_error:
             logger.debug(f"WebSocket broadcast skipped: {ws_error}")
+
+        # Trigger workflows for case update
+        try:
+            # Check if status changed - trigger STATUS_CHANGE rules
+            old_status = str(existing_case.get("status"))
+            new_status = updated_case.get("status")
+            if "status" in update_dict and old_status != new_status:
+                await trigger_workflows(
+                    db=db,
+                    trigger_type="STATUS_CHANGE",
+                    case_data=updated_case,
+                    trigger_data={
+                        "old_status": old_status,
+                        "new_status": new_status,
+                    },
+                    triggered_by=f"status_change:{old_status}->{new_status}",
+                )
+
+            # Also trigger EVENT rules for case_updated
+            await trigger_workflows(
+                db=db,
+                trigger_type="EVENT",
+                case_data=updated_case,
+                trigger_data={
+                    "event": "case_updated",
+                    "updated_fields": list(update_dict.keys()),
+                },
+                triggered_by="event:case_updated",
+            )
+        except Exception as wf_error:
+            logger.debug(f"Workflow trigger skipped: {wf_error}")
 
         return response
 
@@ -740,6 +847,23 @@ async def add_finding(
             )
         except Exception as ws_error:
             logger.debug(f"WebSocket broadcast skipped: {ws_error}")
+
+        # Trigger workflows for finding added
+        try:
+            await trigger_workflows(
+                db=db,
+                trigger_type="EVENT",
+                case_data=case_data,
+                trigger_data={
+                    "event": "finding_added",
+                    "finding_id": str(finding_data.get("id")),
+                    "finding_title": title,
+                    "finding_severity": severity.value,
+                },
+                triggered_by="event:finding_added",
+            )
+        except Exception as wf_error:
+            logger.debug(f"Workflow trigger skipped: {wf_error}")
 
         return finding_data
 

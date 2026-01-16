@@ -361,3 +361,114 @@ export interface FullAnalyticsResponse {
   entities: EntityInsightsResponse;
   user_activity: UserActivityResponse;
 }
+
+// Notification types
+export type NotificationPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  priority: NotificationPriority;
+  is_read: boolean;
+  read_at?: string;
+  entity_type?: string;
+  entity_id?: string;
+  link_url?: string;
+  source: string;
+  created_at: string;
+}
+
+export interface NotificationListResponse {
+  items: Notification[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface NotificationCountResponse {
+  count: number;
+}
+
+// Workflow types
+export type TriggerType = 'STATUS_CHANGE' | 'TIME_BASED' | 'EVENT' | 'CONDITION';
+export type ActionType = 'CHANGE_STATUS' | 'ASSIGN_USER' | 'ADD_TAG' | 'SEND_NOTIFICATION' | 'CREATE_TIMELINE';
+
+export interface WorkflowAction {
+  id: string;
+  rule_id: string;
+  action_type: ActionType;
+  action_config: Record<string, unknown>;
+  sequence: number;
+  created_at: string;
+}
+
+export interface WorkflowRule {
+  id: string;
+  name: string;
+  description?: string;
+  trigger_type: TriggerType;
+  trigger_config: Record<string, unknown>;
+  is_enabled: boolean;
+  priority: number;
+  scope_codes?: string[];
+  case_types?: string[];
+  actions?: WorkflowAction[];
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkflowRuleCreate {
+  name: string;
+  description?: string;
+  trigger_type: TriggerType;
+  trigger_config: Record<string, unknown>;
+  is_enabled?: boolean;
+  priority?: number;
+  scope_codes?: string[];
+  case_types?: string[];
+}
+
+export interface WorkflowRuleUpdate {
+  name?: string;
+  description?: string;
+  trigger_config?: Record<string, unknown>;
+  is_enabled?: boolean;
+  priority?: number;
+  scope_codes?: string[];
+  case_types?: string[];
+}
+
+export interface WorkflowRuleListResponse {
+  items: WorkflowRule[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface WorkflowHistory {
+  id: string;
+  rule_id: string;
+  rule_name: string;
+  case_id: string;
+  case_id_str: string;
+  trigger_type: TriggerType;
+  trigger_data: Record<string, unknown>;
+  actions_executed: Record<string, unknown>[];
+  success: boolean;
+  error_message?: string;
+  triggered_by: string;
+  executed_at: string;
+}
+
+export interface WorkflowHistoryListResponse {
+  items: WorkflowHistory[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}

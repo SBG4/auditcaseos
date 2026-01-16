@@ -10,6 +10,7 @@ import CaseCreate from './pages/CaseCreate';
 import Reports from './pages/Reports';
 import Analytics from './pages/Analytics';
 import Admin from './pages/Admin';
+import Workflows from './pages/Workflows';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -45,6 +46,7 @@ export default function App() {
           <Route path="reports" element={<ErrorBoundary><Reports /></ErrorBoundary>} />
           <Route path="analytics" element={<ErrorBoundary><Analytics /></ErrorBoundary>} />
           <Route path="admin" element={<ErrorBoundary><Admin /></ErrorBoundary>} />
+          <Route path="workflows" element={<ErrorBoundary><Workflows /></ErrorBoundary>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

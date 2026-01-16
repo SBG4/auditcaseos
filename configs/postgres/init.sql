@@ -295,3 +295,156 @@ CREATE INDEX idx_case_entities_case_type ON case_entities(case_id, entity_type);
 CREATE TRIGGER trigger_case_entities_updated_at
     BEFORE UPDATE ON case_entities
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ============================================
+-- WORKFLOW AUTOMATION TABLES (Feature 3.12)
+-- ============================================
+
+-- Workflow Trigger Types Enum
+CREATE TYPE workflow_trigger_type AS ENUM (
+    'STATUS_CHANGE',      -- When case status transitions
+    'TIME_BASED',         -- After X days in a status
+    'EVENT',              -- When event occurs (evidence added, finding created, etc.)
+    'CONDITION'           -- When conditions match (e.g., severity=CRITICAL AND status=OPEN)
+);
+
+-- Workflow Action Types Enum
+CREATE TYPE workflow_action_type AS ENUM (
+    'CHANGE_STATUS',      -- Update case status
+    'ASSIGN_USER',        -- Assign case to a user
+    'ADD_TAG',            -- Add a tag to the case
+    'SEND_NOTIFICATION',  -- Send in-app notification
+    'CREATE_TIMELINE'     -- Add timeline event
+);
+
+-- Notification Priority Enum
+CREATE TYPE notification_priority AS ENUM ('LOW', 'NORMAL', 'HIGH', 'URGENT');
+
+-- Workflow Rules table
+CREATE TABLE workflow_rules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+
+    -- Trigger configuration
+    trigger_type workflow_trigger_type NOT NULL,
+    trigger_config JSONB NOT NULL DEFAULT '{}',
+    -- Examples:
+    -- STATUS_CHANGE: {"from_status": "OPEN", "to_status": "IN_PROGRESS"}
+    -- TIME_BASED: {"status": "OPEN", "days": 7}
+    -- EVENT: {"event_type": "evidence_added"} or {"event_type": "finding_created"}
+    -- CONDITION: {"conditions": [{"field": "severity", "operator": "eq", "value": "CRITICAL"}]}
+
+    -- Rule state
+    is_enabled BOOLEAN DEFAULT true,
+    priority INTEGER DEFAULT 100,  -- Lower number = higher priority
+
+    -- Scope limiting (optional - null means all cases)
+    scope_codes TEXT[],            -- Limit to specific scopes
+    case_types TEXT[],             -- Limit to specific case types
+
+    -- Audit
+    created_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Workflow Actions table (linked to rules)
+CREATE TABLE workflow_actions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    rule_id UUID NOT NULL REFERENCES workflow_rules(id) ON DELETE CASCADE,
+
+    -- Action configuration
+    action_type workflow_action_type NOT NULL,
+    action_config JSONB NOT NULL DEFAULT '{}',
+    -- Examples:
+    -- CHANGE_STATUS: {"new_status": "IN_PROGRESS"}
+    -- ASSIGN_USER: {"user_id": "uuid-here"} or {"assign_to_owner": true}
+    -- ADD_TAG: {"tag": "escalated"}
+    -- SEND_NOTIFICATION: {"title": "...", "message": "...", "recipient_type": "owner|assignee|role", "recipient_value": "admin"}
+    -- CREATE_TIMELINE: {"event_type": "workflow", "description_template": "Case auto-escalated after {days} days"}
+
+    -- Execution order within rule
+    sequence INTEGER DEFAULT 0,
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Notifications table
+CREATE TABLE notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+    -- Recipient
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    -- Content
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    priority notification_priority DEFAULT 'NORMAL',
+
+    -- Related entity
+    entity_type VARCHAR(50),       -- 'case', 'evidence', 'finding', etc.
+    entity_id UUID,
+    link_url VARCHAR(500),         -- URL to navigate to when clicked
+
+    -- State
+    is_read BOOLEAN DEFAULT false,
+    read_at TIMESTAMP WITH TIME ZONE,
+
+    -- Source (for tracking what generated this notification)
+    source VARCHAR(100),           -- 'workflow', 'system', 'user'
+    source_rule_id UUID REFERENCES workflow_rules(id) ON DELETE SET NULL,
+
+    -- Metadata
+    metadata JSONB DEFAULT '{}',
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Workflow Execution History table
+CREATE TABLE workflow_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+    -- What was executed
+    rule_id UUID REFERENCES workflow_rules(id) ON DELETE SET NULL,
+    rule_name VARCHAR(255) NOT NULL,  -- Preserve name even if rule deleted
+
+    -- What triggered it
+    trigger_type workflow_trigger_type NOT NULL,
+    trigger_data JSONB,
+
+    -- Target
+    case_id UUID REFERENCES cases(id) ON DELETE SET NULL,
+    case_id_str VARCHAR(50),         -- Preserve case_id string even if case deleted
+
+    -- Execution details
+    actions_executed JSONB,           -- Array of executed actions with results
+    -- Example: [{"action_type": "CHANGE_STATUS", "success": true, "details": {...}}, ...]
+
+    -- Result
+    success BOOLEAN NOT NULL,
+    error_message TEXT,
+
+    -- Timing
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP WITH TIME ZONE,
+
+    -- Who/what triggered it
+    triggered_by VARCHAR(100)        -- 'scheduler', 'event:case_update', 'manual'
+);
+
+-- Indexes for workflow tables
+CREATE INDEX idx_workflow_rules_enabled ON workflow_rules(is_enabled) WHERE is_enabled = true;
+CREATE INDEX idx_workflow_rules_trigger ON workflow_rules(trigger_type);
+CREATE INDEX idx_workflow_actions_rule ON workflow_actions(rule_id);
+CREATE INDEX idx_notifications_user ON notifications(user_id);
+CREATE INDEX idx_notifications_user_unread ON notifications(user_id, is_read) WHERE is_read = false;
+CREATE INDEX idx_notifications_created ON notifications(created_at DESC);
+CREATE INDEX idx_workflow_history_rule ON workflow_history(rule_id);
+CREATE INDEX idx_workflow_history_case ON workflow_history(case_id);
+CREATE INDEX idx_workflow_history_created ON workflow_history(created_at DESC);
+
+-- Trigger for workflow_rules updated_at
+CREATE TRIGGER trigger_workflow_rules_updated_at
+    BEFORE UPDATE ON workflow_rules
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();

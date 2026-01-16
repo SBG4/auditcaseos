@@ -23,6 +23,8 @@ class ConnectionManager:
         self._metadata: dict[int, dict[str, Any]] = {}
         # Presence tracking: {case_id: {user_id: {email, name, connected_at}}}
         self._presence: dict[str, dict[str, dict[str, Any]]] = {}
+        # Global user connections: {user_id: [websocket, ...]} (for notifications)
+        self._user_connections: dict[str, list[WebSocket]] = {}
         # Lock for thread-safe operations
         self._lock = asyncio.Lock()
 
@@ -80,6 +82,11 @@ class ConnectionManager:
                     "connected_at": datetime.utcnow().isoformat(),
                 }
 
+                # Track global user connection (for notifications)
+                if user_id not in self._user_connections:
+                    self._user_connections[user_id] = []
+                self._user_connections[user_id].append(websocket)
+
             logger.info(f"WebSocket connected: user={user_email}, case={case_id}")
 
             # Broadcast presence update to other viewers
@@ -127,6 +134,15 @@ class ConnectionManager:
                     del self._connections[case_id]
                 if case_id in self._presence and not self._presence[case_id]:
                     del self._presence[case_id]
+
+                # Remove from global user connections
+                if user_id in self._user_connections:
+                    try:
+                        self._user_connections[user_id].remove(websocket)
+                    except ValueError:
+                        pass
+                    if not self._user_connections[user_id]:
+                        del self._user_connections[user_id]
 
         logger.info(f"WebSocket disconnected: user={metadata.get('user_email')}, case={case_id}")
 
@@ -308,6 +324,134 @@ class ConnectionManager:
             await self.disconnect(ws)
 
         return sent_count
+
+    async def send_notification(
+        self,
+        user_id: str,
+        notification_data: dict[str, Any],
+    ) -> int:
+        """
+        Send a notification to a specific user across all their connections.
+
+        Args:
+            user_id: The user to notify
+            notification_data: The notification data
+
+        Returns:
+            Number of connections that received the notification
+        """
+        message = {
+            "type": "notification",
+            "data": notification_data,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+        sent_count = 0
+        dead_connections: list[WebSocket] = []
+
+        async with self._lock:
+            if user_id not in self._user_connections:
+                return 0
+
+            for websocket in self._user_connections[user_id]:
+                try:
+                    if websocket.client_state == WebSocketState.CONNECTED:
+                        await websocket.send_json(message)
+                        sent_count += 1
+                    else:
+                        dead_connections.append(websocket)
+                except Exception as e:
+                    logger.warning(f"Failed to send notification to user {user_id}: {e}")
+                    dead_connections.append(websocket)
+
+        # Clean up dead connections
+        for ws in dead_connections:
+            await self.disconnect(ws)
+
+        return sent_count
+
+    async def send_notification_to_many(
+        self,
+        user_ids: list[str],
+        notification_data: dict[str, Any],
+    ) -> dict[str, int]:
+        """
+        Send a notification to multiple users.
+
+        Args:
+            user_ids: List of user IDs to notify
+            notification_data: The notification data
+
+        Returns:
+            Dict with sent and failed counts
+        """
+        sent = 0
+        failed = 0
+
+        for user_id in user_ids:
+            count = await self.send_notification(user_id, notification_data)
+            if count > 0:
+                sent += 1
+            else:
+                failed += 1
+
+        return {"sent": sent, "failed": failed, "total": len(user_ids)}
+
+    async def broadcast_notification(
+        self,
+        notification_data: dict[str, Any],
+        priority: str | None = None,
+    ) -> int:
+        """
+        Broadcast a notification to all connected users.
+
+        Args:
+            notification_data: The notification data
+            priority: Optional priority filter (only send to users with matching priority level)
+
+        Returns:
+            Number of users notified
+        """
+        message = {
+            "type": "notification",
+            "data": notification_data,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+        sent_count = 0
+        dead_connections: list[WebSocket] = []
+
+        async with self._lock:
+            for user_id, connections in self._user_connections.items():
+                user_sent = False
+                for websocket in connections:
+                    try:
+                        if websocket.client_state == WebSocketState.CONNECTED:
+                            await websocket.send_json(message)
+                            if not user_sent:
+                                sent_count += 1
+                                user_sent = True
+                        else:
+                            dead_connections.append(websocket)
+                    except Exception as e:
+                        logger.warning(f"Failed to broadcast notification: {e}")
+                        dead_connections.append(websocket)
+
+        # Clean up dead connections
+        for ws in dead_connections:
+            await self.disconnect(ws)
+
+        return sent_count
+
+    async def get_connected_user_ids(self) -> list[str]:
+        """
+        Get list of all connected user IDs.
+
+        Returns:
+            List of user IDs with active connections
+        """
+        async with self._lock:
+            return list(self._user_connections.keys())
 
     async def ping_all(self) -> dict[str, int]:
         """

@@ -26,8 +26,79 @@ from app.services.case_service import case_service
 from app.services.storage_service import storage_service
 from app.services.nextcloud_service import nextcloud_service
 from app.services.websocket_service import connection_manager
+from app.services.workflow_service import workflow_service
+from app.services.workflow_executor import workflow_executor
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Workflow Trigger Helper
+# =============================================================================
+
+
+async def trigger_evidence_workflows(
+    db: AsyncSession,
+    case_data: dict,
+    evidence_data: dict,
+    triggered_by: str,
+) -> None:
+    """
+    Trigger matching workflow rules for evidence events.
+
+    This function is non-blocking - workflow failures don't affect the main operation.
+    """
+    try:
+        trigger_data = {
+            "event": "evidence_uploaded",
+            "evidence_id": str(evidence_data.get("id")),
+            "file_name": evidence_data.get("file_name"),
+            "mime_type": evidence_data.get("mime_type"),
+            "file_size": evidence_data.get("file_size"),
+        }
+
+        # Get matching rules
+        rules = await workflow_service.get_matching_rules(
+            db=db,
+            trigger_type="EVENT",
+            case_data=case_data,
+            trigger_data=trigger_data,
+        )
+
+        for rule in rules:
+            try:
+                # Execute rule actions
+                result = await workflow_executor.execute_rule(
+                    db=db,
+                    rule=rule,
+                    case_data=case_data,
+                    trigger_data=trigger_data,
+                    triggered_by=triggered_by,
+                )
+
+                # Log execution
+                await workflow_service.log_execution(
+                    db=db,
+                    rule=rule,
+                    case_data=case_data,
+                    trigger_type="EVENT",
+                    trigger_data=trigger_data,
+                    actions_executed=result["actions_executed"],
+                    success=result["success"],
+                    error_message=result.get("error_message"),
+                    triggered_by=triggered_by,
+                )
+
+                logger.info(
+                    f"Workflow '{rule['name']}' executed for evidence upload "
+                    f"in case {case_data.get('case_id')} - success: {result['success']}"
+                )
+
+            except Exception as rule_error:
+                logger.error(f"Failed to execute workflow rule {rule.get('id')}: {rule_error}")
+
+    except Exception as e:
+        logger.error(f"Failed to trigger evidence workflows: {e}")
 
 router = APIRouter(prefix="/evidence", tags=["evidence"])
 
@@ -226,6 +297,17 @@ async def upload_evidence(
             )
         except Exception as ws_error:
             logger.debug(f"WebSocket broadcast skipped: {ws_error}")
+
+        # Trigger workflows for evidence upload
+        try:
+            await trigger_evidence_workflows(
+                db=db,
+                case_data=case_data,
+                evidence_data=evidence_data,
+                triggered_by="event:evidence_uploaded",
+            )
+        except Exception as wf_error:
+            logger.debug(f"Workflow trigger skipped: {wf_error}")
 
         now = datetime.utcnow()
         return EvidenceUploadResponse(

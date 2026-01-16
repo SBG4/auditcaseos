@@ -5,6 +5,7 @@ import {
   DocumentTextIcon,
   ChartBarIcon,
   Cog6ToothIcon,
+  BoltIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../hooks/useAuth';
@@ -22,6 +23,7 @@ const navigation = [
 ];
 
 const adminNavigation = [
+  { name: 'Workflows', href: '/workflows', icon: BoltIcon },
   { name: 'Settings', href: '/admin', icon: Cog6ToothIcon },
 ];
 
