@@ -8,21 +8,83 @@ Source: https://fastapi.tiangolo.com/advanced/testing-database/
 """
 
 import asyncio
+import uuid
 from typing import AsyncGenerator, Generator
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.database import Base, get_db
+from app.database import get_db
 from app.main import app
 from app.services.auth_service import auth_service
+from app.utils.security import hash_password
 
 
 # Test database URL - use in-memory SQLite for isolation
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+# Minimal schema for auth tests (raw SQL to avoid ORM model conflicts)
+CREATE_USERS_TABLE = """
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    full_name TEXT NOT NULL,
+    role TEXT DEFAULT 'viewer',
+    department TEXT,
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+)
+"""
+
+
+async def create_test_user(
+    db: AsyncSession,
+    username: str,
+    email: str,
+    password: str,
+    full_name: str,
+    role: str = "viewer",
+    department: str | None = None,
+) -> dict:
+    """
+    Create a test user directly in SQLite.
+
+    Unlike auth_service.create_user(), this generates UUIDs in Python
+    since SQLite doesn't have gen_random_uuid().
+    """
+    user_id = str(uuid.uuid4())
+    password_hashed = hash_password(password)
+
+    query = text("""
+        INSERT INTO users (id, username, email, password_hash, full_name, role, department, is_active)
+        VALUES (:id, :username, :email, :password_hash, :full_name, :role, :department, 1)
+    """)
+
+    await db.execute(query, {
+        "id": user_id,
+        "username": username,
+        "email": email,
+        "password_hash": password_hashed,
+        "full_name": full_name,
+        "role": role,
+        "department": department,
+    })
+    await db.commit()
+
+    # Fetch the created user
+    result = await db.execute(
+        text("SELECT * FROM users WHERE id = :id"),
+        {"id": user_id}
+    )
+    row = result.fetchone()
+    return dict(row._mapping)
 
 
 @pytest.fixture(scope="session")
@@ -49,13 +111,11 @@ async def async_engine():
         echo=False,
     )
 
+    # Create minimal tables using raw SQL
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.execute(text(CREATE_USERS_TABLE))
 
     yield engine
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
 
     await engine.dispose()
 
@@ -100,7 +160,7 @@ async def test_user(db_session: AsyncSession) -> dict:
     Returns:
         dict: User data including id, username, email, role
     """
-    user = await auth_service.create_user(
+    user = await create_test_user(
         db=db_session,
         username="testuser",
         email="testuser@example.com",
@@ -118,7 +178,7 @@ async def test_admin(db_session: AsyncSession) -> dict:
     Returns:
         dict: Admin user data
     """
-    admin = await auth_service.create_user(
+    admin = await create_test_user(
         db=db_session,
         username="testadmin",
         email="testadmin@example.com",

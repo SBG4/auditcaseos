@@ -1,6 +1,7 @@
 """Authentication service for user management and token handling."""
 
 import logging
+import uuid as uuid_lib
 from typing import Any
 from uuid import UUID
 
@@ -10,6 +11,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.security import hash_password, verify_password, create_access_token
 
 logger = logging.getLogger(__name__)
+
+
+def _is_sqlite(db: AsyncSession) -> bool:
+    """Check if the database is SQLite (for test compatibility)."""
+    try:
+        dialect = db.get_bind().dialect.name
+        return dialect == "sqlite"
+    except Exception:
+        return False
 
 
 class AuthService:
@@ -190,25 +200,54 @@ class AuthService:
             # Hash password
             password_hash = hash_password(password)
 
-            # Insert user
-            query = text("""
-                INSERT INTO users (username, email, password_hash, full_name, role, department)
-                VALUES (:username, :email, :password_hash, :full_name, CAST(:role AS user_role), :department)
-                RETURNING id, username, email, full_name, role, department, is_active, created_at
-            """)
+            # Generate UUID for SQLite (PostgreSQL uses gen_random_uuid() default)
+            user_id = str(uuid_lib.uuid4())
 
-            result = await db.execute(query, {
-                "username": username,
-                "email": email,
-                "password_hash": password_hash,
-                "full_name": full_name,
-                "role": role,
-                "department": department,
-            })
-            await db.commit()
+            # Use database-specific SQL
+            if _is_sqlite(db):
+                # SQLite doesn't have enum types or gen_random_uuid()
+                query = text("""
+                    INSERT INTO users (id, username, email, password_hash, full_name, role, department)
+                    VALUES (:id, :username, :email, :password_hash, :full_name, :role, :department)
+                """)
+                await db.execute(query, {
+                    "id": user_id,
+                    "username": username,
+                    "email": email,
+                    "password_hash": password_hash,
+                    "full_name": full_name,
+                    "role": role,
+                    "department": department,
+                })
+                await db.commit()
 
-            row = result.fetchone()
-            user = dict(row._mapping) if row else {}
+                # Fetch the created user
+                result = await db.execute(
+                    text("SELECT id, username, email, full_name, role, department, is_active, created_at FROM users WHERE id = :id"),
+                    {"id": user_id}
+                )
+                row = result.fetchone()
+                user = dict(row._mapping) if row else {}
+            else:
+                # PostgreSQL with enum type and RETURNING
+                query = text("""
+                    INSERT INTO users (username, email, password_hash, full_name, role, department)
+                    VALUES (:username, :email, :password_hash, :full_name, CAST(:role AS user_role), :department)
+                    RETURNING id, username, email, full_name, role, department, is_active, created_at
+                """)
+
+                result = await db.execute(query, {
+                    "username": username,
+                    "email": email,
+                    "password_hash": password_hash,
+                    "full_name": full_name,
+                    "role": role,
+                    "department": department,
+                })
+                await db.commit()
+
+                row = result.fetchone()
+                user = dict(row._mapping) if row else {}
 
             logger.info(f"Created user: {username}")
             return user
@@ -299,11 +338,12 @@ class AuthService:
             List of user dicts (without password_hash)
         """
         try:
+            # Use LIMIT before OFFSET for SQLite compatibility
             query = text("""
                 SELECT id, username, email, full_name, role, department, is_active, created_at, updated_at
                 FROM users
                 ORDER BY created_at DESC
-                OFFSET :skip LIMIT :limit
+                LIMIT :limit OFFSET :skip
             """)
 
             result = await db.execute(query, {"skip": skip, "limit": limit})

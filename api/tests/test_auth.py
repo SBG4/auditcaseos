@@ -14,7 +14,7 @@ Source: FastAPI testing best practices
 import pytest
 from httpx import AsyncClient
 
-from app.services.auth_service import auth_service
+from tests.conftest import create_test_user
 
 
 class TestLogin:
@@ -271,7 +271,7 @@ class TestDeactivateUser:
     ):
         """Test successful user deactivation."""
         # Create a user to deactivate
-        user = await auth_service.create_user(
+        user = await create_test_user(
             db=db_session,
             username="todeactivate",
             email="todeactivate@example.com",
