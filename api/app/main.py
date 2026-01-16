@@ -265,7 +265,7 @@ def create_application() -> FastAPI:
     app = FastAPI(
         title="AuditCaseOS API",
         description="Internal audit case management system with AI-powered analysis",
-        version="0.8.3",
+        version="0.8.5",
         lifespan=lifespan,
         debug=settings.debug,
         redirect_slashes=False,
@@ -362,5 +362,5 @@ async def health_check() -> dict[str, Any]:
     return {
         "status": "healthy",
         "service": "auditcaseos-api",
-        "version": "0.8.3",
+        "version": "0.8.5",
     }

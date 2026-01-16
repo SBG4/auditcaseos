@@ -16,12 +16,12 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.8.2</version>
+    <version>0.8.5</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-16</last_updated>
     <documentation_layer>See docs/ folder and CLAUDE.md for layered documentation</documentation_layer>
     <current_phase>4</current_phase>
-    <overall_progress>phase_4_86_percent_18_of_21_complete</overall_progress>
+    <overall_progress>phase_4_100_percent_21_of_21_complete</overall_progress>
   </metadata>
 
   <!-- ============================================== -->
