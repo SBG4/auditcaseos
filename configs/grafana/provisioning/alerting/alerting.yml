@@ -89,7 +89,7 @@ groups:
               to: 0
             datasourceUid: prometheus
             model:
-              expr: sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) * 100
+              expr: sum(rate(auditcaseos_api_http_requests_total{status="5xx"}[5m])) / sum(rate(auditcaseos_api_http_requests_total[5m])) * 100
               intervalMs: 1000
               maxDataPoints: 43200
               refId: A
@@ -134,7 +134,7 @@ groups:
               to: 0
             datasourceUid: prometheus
             model:
-              expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))
+              expr: histogram_quantile(0.95, sum by (le) (rate(auditcaseos_api_http_request_duration_highr_seconds_bucket[5m])))
               intervalMs: 1000
               maxDataPoints: 43200
               refId: A
