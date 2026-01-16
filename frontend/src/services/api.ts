@@ -176,8 +176,8 @@ export const evidenceApi = {
 // Findings API
 export const findingsApi = {
   list: async (caseId: string): Promise<Finding[]> => {
-    const response = await api.get<Finding[]>(`/cases/${caseId}/findings`);
-    return response.data;
+    const response = await api.get<{ items: Finding[]; total: number }>(`/cases/${caseId}/findings`);
+    return response.data.items || [];
   },
 
   create: async (caseId: string, data: FindingCreate): Promise<Finding> => {
@@ -198,8 +198,8 @@ export const findingsApi = {
 // Timeline API
 export const timelineApi = {
   list: async (caseId: string): Promise<TimelineEvent[]> => {
-    const response = await api.get<TimelineEvent[]>(`/cases/${caseId}/timeline`);
-    return response.data;
+    const response = await api.get<{ items: TimelineEvent[]; total: number }>(`/cases/${caseId}/timeline`);
+    return response.data.items || [];
   },
 
   create: async (caseId: string, data: {
