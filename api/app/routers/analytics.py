@@ -1,7 +1,7 @@
 """Analytics router for AuditCaseOS dashboard statistics and trends."""
 
 import logging
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,7 +46,7 @@ async def get_overview(
 async def get_case_stats(
     db: DbSession,
     current_user: CurrentUser,
-    scope: Optional[str] = Query(None, description="Filter by scope code"),
+    scope: str | None = Query(None, description="Filter by scope code"),
 ) -> CaseStatsResponse:
     """
     Get case statistics breakdown.
@@ -93,7 +93,7 @@ async def get_evidence_findings_stats(
 async def get_entity_insights(
     db: DbSession,
     current_user: CurrentUser,
-    entity_type: Optional[str] = Query(None, description="Filter by entity type"),
+    entity_type: str | None = Query(None, description="Filter by entity type"),
     limit: int = Query(10, ge=1, le=50, description="Max number of top entities"),
 ) -> EntityInsightsResponse:
     """

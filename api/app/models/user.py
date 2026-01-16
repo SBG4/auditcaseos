@@ -1,6 +1,6 @@
 """User model for AuditCaseOS."""
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -8,8 +8,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
 
 if TYPE_CHECKING:
-    from .case import Case
     from .audit_log import AuditLog
+    from .case import Case
     from .evidence import Evidence
 
 
@@ -48,7 +48,7 @@ class User(Base):
         nullable=False,
     )
 
-    department: Mapped[Optional[str]] = mapped_column(
+    department: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True,
     )

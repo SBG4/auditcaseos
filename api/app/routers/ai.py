@@ -6,7 +6,7 @@ using Ollama, similarity search using RAG, and embedding management.
 
 import logging
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
@@ -390,7 +390,7 @@ async def summarize_case(
         logger.error(f"Error generating summary for case {case_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error generating summary: {str(e)}",
+            detail=f"Error generating summary: {e!s}",
         )
 
 
@@ -493,7 +493,7 @@ async def find_similar_cases(
         logger.error(f"Error finding similar cases for {case_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error finding similar cases: {str(e)}",
+            detail=f"Error finding similar cases: {e!s}",
         )
 
 
@@ -604,7 +604,7 @@ async def embed_case(
         logger.error(f"Failed to embed case {case_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate embeddings: {str(e)}",
+            detail=f"Failed to generate embeddings: {e!s}",
         )
 
 
@@ -690,7 +690,7 @@ async def find_similar_cases_real(
         logger.error(f"Failed to find similar cases: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to search similar cases: {str(e)}",
+            detail=f"Failed to search similar cases: {e!s}",
         )
 
 

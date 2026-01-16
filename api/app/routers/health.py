@@ -36,7 +36,7 @@ async def readiness_check(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
         await db.execute(text("SELECT 1"))
         checks["database"] = "healthy"
     except Exception as e:
-        checks["database"] = f"unhealthy: {str(e)}"
+        checks["database"] = f"unhealthy: {e!s}"
 
     overall_status = "ready" if all(
         v == "healthy" for v in checks.values()

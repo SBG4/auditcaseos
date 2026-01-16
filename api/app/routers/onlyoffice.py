@@ -3,16 +3,15 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi import status as http_status
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException, Query, status as http_status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.routers.auth import get_current_user_required, CurrentUser
-from app.services.onlyoffice_service import onlyoffice_service
-from app.services.nextcloud_service import nextcloud_service
+from app.routers.auth import CurrentUser
 from app.services.case_service import case_service
+from app.services.nextcloud_service import nextcloud_service
+from app.services.onlyoffice_service import onlyoffice_service
 
 logger = logging.getLogger(__name__)
 

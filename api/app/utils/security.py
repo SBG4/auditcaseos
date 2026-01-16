@@ -1,6 +1,6 @@
 """Security utilities for authentication and authorization."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from jose import JWTError, jwt
@@ -8,7 +8,6 @@ from passlib.context import CryptContext
 from pydantic import BaseModel
 
 from app.config import settings
-
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -75,9 +74,9 @@ def create_access_token(
     to_encode = data.copy()
 
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(
+        expire = datetime.now(UTC) + timedelta(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
 
@@ -139,10 +138,10 @@ def create_refresh_token(
     to_encode = data.copy()
 
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
         # Refresh tokens last 7 days by default
-        expire = datetime.now(timezone.utc) + timedelta(days=7)
+        expire = datetime.now(UTC) + timedelta(days=7)
 
     to_encode.update({"exp": expire, "type": "refresh"})
 

@@ -1,7 +1,6 @@
 """Case service for managing audit cases."""
 
 import logging
-from datetime import datetime
 from typing import Any
 from uuid import UUID
 

@@ -122,7 +122,6 @@ class OnlyOfficeService:
         else:
             # Fallback to file browser URL
             import urllib.parse
-            encoded_path = urllib.parse.quote(f"/{file_path}", safe='/')
             dir_path = "/".join(file_path.split("/")[:-1])
             encoded_dir = urllib.parse.quote(f"/{dir_path}", safe='/')
             return f"{self.nextcloud_external_url}/index.php/apps/files/?dir={encoded_dir}"

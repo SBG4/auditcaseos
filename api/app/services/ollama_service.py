@@ -489,7 +489,7 @@ Provide your analysis:"""
             logger.error(f"Failed to generate structured summary for {case_id}: {e}")
             # Return default structure on failure
             return {
-                "summary": f"Unable to generate summary: {str(e)}",
+                "summary": f"Unable to generate summary: {e!s}",
                 "key_points": [],
                 "risk_assessment": "UNKNOWN",
                 "recommended_actions": [],

@@ -1,7 +1,7 @@
 """Analytics schemas for dashboard statistics and trends."""
 
 from datetime import date, datetime
-from typing import Optional
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -83,7 +83,7 @@ class DashboardOverview(BaseModel):
     total_evidence: int
     total_findings: int
     total_entities: int
-    avg_resolution_days: Optional[float] = None
+    avg_resolution_days: float | None = None
 
 
 class CaseStatsResponse(BaseModel):

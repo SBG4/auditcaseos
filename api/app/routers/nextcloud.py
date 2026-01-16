@@ -1,15 +1,22 @@
 """Nextcloud router for file collaboration endpoints."""
 
 import logging
-from typing import Annotated, Any
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
-from fastapi import status as http_status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    UploadFile,
+    status as http_status,
+)
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.routers.auth import get_current_user_required, CurrentUser
+from app.routers.auth import CurrentUser
 from app.services.nextcloud_service import nextcloud_service
 
 logger = logging.getLogger(__name__)

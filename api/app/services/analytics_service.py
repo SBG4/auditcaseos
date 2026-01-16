@@ -1,8 +1,6 @@
 """Analytics service for dashboard statistics and trends."""
 
 import logging
-from datetime import date, datetime, timedelta
-from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -69,7 +67,7 @@ class AnalyticsService:
             raise
 
     async def get_case_stats(
-        self, db: AsyncSession, scope_code: Optional[str] = None
+        self, db: AsyncSession, scope_code: str | None = None
     ) -> CaseStatsResponse:
         """Get case statistics by status, severity, type, and scope."""
         try:
@@ -329,7 +327,7 @@ class AnalyticsService:
     async def get_entity_insights(
         self,
         db: AsyncSession,
-        entity_type: Optional[str] = None,
+        entity_type: str | None = None,
         limit: int = 10,
     ) -> EntityInsightsResponse:
         """Get entity extraction insights."""

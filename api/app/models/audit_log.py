@@ -76,7 +76,7 @@ class AuditLog(Base):
 
     __tablename__ = "audit_logs"
 
-    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
@@ -95,38 +95,38 @@ class AuditLog(Base):
         index=True,
     )
 
-    resource_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+    resource_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         nullable=True,
         index=True,
     )
 
-    description: Mapped[Optional[str]] = mapped_column(
+    description: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
 
-    old_values: Mapped[Optional[dict[str, Any]]] = mapped_column(
+    old_values: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB,
         nullable=True,
     )
 
-    new_values: Mapped[Optional[dict[str, Any]]] = mapped_column(
+    new_values: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB,
         nullable=True,
     )
 
-    ip_address: Mapped[Optional[str]] = mapped_column(
+    ip_address: Mapped[str | None] = mapped_column(
         String(45),  # IPv6 max length
         nullable=True,
     )
 
-    user_agent: Mapped[Optional[str]] = mapped_column(
+    user_agent: Mapped[str | None] = mapped_column(
         String(512),
         nullable=True,
     )
 
-    metadata: Mapped[Optional[dict[str, Any]]] = mapped_column(
+    metadata: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB,
         nullable=True,
     )

@@ -1,14 +1,11 @@
 """WebSocket router for real-time updates."""
 
-import asyncio
 import json
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 
-from app.database import get_db
 from app.schemas.websocket import (
     HealthResponse,
     WebSocketMessageType,

@@ -101,13 +101,14 @@ def cases_metrics() -> metrics.Info:
     """
     from prometheus_client import Counter
 
-    CASES_CREATED = Counter(
+    # These Counters register with Prometheus on creation (used by route handlers)
+    Counter(
         "auditcaseos_cases_created_total",
         "Total number of cases created",
         ["case_type", "scope"],
     )
 
-    EVIDENCE_UPLOADED = Counter(
+    Counter(
         "auditcaseos_evidence_uploaded_total",
         "Total evidence files uploaded",
         ["file_type"],
@@ -132,7 +133,8 @@ def auth_metrics() -> metrics.Info:
     """
     from prometheus_client import Counter
 
-    LOGIN_ATTEMPTS = Counter(
+    # This Counter registers with Prometheus on creation (used by auth router)
+    Counter(
         "auditcaseos_login_attempts_total",
         "Total login attempts",
         ["status"],  # success, failure
@@ -148,7 +150,7 @@ def auth_metrics() -> metrics.Info:
 # Expose counters for use in routers
 def get_cases_created_counter():
     """Get the cases created counter for incrementing in routes."""
-    from prometheus_client import Counter, REGISTRY
+    from prometheus_client import REGISTRY, Counter
 
     try:
         return REGISTRY._names_to_collectors.get("auditcaseos_cases_created_total")
@@ -162,7 +164,7 @@ def get_cases_created_counter():
 
 def get_login_attempts_counter():
     """Get the login attempts counter for incrementing in routes."""
-    from prometheus_client import Counter, REGISTRY
+    from prometheus_client import REGISTRY, Counter
 
     try:
         return REGISTRY._names_to_collectors.get("auditcaseos_login_attempts_total")

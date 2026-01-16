@@ -11,8 +11,7 @@ This service integrates with Paperless-ngx to:
 import asyncio
 import logging
 import os
-from typing import Any, BinaryIO
-from uuid import UUID
+from typing import Any
 
 import httpx
 

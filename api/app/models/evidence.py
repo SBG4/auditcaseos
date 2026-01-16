@@ -92,22 +92,22 @@ class Evidence(Base):
         nullable=False,
     )
 
-    file_size: Mapped[Optional[int]] = mapped_column(
+    file_size: Mapped[int | None] = mapped_column(
         BigInteger,
         nullable=True,
     )
 
-    mime_type: Mapped[Optional[str]] = mapped_column(
+    mime_type: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True,
     )
 
-    checksum: Mapped[Optional[str]] = mapped_column(
+    checksum: Mapped[str | None] = mapped_column(
         String(64),  # SHA-256 produces 64 hex characters
         nullable=True,
     )
 
-    description: Mapped[Optional[str]] = mapped_column(
+    description: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
@@ -124,18 +124,18 @@ class Evidence(Base):
         nullable=False,
     )
 
-    verified_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+    verified_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
 
-    verified_at: Mapped[Optional[datetime]] = mapped_column(
+    verified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )
 
-    metadata: Mapped[Optional[dict[str, Any]]] = mapped_column(
+    metadata: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB,
         nullable=True,
     )

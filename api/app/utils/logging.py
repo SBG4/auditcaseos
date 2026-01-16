@@ -13,7 +13,6 @@ Benefits:
 
 import logging
 import sys
-from typing import Any
 
 import structlog
 from structlog.types import Processor

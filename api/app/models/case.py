@@ -111,33 +111,33 @@ class Case(Base):
         nullable=False,
     )
 
-    summary: Mapped[Optional[str]] = mapped_column(
+    summary: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
 
-    description: Mapped[Optional[str]] = mapped_column(
+    description: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
 
-    subject_user: Mapped[Optional[str]] = mapped_column(
+    subject_user: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
         index=True,
     )
 
-    subject_computer: Mapped[Optional[str]] = mapped_column(
+    subject_computer: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
     )
 
-    subject_devices: Mapped[Optional[list[str]]] = mapped_column(
+    subject_devices: Mapped[list[str] | None] = mapped_column(
         ARRAY(String(255)),
         nullable=True,
     )
 
-    related_users: Mapped[Optional[list[str]]] = mapped_column(
+    related_users: Mapped[list[str] | None] = mapped_column(
         ARRAY(String(255)),
         nullable=True,
     )
@@ -149,29 +149,29 @@ class Case(Base):
         index=True,
     )
 
-    assigned_to: Mapped[Optional[uuid.UUID]] = mapped_column(
+    assigned_to: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
 
-    incident_date: Mapped[Optional[datetime]] = mapped_column(
+    incident_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )
 
-    closed_at: Mapped[Optional[datetime]] = mapped_column(
+    closed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )
 
-    tags: Mapped[Optional[list[str]]] = mapped_column(
+    tags: Mapped[list[str] | None] = mapped_column(
         ARRAY(String(50)),
         nullable=True,
     )
 
-    metadata: Mapped[Optional[dict[str, Any]]] = mapped_column(
+    metadata: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB,
         nullable=True,
     )

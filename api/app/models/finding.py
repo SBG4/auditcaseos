@@ -65,7 +65,7 @@ class Finding(Base):
         nullable=False,
     )
 
-    description: Mapped[Optional[str]] = mapped_column(
+    description: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
@@ -84,12 +84,12 @@ class Finding(Base):
         index=True,
     )
 
-    evidence_ids: Mapped[Optional[list[uuid.UUID]]] = mapped_column(
+    evidence_ids: Mapped[list[uuid.UUID] | None] = mapped_column(
         ARRAY(UUID(as_uuid=True)),
         nullable=True,
     )
 
-    recommendation: Mapped[Optional[str]] = mapped_column(
+    recommendation: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
@@ -101,13 +101,13 @@ class Finding(Base):
         index=True,
     )
 
-    reviewed_by: Mapped[Optional[uuid.UUID]] = mapped_column(
+    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
 
-    metadata: Mapped[Optional[dict[str, Any]]] = mapped_column(
+    metadata: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB,
         nullable=True,
     )

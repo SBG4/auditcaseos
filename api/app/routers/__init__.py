@@ -13,10 +13,10 @@ from .notifications import router as notifications_router
 from .onlyoffice import router as onlyoffice_router
 from .reports import router as reports_router
 from .scopes import router as scopes_router
+from .search import router as search_router
 from .sync import router as sync_router
 from .users import router as users_router
 from .websocket import router as websocket_router
-from .search import router as search_router
 from .workflows import router as workflows_router
 
 __all__ = [

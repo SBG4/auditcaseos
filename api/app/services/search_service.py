@@ -8,7 +8,6 @@ cases, evidence, findings, entities, and timeline events.
 import logging
 import time
 from typing import Any
-from uuid import UUID
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession

@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.utils.security import hash_password, verify_password, create_access_token
+from app.utils.security import create_access_token, hash_password, verify_password
 
 logger = logging.getLogger(__name__)
 

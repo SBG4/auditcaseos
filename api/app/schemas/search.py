@@ -11,7 +11,7 @@ from uuid import UUID
 
 from pydantic import Field
 
-from .common import BaseSchema, PaginatedResponse, Severity, CaseStatus
+from .common import BaseSchema, PaginatedResponse
 
 
 class SearchEntityType(str, Enum):

@@ -1,6 +1,5 @@
 """Entity schemas for AuditCaseOS API."""
 
-from datetime import datetime
 from enum import Enum
 from uuid import UUID
 

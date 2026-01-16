@@ -9,20 +9,19 @@ Source: https://fastapi.tiangolo.com/advanced/testing-database/
 
 import asyncio
 import uuid
-from typing import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator, Generator
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from app.database import get_db
 from app.main import app
 from app.services.auth_service import auth_service
 from app.utils.security import hash_password
-
 
 # Test database URL - use in-memory SQLite for isolation
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"

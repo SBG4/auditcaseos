@@ -4,15 +4,11 @@ import io
 import logging
 from datetime import datetime
 from typing import Any
-from uuid import UUID
 
 from docx import Document
 from docx.enum.style import WD_STYLE_TYPE
-from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml import parse_xml
-from docx.oxml.ns import nsdecls
-from docx.shared import Inches, Pt, RGBColor
+from docx.shared import Pt, RGBColor
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .case_service import case_service
@@ -87,8 +83,8 @@ class ReportService:
             doc.add_paragraph()
 
         # Report title
-        title_text = title or f"Audit Case Report"
-        title_para = doc.add_paragraph(title_text, style="Report Title")
+        title_text = title or "Audit Case Report"
+        doc.add_paragraph(title_text, style="Report Title")
 
         # Case ID prominently displayed
         case_id_para = doc.add_paragraph()
@@ -160,7 +156,7 @@ class ReportService:
             # Risk assessment
             if ai_summary.get("risk_assessment"):
                 doc.add_paragraph("Risk Assessment:", style="Subsection Heading")
-                risk_para = doc.add_paragraph(ai_summary["risk_assessment"])
+                doc.add_paragraph(ai_summary["risk_assessment"])
 
             # Recommended actions
             if ai_summary.get("recommended_actions"):
@@ -327,7 +323,7 @@ class ReportService:
                 continue
 
             # Severity subsection
-            severity_para = doc.add_paragraph(f"{severity} Severity Findings", style="Subsection Heading")
+            doc.add_paragraph(f"{severity} Severity Findings", style="Subsection Heading")
 
             for finding in severity_findings:
                 # Finding title with number

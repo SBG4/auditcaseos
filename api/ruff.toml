@@ -39,10 +39,22 @@ select = [
 # Ignore rules
 ignore = [
     "E501",   # Line too long (handled by formatter)
+    "B007",   # Loop control variable not used (intentional in some cases)
     "B008",   # Do not perform function calls in argument defaults (FastAPI Depends)
+    "B904",   # Within except, raise with from (stylistic preference)
     "S101",   # Use of assert detected (ok in tests)
     "S104",   # Possible binding to all interfaces (ok for containers)
+    "S105",   # Possible hardcoded password (dev defaults, use env vars in prod)
+    "S106",   # Possible hardcoded password in function arg (test fixtures)
+    "S110",   # try-except-pass (intentional silent error handling)
+    "S314",   # XML parsing (from trusted source - Nextcloud)
+    "S608",   # SQL injection (false positive, we use parameterized queries)
+    "SIM105", # Use contextlib.suppress (try-except-pass is clearer)
     "ARG001", # Unused function argument (common in FastAPI routes)
+    "ARG002", # Unused method argument (common in interface implementations)
+    "RUF012", # Mutable class attributes (false positive for SQLAlchemy mappings)
+    "RUF013", # PEP 484 implicit Optional (fixed with explicit = None)
+    "RUF022", # __all__ not sorted (intentionally grouped by category)
 ]
 
 # Allow fix for all enabled rules

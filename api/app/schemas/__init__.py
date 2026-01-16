@@ -1,5 +1,13 @@
 """Pydantic schemas for AuditCaseOS API."""
 
+from .case import (
+    CaseBase,
+    CaseCreate,
+    CaseFilter,
+    CaseListResponse,
+    CaseResponse,
+    CaseUpdate,
+)
 from .common import (
     BaseSchema,
     CaseStatus,
@@ -9,21 +17,6 @@ from .common import (
     PaginationParams,
     Severity,
     TimestampMixin,
-)
-from .user import (
-    UserBase,
-    UserBrief,
-    UserCreate,
-    UserResponse,
-    UserUpdate,
-)
-from .case import (
-    CaseBase,
-    CaseCreate,
-    CaseFilter,
-    CaseListResponse,
-    CaseResponse,
-    CaseUpdate,
 )
 from .evidence import (
     EvidenceBase,
@@ -49,6 +42,13 @@ from .report import (
     ReportSection,
     ReportStatus,
     ReportTemplate,
+)
+from .user import (
+    UserBase,
+    UserBrief,
+    UserCreate,
+    UserResponse,
+    UserUpdate,
 )
 from .workflow import (
     ActionType,

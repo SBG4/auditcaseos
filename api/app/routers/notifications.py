@@ -4,19 +4,18 @@ import logging
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi import status as http_status
+from fastapi import APIRouter, Depends, HTTPException, Query, status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.routers.auth import get_current_user_required
+from app.schemas.common import MessageResponse
 from app.schemas.workflow import (
     NotificationCountResponse,
     NotificationListResponse,
     NotificationMarkReadResponse,
     NotificationResponse,
 )
-from app.schemas.common import MessageResponse
 from app.services.notification_service import notification_service
 
 logger = logging.getLogger(__name__)

@@ -9,13 +9,12 @@ from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
-from fastapi import status as http_status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status as http_status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.routers.auth import get_current_user_required, OptionalUser
+from app.routers.auth import get_current_user_required
 from app.schemas.case import (
     CaseCreate,
     CaseListResponse,
@@ -26,14 +25,13 @@ from app.schemas.common import (
     CaseStatus,
     CaseType,
     MessageResponse,
-    PaginatedResponse,
     Severity,
 )
 from app.services.audit_service import audit_service
 from app.services.case_service import case_service
 from app.services.websocket_service import connection_manager
-from app.services.workflow_service import workflow_service
 from app.services.workflow_executor import workflow_executor
+from app.services.workflow_service import workflow_service
 
 logger = logging.getLogger(__name__)
 
@@ -297,7 +295,7 @@ async def create_case(
                 trigger_type="EVENT",
                 case_data=created_case,
                 trigger_data={"event": "case_created"},
-                triggered_by=f"event:case_created",
+                triggered_by="event:case_created",
             )
         except Exception as wf_error:
             logger.debug(f"Workflow trigger skipped: {wf_error}")
@@ -310,7 +308,7 @@ async def create_case(
         logger.error(f"Failed to create case: {e}")
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create case: {str(e)}",
+            detail=f"Failed to create case: {e!s}",
         )
 
 
@@ -502,7 +500,7 @@ async def update_case(
         logger.error(f"Failed to update case {case_id}: {e}")
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update case: {str(e)}",
+            detail=f"Failed to update case: {e!s}",
         )
 
 
@@ -873,5 +871,5 @@ async def add_finding(
         logger.error(f"Failed to add finding: {e}")
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to add finding: {str(e)}",
+            detail=f"Failed to add finding: {e!s}",
         )

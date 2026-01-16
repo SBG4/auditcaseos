@@ -8,15 +8,15 @@ from .entity_service import EntityService
 from .nextcloud_service import NextcloudService
 from .notification_service import NotificationService
 from .ollama_service import OllamaService
-from .scheduler_service import SchedulerService
-from .workflow_executor import WorkflowExecutor
-from .workflow_service import WorkflowService
 from .onlyoffice_service import OnlyOfficeService
 from .paperless_service import PaperlessService
 from .report_service import ReportService
+from .scheduler_service import SchedulerService
 from .search_service import SearchService
 from .storage_service import StorageService
 from .websocket_service import ConnectionManager
+from .workflow_executor import WorkflowExecutor
+from .workflow_service import WorkflowService
 
 __all__ = [
     "AnalyticsService",

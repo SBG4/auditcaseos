@@ -9,7 +9,6 @@ from pydantic import Field
 
 from .common import BaseSchema, PaginatedResponse, TimestampMixin
 
-
 # ============================================
 # ENUMS
 # ============================================

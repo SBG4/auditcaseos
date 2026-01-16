@@ -6,12 +6,10 @@ for OCR processing and text extraction.
 """
 
 import logging
-from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path
-from fastapi import status as http_status
+from fastapi import APIRouter, Depends, HTTPException, Path, status as http_status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -452,7 +450,7 @@ async def extract_text_from_paperless(
         logger.error(f"Failed to extract text from Paperless: {e}")
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to extract text: {str(e)}",
+            detail=f"Failed to extract text: {e!s}",
         )
 
 
@@ -486,5 +484,5 @@ async def search_paperless_documents(
         logger.error(f"Paperless search failed: {e}")
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Search failed: {str(e)}",
+            detail=f"Search failed: {e!s}",
         )

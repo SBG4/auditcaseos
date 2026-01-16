@@ -11,8 +11,17 @@ from io import BytesIO
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, Path, Query, Request, UploadFile
-from fastapi import status as http_status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Path,
+    Query,
+    Request,
+    UploadFile,
+    status as http_status,
+)
 from fastapi.responses import StreamingResponse
 from pydantic import Field
 from sqlalchemy import text
@@ -23,11 +32,11 @@ from app.routers.auth import get_current_user_required
 from app.schemas.common import BaseSchema, MessageResponse, TimestampMixin
 from app.services.audit_service import audit_service
 from app.services.case_service import case_service
-from app.services.storage_service import storage_service
 from app.services.nextcloud_service import nextcloud_service
+from app.services.storage_service import storage_service
 from app.services.websocket_service import connection_manager
-from app.services.workflow_service import workflow_service
 from app.services.workflow_executor import workflow_executor
+from app.services.workflow_service import workflow_service
 
 logger = logging.getLogger(__name__)
 
@@ -334,7 +343,7 @@ async def upload_evidence(
         logger.error(f"Failed to upload evidence: {e}")
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload evidence: {str(e)}",
+            detail=f"Failed to upload evidence: {e!s}",
         )
 
 
@@ -696,7 +705,7 @@ async def sync_evidence_to_nextcloud(
         logger.error(f"Failed to sync evidence to Nextcloud: {e}")
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to sync evidence: {str(e)}",
+            detail=f"Failed to sync evidence: {e!s}",
         )
 
 
@@ -848,5 +857,5 @@ async def import_evidence_from_nextcloud(
         logger.error(f"Failed to import evidence from Nextcloud: {e}")
         raise HTTPException(
             status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to import evidence: {str(e)}",
+            detail=f"Failed to import evidence: {e!s}",
         )

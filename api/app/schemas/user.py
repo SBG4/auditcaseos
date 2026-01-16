@@ -1,6 +1,5 @@
 """User schemas for AuditCaseOS API."""
 
-from datetime import datetime
 from uuid import UUID
 
 from pydantic import EmailStr, Field
