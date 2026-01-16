@@ -16,11 +16,11 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.5.5</version>
+    <version>0.6.0</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-16</last_updated>
-    <current_phase>3</current_phase>
-    <overall_progress>phase_3_complete</overall_progress>
+    <current_phase>4</current_phase>
+    <overall_progress>phase_4_in_progress</overall_progress>
   </metadata>
 
   <!-- ============================================== -->
@@ -2463,30 +2463,300 @@ $$ LANGUAGE plpgsql;
   </phase>
 
   <!-- ============================================== -->
+  <!-- PHASE 4: PRODUCTION HARDENING - PLANNED        -->
+  <!-- ============================================== -->
+  <phase number="4" name="Production Hardening" status="PLANNED">
+    <description>Security, testing, observability, and infrastructure improvements for production readiness</description>
+    <decision_rationale>
+      <note>Implementing on Docker Compose first per research findings:</note>
+      <point>Production improvements are platform-agnostic (transfer to K8s if needed later)</point>
+      <point>K8s operational overhead not justified for teams &lt; 25 engineers</point>
+      <point>77% of K8s practitioners report ongoing issues (CNCF 2024)</point>
+      <point>Self-managed K8s costs 3x more than alternatives</point>
+      <point>Current 9-service setup well within Docker Compose capabilities</point>
+      <source>https://www.cncf.io/blog/2025/11/18/top-5-hard-earned-lessons-from-the-experts-on-managing-kubernetes/</source>
+    </decision_rationale>
+
+    <feature_group name="Security Hardening">
+      <feature id="4.1" status="PENDING">
+        <name>Rate Limiting</name>
+        <description>API rate limiting with slowapi to prevent abuse</description>
+        <priority>1</priority>
+        <tasks>
+          <task>Install slowapi dependency</task>
+          <task>Configure rate limits per endpoint (auth stricter)</task>
+          <task>Add X-RateLimit headers to responses</task>
+          <task>Return 429 status with retry-after</task>
+        </tasks>
+        <source>https://owasp.org/API-Security/</source>
+      </feature>
+      <feature id="4.2" status="PENDING">
+        <name>Security Headers</name>
+        <description>Add security headers middleware (CSP, HSTS, X-Frame-Options)</description>
+        <priority>1</priority>
+        <tasks>
+          <task>Add secure-headers or custom middleware</task>
+          <task>Configure Content-Security-Policy</task>
+          <task>Add X-Content-Type-Options, X-Frame-Options</task>
+          <task>Enable HSTS for HTTPS</task>
+        </tasks>
+        <source>https://owasp.org/www-project-secure-headers/</source>
+      </feature>
+      <feature id="4.3" status="PENDING">
+        <name>CORS Hardening</name>
+        <description>Configure CORS with specific origins instead of wildcard</description>
+        <priority>1</priority>
+        <tasks>
+          <task>Remove allow_origins=["*"]</task>
+          <task>Configure specific allowed origins from env var</task>
+          <task>Restrict allowed methods and headers</task>
+        </tasks>
+        <source>https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/11-Client-side_Testing/07-Testing_Cross_Origin_Resource_Sharing</source>
+      </feature>
+      <feature id="4.4" status="PENDING">
+        <name>Production API Configuration</name>
+        <description>Disable docs/redoc in production, add input validation</description>
+        <priority>2</priority>
+        <tasks>
+          <task>Conditionally disable /docs and /redoc based on env</task>
+          <task>Add input validation middleware</task>
+          <task>Configure proper error responses (no stack traces)</task>
+        </tasks>
+      </feature>
+      <feature id="4.5" status="PENDING">
+        <name>Dependency Scanning</name>
+        <description>Automated vulnerability scanning for dependencies</description>
+        <priority>2</priority>
+        <tasks>
+          <task>Add pip-audit for Python dependencies</task>
+          <task>Add npm audit for frontend dependencies</task>
+          <task>Integrate into CI pipeline</task>
+        </tasks>
+        <source>https://owasp.org/Top10/A06_2021-Vulnerable_and_Outdated_Components/</source>
+      </feature>
+    </feature_group>
+
+    <feature_group name="Testing Infrastructure">
+      <feature id="4.6" status="PENDING">
+        <name>pytest Setup</name>
+        <description>Configure pytest with fixtures and test structure</description>
+        <priority>1</priority>
+        <tasks>
+          <task>Create tests/ directory structure</task>
+          <task>Create conftest.py with shared fixtures</task>
+          <task>Add pytest.ini or pyproject.toml config</task>
+          <task>Add pytest-asyncio for async tests</task>
+          <task>Add pytest-cov for coverage</task>
+        </tasks>
+        <target_coverage>80%</target_coverage>
+        <source>https://docs.pytest.org/</source>
+      </feature>
+      <feature id="4.7" status="PENDING">
+        <name>API Endpoint Tests</name>
+        <description>Integration tests for all API endpoints</description>
+        <priority>1</priority>
+        <tasks>
+          <task>Test auth endpoints (login, register, me)</task>
+          <task>Test cases CRUD endpoints</task>
+          <task>Test evidence endpoints</task>
+          <task>Test workflow and notification endpoints</task>
+        </tasks>
+        <source>https://fastapi.tiangolo.com/tutorial/testing/</source>
+      </feature>
+      <feature id="4.8" status="PENDING">
+        <name>CI/CD Pipeline</name>
+        <description>GitHub Actions workflow for automated testing and building</description>
+        <priority>1</priority>
+        <tasks>
+          <task>Create .github/workflows/ci.yml</task>
+          <task>Run linting (ruff)</task>
+          <task>Run type checking (mypy)</task>
+          <task>Run tests with coverage</task>
+          <task>Build Docker images</task>
+          <task>Security scanning (bandit, trivy)</task>
+        </tasks>
+        <source>https://docs.github.com/en/actions</source>
+      </feature>
+      <feature id="4.9" status="PENDING">
+        <name>Pre-commit Hooks</name>
+        <description>Automated code quality checks before commits</description>
+        <priority>2</priority>
+        <tasks>
+          <task>Create .pre-commit-config.yaml</task>
+          <task>Add ruff for linting/formatting</task>
+          <task>Add mypy for type checking</task>
+          <task>Add eslint/prettier for frontend</task>
+        </tasks>
+        <source>https://pre-commit.com/</source>
+      </feature>
+    </feature_group>
+
+    <feature_group name="Observability">
+      <feature id="4.10" status="PENDING">
+        <name>Structured Logging</name>
+        <description>JSON structured logging with correlation IDs</description>
+        <priority>2</priority>
+        <tasks>
+          <task>Install structlog</task>
+          <task>Configure JSON output format</task>
+          <task>Add request/correlation IDs</task>
+          <task>Add contextual fields (user, case_id)</task>
+        </tasks>
+        <source>https://www.structlog.org/</source>
+      </feature>
+      <feature id="4.11" status="PENDING">
+        <name>Prometheus Metrics</name>
+        <description>Expose /metrics endpoint for Prometheus scraping</description>
+        <priority>2</priority>
+        <tasks>
+          <task>Install prometheus-fastapi-instrumentator</task>
+          <task>Add /metrics endpoint</task>
+          <task>Track request latency, count, errors (RED method)</task>
+          <task>Add custom business metrics</task>
+        </tasks>
+        <source>https://prometheus.io/docs/practices/</source>
+      </feature>
+      <feature id="4.12" status="PENDING">
+        <name>Error Tracking</name>
+        <description>Integrate Sentry for error tracking and alerting</description>
+        <priority>3</priority>
+        <tasks>
+          <task>Install sentry-sdk</task>
+          <task>Configure DSN from environment</task>
+          <task>Add user context to errors</task>
+          <task>Configure release tracking</task>
+        </tasks>
+        <source>https://docs.sentry.io/platforms/python/</source>
+      </feature>
+    </feature_group>
+
+    <feature_group name="Infrastructure Hardening">
+      <feature id="4.13" status="PENDING">
+        <name>Docker Security</name>
+        <description>Run containers as non-root, add resource limits</description>
+        <priority>2</priority>
+        <tasks>
+          <task>Add non-root USER to Dockerfiles</task>
+          <task>Add CPU/memory limits to docker-compose</task>
+          <task>Add read-only filesystem where possible</task>
+          <task>Drop unnecessary capabilities</task>
+        </tasks>
+        <source>https://docs.docker.com/engine/security/</source>
+      </feature>
+      <feature id="4.14" status="PENDING">
+        <name>Database Optimization</name>
+        <description>PostgreSQL tuning and connection pooling</description>
+        <priority>3</priority>
+        <tasks>
+          <task>Add PgBouncer for connection pooling</task>
+          <task>Tune shared_buffers, work_mem</task>
+          <task>Add database backup automation</task>
+          <task>Audit indexes for performance</task>
+        </tasks>
+        <source>https://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server</source>
+      </feature>
+      <feature id="4.15" status="PENDING">
+        <name>Redis Caching</name>
+        <description>Add Redis caching for frequently accessed data</description>
+        <priority>3</priority>
+        <tasks>
+          <task>Implement cache-aside pattern</task>
+          <task>Cache case lists and analytics</task>
+          <task>Configure TTL and eviction policies</task>
+        </tasks>
+        <source>https://redis.io/solutions/caching/</source>
+      </feature>
+    </feature_group>
+  </phase>
+
+  <!-- ============================================== -->
+  <!-- PHASE 5: FUTURE ENHANCEMENTS - PLANNED         -->
+  <!-- ============================================== -->
+  <phase number="5" name="Future Enhancements" status="PLANNED">
+    <description>Feature enhancements and potential Kubernetes migration when scale demands</description>
+
+    <feature_group name="Feature Enhancements">
+      <feature id="5.1" status="PLANNED">
+        <name>Mobile Responsive Improvements</name>
+        <description>Optimize UI for mobile devices</description>
+      </feature>
+      <feature id="5.2" status="PLANNED">
+        <name>Email Notifications</name>
+        <description>SMTP integration for email alerts</description>
+      </feature>
+      <feature id="5.3" status="PLANNED">
+        <name>Bulk Case Operations</name>
+        <description>Select and operate on multiple cases</description>
+      </feature>
+      <feature id="5.4" status="PLANNED">
+        <name>Custom Report Templates</name>
+        <description>User-uploaded DOCX templates</description>
+      </feature>
+    </feature_group>
+
+    <feature_group name="Kubernetes Migration">
+      <migration_decision>
+        <title>When to Consider Kubernetes Migration</title>
+        <triggers>
+          <trigger>99.9%+ uptime SLA requirements</trigger>
+          <trigger>Multi-region deployment needs</trigger>
+          <trigger>Auto-scaling requirements</trigger>
+          <trigger>Team size exceeds 25 engineers</trigger>
+          <trigger>Traffic spikes causing Docker Compose limits</trigger>
+        </triggers>
+        <recommended_path>
+          <step order="1">K3s for lightweight Kubernetes (if self-hosting)</step>
+          <step order="2">DigitalOcean Kubernetes (DOKS) for cost-sensitive</step>
+          <step order="3">GKE/EKS/AKS for full managed Kubernetes</step>
+        </recommended_path>
+        <migration_strategy>Strangler Fig (incremental) - migrate one service at a time</migration_strategy>
+        <timeline>18-36 months for full migration if needed</timeline>
+        <sources>
+          <source>https://kubernetes.io/docs/setup/production-environment/</source>
+          <source>https://k3s.io/</source>
+          <source>https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/strangler-fig.html</source>
+        </sources>
+      </migration_decision>
+      <feature id="5.5" status="PLANNED">
+        <name>Kubernetes Manifests</name>
+        <description>Create K8s deployment manifests for all services</description>
+        <dependency>Only when scaling triggers are met</dependency>
+      </feature>
+      <feature id="5.6" status="PLANNED">
+        <name>Helm Charts</name>
+        <description>Package application as Helm chart</description>
+        <dependency>After K8s manifests are validated</dependency>
+      </feature>
+    </feature_group>
+  </phase>
+
+  <!-- ============================================== -->
   <!-- PROGRESS TRACKING                              -->
   <!-- ============================================== -->
   <progress>
     <summary>
-      <total_features>38</total_features>
+      <total_features>53</total_features>
       <completed>38</completed>
       <in_progress>0</in_progress>
-      <pending>0</pending>
-      <completion_percentage>100</completion_percentage>
+      <pending>15</pending>
+      <completion_percentage>72</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="2" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="3" features_total="14" features_completed="14" status="COMPLETED"/>
+      <phase number="4" features_total="15" features_completed="0" status="IN_PROGRESS"/>
+      <phase number="5" features_total="6" features_completed="0" status="PLANNED"/>
     </phase_status>
 
     <next_steps>
-      <note>All 38 features complete! Consider Phase 4 enhancements:</note>
-      <step priority="1">Mobile responsive improvements</step>
-      <step priority="2">Email notifications (SMTP integration)</step>
-      <step priority="3">Bulk case operations</step>
-      <step priority="4">Custom report templates (user-uploaded DOCX)</step>
-      <step priority="5">API rate limiting and caching</step>
+      <note>Phase 4: Production Hardening - Starting Now</note>
+      <step priority="1" feature_id="4.1">Rate Limiting (slowapi)</step>
+      <step priority="1" feature_id="4.2">Security Headers</step>
+      <step priority="1" feature_id="4.3">CORS Hardening</step>
+      <step priority="1" feature_id="4.6">pytest Setup</step>
+      <step priority="1" feature_id="4.8">CI/CD Pipeline</step>
     </next_steps>
   </progress>
 
@@ -2494,6 +2764,20 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-16" version="0.6.0" phase="4">
+      <changes>
+        <change type="added">Phase 4: Production Hardening (15 features planned)</change>
+        <change type="added">Phase 5: Future Enhancements (6 features planned)</change>
+        <change type="added">Security hardening roadmap: rate limiting, headers, CORS, dependency scanning</change>
+        <change type="added">Testing infrastructure roadmap: pytest, API tests, CI/CD, pre-commit</change>
+        <change type="added">Observability roadmap: structured logging, Prometheus metrics, Sentry</change>
+        <change type="added">Infrastructure hardening roadmap: Docker security, PgBouncer, Redis caching</change>
+        <change type="added">Kubernetes migration decision framework with triggers and recommended path</change>
+        <change type="decision">Implementing production improvements on Docker Compose first (platform-agnostic)</change>
+        <change type="decision">K8s deferred until scaling triggers are met (99.9% SLA, multi-region, team 25+)</change>
+        <change type="milestone">Starting Phase 4: Production Hardening</change>
+      </changes>
+    </entry>
     <entry date="2026-01-16" version="0.5.5" phase="3">
       <changes>
         <change type="fixed">Corrected PROJECT_SPEC.xml progress tracking (was showing 37/38, actually 38/38)</change>
