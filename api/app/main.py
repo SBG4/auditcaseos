@@ -24,6 +24,12 @@ from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import get_settings
+from app.services.cache_service import (
+    CacheService,
+    close_redis_pool,
+    create_redis_pool,
+    set_cache_service,
+)
 from app.utils.logging import configure_logging, get_logger
 from app.utils.metrics import setup_prometheus
 from app.utils.rate_limit import limiter
@@ -163,10 +169,12 @@ async def lifespan(app: FastAPI):
 
     Startup:
         - Initializes MinIO bucket for evidence storage
+        - Initializes Redis connection pool for caching
         - Starts the workflow scheduler
 
     Shutdown:
         - Stops the workflow scheduler
+        - Closes Redis connection pool
         - Performs cleanup operations
 
     Args:
@@ -177,11 +185,30 @@ async def lifespan(app: FastAPI):
     """
     # Startup
     logger.info("Starting AuditCaseOS API...")
+
+    # Initialize MinIO
     try:
         await init_minio_bucket()
         logger.info("MinIO initialization complete")
     except Exception as e:
         logger.warning(f"MinIO initialization skipped: {e}")
+
+    # Initialize Redis cache
+    redis_pool = None
+    try:
+        redis_pool = await create_redis_pool()
+        cache_service = CacheService(pool=redis_pool)
+        set_cache_service(cache_service)
+        if redis_pool:
+            logger.info("Redis cache initialized")
+        else:
+            logger.info("Redis cache disabled (no pool)")
+    except Exception as e:
+        logger.warning(f"Redis cache initialization failed: {e}")
+        set_cache_service(CacheService(pool=None))
+
+    # Store pool in app state for shutdown
+    app.state.redis_pool = redis_pool
 
     # Start workflow scheduler
     try:
@@ -203,6 +230,13 @@ async def lifespan(app: FastAPI):
         logger.info("Workflow scheduler stopped")
     except Exception as e:
         logger.warning(f"Error stopping scheduler: {e}")
+
+    # Close Redis connection pool
+    try:
+        if hasattr(app.state, "redis_pool") and app.state.redis_pool:
+            await close_redis_pool(app.state.redis_pool)
+    except Exception as e:
+        logger.warning(f"Error closing Redis pool: {e}")
 
 
 def create_application() -> FastAPI:
@@ -231,7 +265,7 @@ def create_application() -> FastAPI:
     app = FastAPI(
         title="AuditCaseOS API",
         description="Internal audit case management system with AI-powered analysis",
-        version="0.8.2",
+        version="0.8.3",
         lifespan=lifespan,
         debug=settings.debug,
         redirect_slashes=False,
@@ -328,5 +362,5 @@ async def health_check() -> dict[str, Any]:
     return {
         "status": "healthy",
         "service": "auditcaseos-api",
-        "version": "0.8.2",
+        "version": "0.8.3",
     }

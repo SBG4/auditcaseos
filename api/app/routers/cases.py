@@ -2,6 +2,9 @@
 
 This module provides endpoints for managing audit cases, including
 CRUD operations, timeline events, and findings.
+
+Cache invalidation is performed on case create/update/delete to ensure
+analytics data stays fresh.
 """
 
 import logging
@@ -14,6 +17,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.dependencies import get_cache
 from app.routers.auth import get_current_user_required
 from app.schemas.case import (
     CaseCreate,
@@ -28,6 +32,7 @@ from app.schemas.common import (
     Severity,
 )
 from app.services.audit_service import audit_service
+from app.services.cache_service import CacheService
 from app.services.case_service import case_service
 from app.services.websocket_service import connection_manager
 from app.services.workflow_executor import workflow_executor
@@ -108,6 +113,7 @@ router = APIRouter(prefix="/cases", tags=["cases"])
 # Type aliases for dependency injection
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 CurrentUser = Annotated[dict, Depends(get_current_user_required)]
+Cache = Annotated[CacheService, Depends(get_cache)]
 
 
 # =============================================================================
@@ -202,6 +208,7 @@ async def create_case(
     db: DbSession,
     request: Request,
     current_user: CurrentUser,
+    cache: Cache,
 ) -> CaseResponse:
     """
     Create a new audit case.
@@ -300,6 +307,12 @@ async def create_case(
         except Exception as wf_error:
             logger.debug(f"Workflow trigger skipped: {wf_error}")
 
+        # Invalidate analytics cache (case counts changed)
+        try:
+            await cache.delete_pattern("cache:analytics:*")
+        except Exception as cache_error:
+            logger.debug(f"Cache invalidation skipped: {cache_error}")
+
         return response
 
     except HTTPException:
@@ -381,6 +394,7 @@ async def update_case(
     db: DbSession,
     request: Request,
     current_user: CurrentUser,
+    cache: Cache,
     case_id: str = Path(..., description="Case ID in format SCOPE-TYPE-SEQ or UUID"),
 ) -> CaseResponse:
     """
@@ -492,6 +506,12 @@ async def update_case(
         except Exception as wf_error:
             logger.debug(f"Workflow trigger skipped: {wf_error}")
 
+        # Invalidate analytics cache (case data changed)
+        try:
+            await cache.delete_pattern("cache:analytics:*")
+        except Exception as cache_error:
+            logger.debug(f"Cache invalidation skipped: {cache_error}")
+
         return response
 
     except HTTPException:
@@ -514,6 +534,7 @@ async def delete_case(
     db: DbSession,
     request: Request,
     current_user: CurrentUser,
+    cache: Cache,
     case_id: str = Path(..., description="Case ID in format SCOPE-TYPE-SEQ or UUID"),
 ) -> MessageResponse:
     """
@@ -552,6 +573,12 @@ async def delete_case(
             old_values={"case_id": existing_case["case_id"], "status": str(existing_case.get("status"))},
             user_ip=client_ip,
         )
+
+        # Invalidate analytics cache (case archived)
+        try:
+            await cache.delete_pattern("cache:analytics:*")
+        except Exception as cache_error:
+            logger.debug(f"Cache invalidation skipped: {cache_error}")
 
         return MessageResponse(
             message=f"Case '{existing_case['case_id']}' has been archived",

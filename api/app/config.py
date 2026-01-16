@@ -184,12 +184,26 @@ class Settings(BaseSettings):
     sentry_dsn: str = ""
     sentry_environment: str = "development"
     sentry_traces_sample_rate: float = 0.1  # 10% of requests for performance monitoring
-    sentry_release: str = "0.8.2"
+    sentry_release: str = "0.8.3"
 
     @property
     def sentry_enabled(self) -> bool:
         """Check if Sentry is configured."""
         return bool(self.sentry_dsn)
+
+    # Redis caching settings
+    # Uses existing Redis instance (shared with Paperless)
+    # DB 0 = Paperless task queue, DB 1 = API caching
+    redis_url: str = "redis://redis:6379/1"
+    redis_max_connections: int = 20
+    redis_socket_timeout: float = 5.0
+    redis_enabled: bool = True
+
+    # Cache TTLs (in seconds)
+    cache_analytics_ttl: int = 600  # 10 minutes for analytics endpoints
+    cache_scopes_ttl: int = 86400  # 24 hours for static scopes data
+    cache_search_ttl: int = 900  # 15 minutes for search suggestions
+    cache_default_ttl: int = 300  # 5 minutes default
 
     @property
     def async_database_url(self) -> str:

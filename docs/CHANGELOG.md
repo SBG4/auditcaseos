@@ -4,6 +4,29 @@ All notable changes to this project are documented here.
 
 ---
 
+## [0.8.3] - 2026-01-16
+
+### Added
+- Feature 4.15: Redis Caching with cache-aside pattern
+- `api/app/services/cache_service.py` - CacheService with graceful degradation
+- `api/app/dependencies.py` - FastAPI cache dependency
+- redis>=5.0.0 and orjson>=3.9.0 dependencies
+- Cache health check in `/ready` endpoint
+
+### Changed
+- Analytics endpoints now cached (10-30 min TTL)
+- Scopes endpoints now cached (24 hour TTL)
+- Cases router invalidates analytics cache on create/update/delete
+- Phase 4 progress: 19/21 features (90%)
+- Overall progress: 57/61 features (93%)
+
+### Configuration
+- Redis URL: `redis://redis:6379/1` (shares with Paperless, uses DB 1)
+- `redis_enabled`, `redis_max_connections`, `redis_socket_timeout`
+- Cache TTLs: `cache_analytics_ttl`, `cache_scopes_ttl`, `cache_search_ttl`, `cache_default_ttl`
+
+---
+
 ## [0.8.2] - 2026-01-16
 
 ### Added

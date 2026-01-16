@@ -2,6 +2,7 @@
 
 from .analytics_service import AnalyticsService
 from .audit_service import AuditService
+from .cache_service import CacheService, get_cache_service, set_cache_service
 from .case_service import CaseService
 from .embedding_service import EmbeddingService
 from .entity_service import EntityService
@@ -21,6 +22,7 @@ from .workflow_service import WorkflowService
 __all__ = [
     "AnalyticsService",
     "AuditService",
+    "CacheService",
     "CaseService",
     "ConnectionManager",
     "EmbeddingService",
@@ -36,4 +38,6 @@ __all__ = [
     "StorageService",
     "WorkflowExecutor",
     "WorkflowService",
+    "get_cache_service",
+    "set_cache_service",
 ]

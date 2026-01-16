@@ -1,6 +1,6 @@
 # AuditCaseOS Features
 
-**Version: 0.8.2** | **Last Updated: 2026-01-16**
+**Version: 0.8.3** | **Last Updated: 2026-01-16**
 
 ## Progress Summary
 
@@ -9,9 +9,9 @@
 | 1 | Core Platform | COMPLETED | 12/12 |
 | 2 | Document Intelligence | COMPLETED | 12/12 |
 | 3 | Frontend & Collaboration | COMPLETED | 14/14 |
-| 4 | Production Hardening | IN PROGRESS | 18/21 (86%) |
+| 4 | Production Hardening | IN PROGRESS | 19/21 (90%) |
 | 5 | Future Enhancements | PLANNED | 0/8 |
-| **Total** | | | **56/61 (92%)** |
+| **Total** | | | **57/61 (93%)** |
 
 ---
 
@@ -256,8 +256,15 @@ PgBouncer connection pooler for API database connections.
 - SQLAlchemy uses NullPool, statement caching disabled
 - Migrations bypass PgBouncer via POSTGRES_DIRECT_URL
 
-#### 4.15 Redis Caching (PENDING)
+#### 4.15 Redis Caching (COMPLETED)
 Cache-aside pattern for frequently accessed data.
+- Files: `api/app/services/cache_service.py`, `api/app/dependencies.py`
+- Uses existing Redis (DB 1, Paperless uses DB 0)
+- orjson for fast serialization
+- Graceful degradation (cache failures don't break app)
+- Cached endpoints: analytics (10-30 min TTL), scopes (24 hr TTL)
+- Cache invalidation on case create/update/delete
+- Health check at `/ready` shows cache status
 
 ### Production Security
 

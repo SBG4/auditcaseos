@@ -2,7 +2,7 @@
 
 Internal audit case management system with AI-powered analysis, evidence vault, document editing, real-time collaboration, and smart report generation.
 
-**Version: 0.8.2** | **Phase 4: Production Hardening (86%)** | **Status: Active Development**
+**Version: 0.8.3** | **Phase 4: Production Hardening (90%)** | **Status: Active Development**
 
 ![CI](https://github.com/SBG4/auditcaseos/actions/workflows/ci.yml/badge.svg)
 
@@ -13,9 +13,9 @@ Internal audit case management system with AI-powered analysis, evidence vault, 
 | Phase 1 | Core Platform | 12/12 | ✅ Complete |
 | Phase 2 | Document Intelligence | 12/12 | ✅ Complete |
 | Phase 3 | Collaboration & Enterprise | 14/14 | ✅ Complete |
-| Phase 4 | Production Hardening | 18/21 | 🔄 86% Complete |
+| Phase 4 | Production Hardening | 19/21 | 🔄 90% Complete |
 | Phase 5 | Future Enhancements | 0/8 | 📋 Planned |
-| **Total** | **All Features** | **56/61** | **92%** |
+| **Total** | **All Features** | **57/61** | **93%** |
 
 ## Features
 
@@ -51,7 +51,7 @@ Internal audit case management system with AI-powered analysis, evidence vault, 
 - **Advanced Search**: Hybrid keyword + semantic search across all content
 - **Global Search Bar**: Header search with auto-suggestions
 
-### Phase 4: Production Hardening (18/21 features - 86%)
+### Phase 4: Production Hardening (19/21 features - 90%)
 
 #### Completed
 - **Rate Limiting**: slowapi with auth-specific limits (10/min login, 60/min general)
@@ -67,14 +67,14 @@ Internal audit case management system with AI-powered analysis, evidence vault, 
 - **Prometheus Metrics**: /metrics endpoint for monitoring
 - **Sentry Integration**: Error tracking with user context and performance monitoring
 - **Docker Security**: Non-root users, resource limits, multi-stage builds
+- **PgBouncer**: Connection pooling for API (transaction mode, 20 pool size)
+- **Redis Caching**: Cache-aside pattern with orjson, graceful degradation
 - **Secret Management**: SOPS + age encrypted secrets infrastructure
 - **Database Migrations**: Alembic setup with async SQLAlchemy
 - **Backup Strategy**: pg_dump + mc mirror scripts with 7-day retention (42 tests)
 
-#### Remaining (19%)
+#### Remaining (10%)
 - **SSL/TLS (HTTPS)**: Let's Encrypt certificates
-- **Database Optimization**: PgBouncer connection pooling
-- **Redis Caching**: Response and query caching
 - **Load Testing**: k6 performance testing
 - **Monitoring/Alerting**: Grafana dashboards
 
@@ -275,10 +275,11 @@ docker compose down -v
 | SSL/TLS (HTTPS) | High | Not started |
 | Secret Management | High | ✅ SOPS + age infrastructure ready |
 | Database Migrations (Alembic) | High | ✅ Complete |
+| PgBouncer Connection Pooling | High | ✅ Complete |
+| Redis Caching | High | ✅ Complete |
 | Sentry Error Tracking | Medium | ✅ Complete |
 | Backup Strategy | Medium | ✅ Complete (42 tests) |
 | Test Coverage (70%+) | Medium | 35% current |
-| PgBouncer Connection Pooling | Medium | Not started |
 | Load Testing | Medium | Not started |
 | Monitoring/Alerting | Medium | Prometheus metrics only |
 
@@ -300,14 +301,16 @@ Full project specification is maintained in `PROJECT_SPEC.xml` including:
 - API specifications
 - Changelog
 
-## Recent Updates (v0.8.1)
+## Recent Updates (v0.8.3)
 
+- **Redis Caching**: Cache-aside pattern for analytics/scopes with graceful degradation
+- **PgBouncer**: Connection pooling for API (transaction mode, 20 pool size)
+- **Cache Health Check**: `/ready` endpoint shows cache status
+- **orjson Serialization**: 3-10x faster JSON serialization for caching
+- **Cache Invalidation**: Analytics cache cleared on case create/update/delete
 - **Sentry Integration**: Error tracking with FastAPI, SQLAlchemy, and logging integrations
 - **Backup Strategy**: Full backup/restore scripts with 42 automated tests
 - **Database Migrations**: Alembic setup with async SQLAlchemy support
-- **Secret Management**: SOPS + age infrastructure for encrypted secrets
-- **Layered Documentation**: PROJECT_SPEC.xml split into focused docs/ files
-- **Dependency Drift Fixes**: SQLAlchemy 2.x compatibility, IPv6 healthcheck fixes
 - **CI Pipeline**: All 4 jobs passing (Security, Backend, Frontend, Docker)
 
 ## License

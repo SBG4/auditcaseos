@@ -2,14 +2,24 @@
 
 This module provides endpoints for managing audit scopes,
 which represent organizational areas or departments that can be audited.
+
+Scopes data is static and cached for 24 hours to minimize overhead.
 """
 
-from fastapi import APIRouter, Query
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Query
 from pydantic import Field
 
-from ..schemas.common import BaseSchema
+from app.config import get_settings
+from app.dependencies import get_cache
+from app.schemas.common import BaseSchema
+from app.services.cache_service import CacheService
 
 router = APIRouter(prefix="/scopes", tags=["scopes"])
+
+# Type alias for cache dependency
+Cache = Annotated[CacheService, Depends(get_cache)]
 
 
 # =============================================================================
@@ -128,6 +138,7 @@ PREDEFINED_SCOPES: list[ScopeResponse] = [
     description="Retrieve all available audit scopes.",
 )
 async def list_scopes(
+    cache: Cache,
     search: str | None = Query(None, description="Search in code and name"),
 ) -> ScopeListResponse:
     """
@@ -156,24 +167,37 @@ async def list_scopes(
     - **search**: Optional search term to filter scopes
 
     Returns a list of all matching scopes.
+
+    Results are cached for 24 hours (static data).
     """
-    scopes = PREDEFINED_SCOPES
+    settings = get_settings()
+    cache_key = f"cache:scopes:list:{search or 'all'}"
 
-    # Filter by search term if provided
-    if search:
-        search_lower = search.lower()
-        scopes = [
-            scope
-            for scope in scopes
-            if search_lower in scope.code.lower()
-            or search_lower in scope.name.lower()
-            or search_lower in scope.description.lower()
-        ]
+    async def compute():
+        scopes = PREDEFINED_SCOPES
 
-    return ScopeListResponse(
-        items=scopes,
-        total=len(scopes),
+        # Filter by search term if provided
+        if search:
+            search_lower = search.lower()
+            scopes = [
+                scope
+                for scope in scopes
+                if search_lower in scope.code.lower()
+                or search_lower in scope.name.lower()
+                or search_lower in scope.description.lower()
+            ]
+
+        return ScopeListResponse(
+            items=scopes,
+            total=len(scopes),
+        )
+
+    result = await cache.get_or_compute(
+        key=cache_key,
+        compute_func=compute,
+        ttl=settings.cache_scopes_ttl,
     )
+    return ScopeListResponse(**result) if isinstance(result, dict) else result
 
 
 @router.get(
@@ -184,6 +208,7 @@ async def list_scopes(
 )
 async def get_scope(
     scope_code: str,
+    cache: Cache,
 ) -> ScopeResponse:
     """
     Get a specific scope by its code.
@@ -192,17 +217,33 @@ async def get_scope(
 
     Returns the scope details if found.
 
+    Results are cached for 24 hours (static data).
+
     Raises:
         HTTPException: 404 if scope not found
     """
     from fastapi import HTTPException, status
 
+    settings = get_settings()
     scope_code_upper = scope_code.upper()
-    for scope in PREDEFINED_SCOPES:
-        if scope.code == scope_code_upper:
-            return scope
+    cache_key = f"cache:scopes:{scope_code_upper}"
 
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Scope with code '{scope_code}' not found",
+    async def compute():
+        for scope in PREDEFINED_SCOPES:
+            if scope.code == scope_code_upper:
+                return scope
+        return None
+
+    result = await cache.get_or_compute(
+        key=cache_key,
+        compute_func=compute,
+        ttl=settings.cache_scopes_ttl,
     )
+
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Scope with code '{scope_code}' not found",
+        )
+
+    return ScopeResponse(**result) if isinstance(result, dict) else result

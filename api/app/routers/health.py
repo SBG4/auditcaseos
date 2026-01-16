@@ -12,13 +12,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import get_db
+from app.dependencies import get_cache
+from app.services.cache_service import CacheService
 
 router = APIRouter()
 settings = get_settings()
 
 
 @router.get("/ready")
-async def readiness_check(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+async def readiness_check(
+    db: AsyncSession = Depends(get_db),
+    cache: CacheService = Depends(get_cache),
+) -> dict[str, Any]:
     """
     Readiness check endpoint.
 
@@ -27,6 +32,7 @@ async def readiness_check(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
 
     Args:
         db: Database session for connectivity check.
+        cache: Cache service for Redis connectivity check.
 
     Returns:
         dict: Readiness status with component health details.
@@ -43,12 +49,25 @@ async def readiness_check(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     except Exception as e:
         checks["database"] = f"unhealthy: {e!s}"
 
-    overall_status = "ready" if all(
-        "healthy" in v for v in checks.values()
-    ) else "not_ready"
+    # Check Redis cache connectivity (non-critical)
+    try:
+        if settings.redis_enabled:
+            if await cache.ping():
+                checks["cache"] = "healthy"
+            else:
+                checks["cache"] = "unavailable (degraded mode)"
+        else:
+            checks["cache"] = "disabled"
+    except Exception as e:
+        checks["cache"] = f"unavailable: {e!s}"
+
+    # Overall status - database is critical, cache is optional
+    db_healthy = "healthy" in checks.get("database", "")
+    overall_status = "ready" if db_healthy else "not_ready"
 
     return {
         "status": overall_status,
         "checks": checks,
         "connection_mode": "pgbouncer" if settings.pgbouncer_enabled else "direct",
+        "cache_enabled": settings.redis_enabled,
     }

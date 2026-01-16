@@ -33,3 +33,6 @@ prometheus-fastapi-instrumentator>=6.1.0
 sentry-sdk[fastapi]>=1.39.0
 # Database migrations (Phase 4)
 alembic>=1.14.0
+# Caching (Phase 4)
+redis>=5.0.0
+orjson>=3.9.0
