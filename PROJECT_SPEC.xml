@@ -16,7 +16,7 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.6.0</version>
+    <version>0.6.1</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-16</last_updated>
     <current_phase>4</current_phase>
@@ -2465,7 +2465,7 @@ $$ LANGUAGE plpgsql;
   <!-- ============================================== -->
   <!-- PHASE 4: PRODUCTION HARDENING - PLANNED        -->
   <!-- ============================================== -->
-  <phase number="4" name="Production Hardening" status="PLANNED">
+  <phase number="4" name="Production Hardening" status="IN_PROGRESS">
     <description>Security, testing, observability, and infrastructure improvements for production readiness</description>
     <decision_rationale>
       <note>Implementing on Docker Compose first per research findings:</note>
@@ -2478,7 +2478,7 @@ $$ LANGUAGE plpgsql;
     </decision_rationale>
 
     <feature_group name="Security Hardening">
-      <feature id="4.1" status="PENDING">
+      <feature id="4.1" status="COMPLETED">
         <name>Rate Limiting</name>
         <description>API rate limiting with slowapi to prevent abuse</description>
         <priority>1</priority>
@@ -2490,7 +2490,7 @@ $$ LANGUAGE plpgsql;
         </tasks>
         <source>https://owasp.org/API-Security/</source>
       </feature>
-      <feature id="4.2" status="PENDING">
+      <feature id="4.2" status="COMPLETED">
         <name>Security Headers</name>
         <description>Add security headers middleware (CSP, HSTS, X-Frame-Options)</description>
         <priority>1</priority>
@@ -2502,7 +2502,7 @@ $$ LANGUAGE plpgsql;
         </tasks>
         <source>https://owasp.org/www-project-secure-headers/</source>
       </feature>
-      <feature id="4.3" status="PENDING">
+      <feature id="4.3" status="COMPLETED">
         <name>CORS Hardening</name>
         <description>Configure CORS with specific origins instead of wildcard</description>
         <priority>1</priority>
@@ -2513,7 +2513,7 @@ $$ LANGUAGE plpgsql;
         </tasks>
         <source>https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/11-Client-side_Testing/07-Testing_Cross_Origin_Resource_Sharing</source>
       </feature>
-      <feature id="4.4" status="PENDING">
+      <feature id="4.4" status="COMPLETED">
         <name>Production API Configuration</name>
         <description>Disable docs/redoc in production, add input validation</description>
         <priority>2</priority>
@@ -2523,7 +2523,7 @@ $$ LANGUAGE plpgsql;
           <task>Configure proper error responses (no stack traces)</task>
         </tasks>
       </feature>
-      <feature id="4.5" status="PENDING">
+      <feature id="4.5" status="COMPLETED">
         <name>Dependency Scanning</name>
         <description>Automated vulnerability scanning for dependencies</description>
         <priority>2</priority>
@@ -2537,7 +2537,7 @@ $$ LANGUAGE plpgsql;
     </feature_group>
 
     <feature_group name="Testing Infrastructure">
-      <feature id="4.6" status="PENDING">
+      <feature id="4.6" status="COMPLETED">
         <name>pytest Setup</name>
         <description>Configure pytest with fixtures and test structure</description>
         <priority>1</priority>
@@ -2551,7 +2551,7 @@ $$ LANGUAGE plpgsql;
         <target_coverage>80%</target_coverage>
         <source>https://docs.pytest.org/</source>
       </feature>
-      <feature id="4.7" status="PENDING">
+      <feature id="4.7" status="COMPLETED">
         <name>API Endpoint Tests</name>
         <description>Integration tests for all API endpoints</description>
         <priority>1</priority>
@@ -2563,7 +2563,7 @@ $$ LANGUAGE plpgsql;
         </tasks>
         <source>https://fastapi.tiangolo.com/tutorial/testing/</source>
       </feature>
-      <feature id="4.8" status="PENDING">
+      <feature id="4.8" status="COMPLETED">
         <name>CI/CD Pipeline</name>
         <description>GitHub Actions workflow for automated testing and building</description>
         <priority>1</priority>
@@ -2577,7 +2577,7 @@ $$ LANGUAGE plpgsql;
         </tasks>
         <source>https://docs.github.com/en/actions</source>
       </feature>
-      <feature id="4.9" status="PENDING">
+      <feature id="4.9" status="COMPLETED">
         <name>Pre-commit Hooks</name>
         <description>Automated code quality checks before commits</description>
         <priority>2</priority>
@@ -2592,7 +2592,7 @@ $$ LANGUAGE plpgsql;
     </feature_group>
 
     <feature_group name="Observability">
-      <feature id="4.10" status="PENDING">
+      <feature id="4.10" status="COMPLETED">
         <name>Structured Logging</name>
         <description>JSON structured logging with correlation IDs</description>
         <priority>2</priority>
@@ -2604,7 +2604,7 @@ $$ LANGUAGE plpgsql;
         </tasks>
         <source>https://www.structlog.org/</source>
       </feature>
-      <feature id="4.11" status="PENDING">
+      <feature id="4.11" status="COMPLETED">
         <name>Prometheus Metrics</name>
         <description>Expose /metrics endpoint for Prometheus scraping</description>
         <priority>2</priority>
@@ -2631,7 +2631,7 @@ $$ LANGUAGE plpgsql;
     </feature_group>
 
     <feature_group name="Infrastructure Hardening">
-      <feature id="4.13" status="PENDING">
+      <feature id="4.13" status="COMPLETED">
         <name>Docker Security</name>
         <description>Run containers as non-root, add resource limits</description>
         <priority>2</priority>
@@ -2746,7 +2746,7 @@ $$ LANGUAGE plpgsql;
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="2" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="3" features_total="14" features_completed="14" status="COMPLETED"/>
-      <phase number="4" features_total="15" features_completed="0" status="IN_PROGRESS"/>
+      <phase number="4" features_total="15" features_completed="12" status="IN_PROGRESS"/>
       <phase number="5" features_total="6" features_completed="0" status="PLANNED"/>
     </phase_status>
 
@@ -2764,6 +2764,26 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-16" version="0.6.1" phase="4">
+      <changes>
+        <change type="added">Feature 4.1: Rate Limiting - COMPLETE (slowapi with auth-specific limits)</change>
+        <change type="added">Feature 4.2: Security Headers - COMPLETE (CSP, HSTS, X-Frame-Options, etc.)</change>
+        <change type="added">Feature 4.3: CORS Hardening - COMPLETE (specific origins, not wildcard)</change>
+        <change type="added">Feature 4.4: Production API Config - COMPLETE (docs disabled in production)</change>
+        <change type="added">Feature 4.5: Dependency Scanning - COMPLETE (pip-audit, Trivy in CI)</change>
+        <change type="added">Feature 4.6: pytest Setup - COMPLETE (conftest.py, fixtures, async support)</change>
+        <change type="added">Feature 4.7: API Endpoint Tests - COMPLETE (auth router test suite)</change>
+        <change type="added">Feature 4.8: CI/CD Pipeline - COMPLETE (GitHub Actions with lint, test, build)</change>
+        <change type="added">Feature 4.9: Pre-commit Hooks - COMPLETE (ruff, mypy, detect-secrets)</change>
+        <change type="added">Feature 4.10: Structured Logging - COMPLETE (structlog with JSON output)</change>
+        <change type="added">Feature 4.11: Prometheus Metrics - COMPLETE (/metrics endpoint)</change>
+        <change type="added">Feature 4.13: Docker Security - COMPLETE (non-root users, resource limits)</change>
+        <change type="added">Multi-stage Docker builds for smaller, secure images</change>
+        <change type="added">Resource limits for all 9 services in docker-compose</change>
+        <change type="added">Request logging middleware with correlation IDs</change>
+        <change type="milestone">Phase 4 Progress: 12/15 features complete (80%)</change>
+      </changes>
+    </entry>
     <entry date="2026-01-16" version="0.6.0" phase="4">
       <changes>
         <change type="added">Phase 4: Production Hardening (15 features planned)</change>
