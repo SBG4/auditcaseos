@@ -4,9 +4,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Version | 0.8.3 |
-| Phase | 4 (Production Hardening) - 90% complete |
-| Features | 57/61 (93%) |
+| Version | 0.8.4 |
+| Phase | 4 (Production Hardening) - 95% complete |
+| Features | 59/61 (97%) |
 | Repo | https://github.com/SBG4/auditcaseos |
 | Stack | FastAPI + React + PostgreSQL + MinIO + Ollama + Paperless + Nextcloud + ONLYOFFICE + Redis |
 
@@ -41,6 +41,8 @@ docker exec -it auditcaseos-db psql -U auditcaseos -d auditcaseos
 | Paperless | 18080 | http://paperless:8000 |
 | Nextcloud | 18081 | http://nextcloud |
 | ONLYOFFICE | 18082 | http://onlyoffice |
+| Prometheus | 19090 | http://prometheus:9090 |
+| Grafana | 19091 | http://grafana:3000 |
 
 ## CRITICAL: URL Architecture
 

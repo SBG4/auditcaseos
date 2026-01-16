@@ -4,6 +4,41 @@ All notable changes to this project are documented here.
 
 ---
 
+## [0.8.4] - 2026-01-16
+
+### Added
+- Feature 4.20: k6 Load Testing framework
+  - `load-tests/` directory with config, thresholds, and test scenarios
+  - Test types: smoke (1 VU), load (50 VUs), stress (200 VUs)
+  - Weighted scenarios: Browse 40%, Analytics 20%, Search 20%, Create 15%, Profile 5%
+  - Docker-based runner: `./load-tests/run-tests.sh [smoke|load|stress]`
+  - SLO thresholds for p95 latency and error rates
+- Feature 4.21: Grafana Monitoring and Alerting
+  - Prometheus server at port 19090
+  - Grafana dashboards at port 19091 (admin/admin123)
+  - postgres_exporter for PostgreSQL metrics
+  - redis_exporter for Redis metrics
+  - Pre-configured alert rules for API, PostgreSQL, and Redis
+  - `configs/prometheus/` - prometheus.yml, alert_rules.yml
+  - `configs/grafana/provisioning/` - datasources, dashboards config
+
+### Changed
+- Phase 4 progress: 19/21 → 20/21 (95%)
+- Overall progress: 57/61 → 59/61 (97%)
+- Phase 4 status: COMPLETED (only 4.17 SSL/TLS remaining)
+
+### New Services
+- `prometheus` - prom/prometheus:v2.49.1
+- `grafana` - grafana/grafana:10.3.1
+- `postgres_exporter` - prometheuscommunity/postgres-exporter:v0.15.0
+- `redis_exporter` - oliver006/redis_exporter:v1.56.0
+
+### New Volumes
+- `prometheus_data`
+- `grafana_data`
+
+---
+
 ## [0.8.3] - 2026-01-16
 
 ### Added

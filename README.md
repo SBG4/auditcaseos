@@ -2,7 +2,7 @@
 
 Internal audit case management system with AI-powered analysis, evidence vault, document editing, real-time collaboration, and smart report generation.
 
-**Version: 0.8.3** | **Phase 4: Production Hardening (90%)** | **Status: Active Development**
+**Version: 0.8.4** | **Phase 4: Production Hardening (95%)** | **Status: Active Development**
 
 ![CI](https://github.com/SBG4/auditcaseos/actions/workflows/ci.yml/badge.svg)
 
@@ -13,9 +13,9 @@ Internal audit case management system with AI-powered analysis, evidence vault, 
 | Phase 1 | Core Platform | 12/12 | ✅ Complete |
 | Phase 2 | Document Intelligence | 12/12 | ✅ Complete |
 | Phase 3 | Collaboration & Enterprise | 14/14 | ✅ Complete |
-| Phase 4 | Production Hardening | 19/21 | 🔄 90% Complete |
+| Phase 4 | Production Hardening | 20/21 | ✅ 95% Complete |
 | Phase 5 | Future Enhancements | 0/8 | 📋 Planned |
-| **Total** | **All Features** | **57/61** | **93%** |
+| **Total** | **All Features** | **59/61** | **97%** |
 
 ## Features
 
@@ -51,7 +51,7 @@ Internal audit case management system with AI-powered analysis, evidence vault, 
 - **Advanced Search**: Hybrid keyword + semantic search across all content
 - **Global Search Bar**: Header search with auto-suggestions
 
-### Phase 4: Production Hardening (19/21 features - 90%)
+### Phase 4: Production Hardening (20/21 features - 95%)
 
 #### Completed
 - **Rate Limiting**: slowapi with auth-specific limits (10/min login, 60/min general)
@@ -72,11 +72,11 @@ Internal audit case management system with AI-powered analysis, evidence vault, 
 - **Secret Management**: SOPS + age encrypted secrets infrastructure
 - **Database Migrations**: Alembic setup with async SQLAlchemy
 - **Backup Strategy**: pg_dump + mc mirror scripts with 7-day retention (42 tests)
+- **Load Testing**: k6 framework with smoke, load, and stress tests
+- **Monitoring/Alerting**: Prometheus + Grafana dashboards with alert rules
 
-#### Remaining (10%)
+#### Remaining (5%)
 - **SSL/TLS (HTTPS)**: Let's Encrypt certificates
-- **Load Testing**: k6 performance testing
-- **Monitoring/Alerting**: Grafana dashboards
 
 ## Quick Start
 
@@ -112,6 +112,8 @@ docker exec -it auditcaseos-ollama ollama pull nomic-embed-text
 | Paperless | http://localhost:18080 | admin / admin123 |
 | Nextcloud | http://localhost:18081 | admin / admin123 |
 | ONLYOFFICE | http://localhost:18082 | - |
+| Prometheus | http://localhost:19090 | - |
+| Grafana | http://localhost:19091 | admin / admin123 |
 
 ## Architecture
 
@@ -301,17 +303,14 @@ Full project specification is maintained in `PROJECT_SPEC.xml` including:
 - API specifications
 - Changelog
 
-## Recent Updates (v0.8.3)
+## Recent Updates (v0.8.4)
 
-- **Redis Caching**: Cache-aside pattern for analytics/scopes with graceful degradation
-- **PgBouncer**: Connection pooling for API (transaction mode, 20 pool size)
-- **Cache Health Check**: `/ready` endpoint shows cache status
-- **orjson Serialization**: 3-10x faster JSON serialization for caching
-- **Cache Invalidation**: Analytics cache cleared on case create/update/delete
-- **Sentry Integration**: Error tracking with FastAPI, SQLAlchemy, and logging integrations
-- **Backup Strategy**: Full backup/restore scripts with 42 automated tests
-- **Database Migrations**: Alembic setup with async SQLAlchemy support
-- **CI Pipeline**: All 4 jobs passing (Security, Backend, Frontend, Docker)
+- **Load Testing**: k6 framework with smoke (1 VU), load (50 VUs), stress (200 VUs) tests
+- **Prometheus Monitoring**: Metrics collection at port 19090
+- **Grafana Dashboards**: Visualization at port 19091 with pre-configured datasource
+- **Alert Rules**: HighErrorRate, HighLatency, APIDown, PostgreSQLDown, RedisDown
+- **Exporters**: postgres_exporter and redis_exporter for database metrics
+- **Phase 4 95% Complete**: Only SSL/TLS (4.17) remaining
 
 ## License
 

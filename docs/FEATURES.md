@@ -1,6 +1,6 @@
 # AuditCaseOS Features
 
-**Version: 0.8.3** | **Last Updated: 2026-01-16**
+**Version: 0.8.4** | **Last Updated: 2026-01-16**
 
 ## Progress Summary
 
@@ -9,9 +9,9 @@
 | 1 | Core Platform | COMPLETED | 12/12 |
 | 2 | Document Intelligence | COMPLETED | 12/12 |
 | 3 | Frontend & Collaboration | COMPLETED | 14/14 |
-| 4 | Production Hardening | IN PROGRESS | 19/21 (90%) |
+| 4 | Production Hardening | COMPLETED | 20/21 (95%) |
 | 5 | Future Enhancements | PLANNED | 0/8 |
-| **Total** | | | **57/61 (93%)** |
+| **Total** | | | **59/61 (97%)** |
 
 ---
 
@@ -195,7 +195,7 @@ Automatic sync between MinIO evidence storage and Nextcloud.
 
 ---
 
-## Phase 4: Production Hardening (IN PROGRESS)
+## Phase 4: Production Hardening (COMPLETED - 95%)
 
 ### Security Hardening
 
@@ -283,11 +283,21 @@ Alembic for schema version control.
 pg_dump, mc mirror, 7-day retention.
 - Scripts: `backup-all.sh`, `backup-database.sh`, `backup-minio.sh`, `restore-database.sh`, `restore-minio.sh`
 
-#### 4.20 Load Testing (PENDING)
-k6 or Locust for performance testing.
+#### 4.20 Load Testing (COMPLETED)
+k6 load testing framework with Docker-based execution.
+- Directory: `load-tests/` with config, thresholds, scenarios
+- Test types: smoke (1 VU, 1 min), load (50 VUs, 8 min), stress (200 VUs, 10 min)
+- Scenarios: Browse cases (40%), Analytics (20%), Search (20%), Create (15%), Profile (5%)
+- SLOs: p95 latency thresholds, <1% error rate
+- Runner: `./load-tests/run-tests.sh [smoke|load|stress]`
 
-#### 4.21 Monitoring and Alerting (PENDING)
-Grafana dashboards with AlertManager.
+#### 4.21 Monitoring and Alerting (COMPLETED)
+Grafana dashboards with Prometheus metrics collection.
+- Prometheus: Port 19090, scrapes API /metrics, postgres_exporter, redis_exporter
+- Grafana: Port 19091, pre-provisioned datasource
+- Exporters: postgres_exporter (PostgreSQL metrics), redis_exporter (Redis metrics)
+- Alert rules: HighErrorRate, HighLatency, APIDown, PostgreSQLDown, RedisDown, etc.
+- Access: http://localhost:19091 (admin/admin123)
 
 ---
 
