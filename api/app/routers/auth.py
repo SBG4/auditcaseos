@@ -2,6 +2,14 @@
 
 This module provides endpoints for user authentication, including
 login, token refresh, and user registration (admin only).
+
+Rate Limiting:
+- Login: 10 requests/minute (brute force protection)
+- Register: 5 requests/minute (spam protection)
+- Password change: 5 requests/minute
+- Other endpoints: Default rate limit
+
+Source: OWASP API Security Top 10 - API4:2023 Unrestricted Resource Consumption
 """
 
 import logging
@@ -13,13 +21,16 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.database import get_db
 from app.schemas.common import BaseSchema, MessageResponse
 from app.services.audit_service import audit_service
 from app.services.auth_service import auth_service
+from app.utils.rate_limit import limiter
 from app.utils.security import decode_access_token, TokenData
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -183,9 +194,10 @@ OptionalUser = Annotated[dict | None, Depends(get_current_user)]
     summary="Login and get access token",
     description="Authenticate with username/email and password to receive a JWT access token.",
 )
+@limiter.limit(f"{settings.rate_limit_auth_per_minute}/minute")
 async def login(
-    db: DbSession,
     request: Request,
+    db: DbSession,
     form_data: OAuth2PasswordRequestForm = Depends(),
 ) -> TokenWithUser:
     """
@@ -254,9 +266,10 @@ async def login(
     summary="Register a new user (admin only)",
     description="Create a new user account. Requires admin privileges.",
 )
+@limiter.limit("5/minute")
 async def register(
-    db: DbSession,
     request: Request,
+    db: DbSession,
     user_data: UserCreate,
     admin: AdminUser,
 ) -> UserResponse:
@@ -341,9 +354,10 @@ async def get_me(
     summary="Change password",
     description="Change the current user's password.",
 )
+@limiter.limit("5/minute")
 async def change_password(
-    db: DbSession,
     request: Request,
+    db: DbSession,
     password_data: PasswordChange,
     current_user: CurrentUser,
 ) -> MessageResponse:

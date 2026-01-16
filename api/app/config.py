@@ -39,11 +39,32 @@ class Settings(BaseSettings):
     app_name: str = "AuditCaseOS"
     debug: bool = False
     secret_key: str = "change-me-in-production"
+    environment: str = "development"  # development, staging, production
+
+    # CORS settings - comma-separated list of allowed origins
+    # In production, set to actual frontend URL(s)
+    cors_origins: str = "http://localhost:13000,http://localhost:3000"
+
+    # Rate limiting settings (requests per minute)
+    rate_limit_per_minute: int = 60
+    rate_limit_auth_per_minute: int = 10  # Stricter for auth endpoints
 
     # JWT settings
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     SECRET_KEY: str = "change-me-in-production"  # Alias for JWT signing
+
+    @property
+    def is_production(self) -> bool:
+        """Check if running in production environment."""
+        return self.environment.lower() == "production"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Return CORS origins as a list."""
+        if self.cors_origins == "*":
+            return ["*"]
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     # Database settings (DATABASE_URL from docker-compose)
     database_url: str = "postgresql+asyncpg://auditcaseos:auditcaseos_secret@postgres:5432/auditcaseos"

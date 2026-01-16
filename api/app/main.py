@@ -3,25 +3,81 @@ AuditCaseOS API - Main FastAPI Application.
 
 This module initializes the FastAPI application with all routers,
 middleware, and startup/shutdown events.
+
+Production Features:
+- Rate limiting (slowapi)
+- Security headers (OWASP)
+- Structured logging (structlog)
+- Prometheus metrics
+- CORS hardening
 """
 
-import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from minio import Minio
 from minio.error import S3Error
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import get_settings
+from app.utils.logging import configure_logging, get_logger
+from app.utils.metrics import setup_prometheus
+from app.utils.rate_limit import limiter
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
-logger = logging.getLogger(__name__)
+# Initialize structured logging
+configure_logging()
+logger = get_logger(__name__)
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware to add security headers to all responses.
+
+    Headers added:
+    - X-Content-Type-Options: Prevents MIME type sniffing
+    - X-Frame-Options: Prevents clickjacking
+    - X-XSS-Protection: Legacy XSS protection
+    - Strict-Transport-Security: Enforces HTTPS (in production)
+    - Content-Security-Policy: Restricts resource loading
+    - Referrer-Policy: Controls referrer information
+    - Permissions-Policy: Restricts browser features
+
+    Source: https://owasp.org/www-project-secure-headers/
+    """
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+        settings = get_settings()
+
+        # Always add these headers
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+
+        # Add HSTS header in production (requires HTTPS)
+        if settings.is_production:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+        # Content Security Policy - adjust based on your needs
+        csp = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: blob:; "
+            "font-src 'self' data:; "
+            "connect-src 'self' ws: wss:; "
+            "frame-ancestors 'none';"
+        )
+        response.headers["Content-Security-Policy"] = csp
+
+        return response
+
 
 
 def get_minio_client() -> Minio:
@@ -122,23 +178,41 @@ def create_application() -> FastAPI:
     """
     settings = get_settings()
 
+    # Conditionally disable docs in production
+    # Source: FastAPI security best practices
+    docs_url = None if settings.is_production else "/docs"
+    redoc_url = None if settings.is_production else "/redoc"
+    openapi_url = None if settings.is_production else "/openapi.json"
+
     app = FastAPI(
         title="AuditCaseOS API",
         description="Internal audit case management system with AI-powered analysis",
-        version="0.1.0",
+        version="0.6.0",
         lifespan=lifespan,
         debug=settings.debug,
         redirect_slashes=False,
+        docs_url=docs_url,
+        redoc_url=redoc_url,
+        openapi_url=openapi_url,
     )
 
-    # Configure CORS middleware for development
-    # In production, restrict origins appropriately
+    # Add rate limiter state and exception handler
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+    # Add security headers middleware
+    app.add_middleware(SecurityHeadersMiddleware)
+
+    # Configure CORS middleware with proper origins
+    # In production, use specific origins from CORS_ORIGINS env var
+    # Source: https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/11-Client-side_Testing/07-Testing_Cross_Origin_Resource_Sharing
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.cors_origins_list,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
+        expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
     )
 
     # Import and include routers
@@ -163,6 +237,9 @@ def create_application() -> FastAPI:
     app.include_router(nextcloud.router, prefix="/api/v1", tags=["Nextcloud"])
     app.include_router(onlyoffice.router, prefix="/api/v1", tags=["ONLYOFFICE"])
     app.include_router(websocket.router, prefix="/api/v1/ws", tags=["WebSocket"])
+
+    # Setup Prometheus metrics (exposes /metrics endpoint)
+    setup_prometheus(app)
 
     return app
 
