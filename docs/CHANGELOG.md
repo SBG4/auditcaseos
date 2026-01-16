@@ -4,6 +4,32 @@ All notable changes to this project are documented here.
 
 ---
 
+## [0.8.2] - 2026-01-16
+
+### Added
+- Feature 4.14: PgBouncer connection pooler for API database connections
+- `configs/pgbouncer/pgbouncer.ini` - PgBouncer configuration (transaction mode)
+- `configs/pgbouncer/userlist.txt` - PgBouncer authentication file
+- PgBouncer service in docker-compose.yml (port 16432 external, 5432 internal)
+- Connection mode indicator in `/ready` health check endpoint
+
+### Changed
+- `database.py`: Use NullPool and disable statement caching for PgBouncer compatibility
+- `config.py`: Added `pgbouncer_enabled` and `postgres_direct_url` settings
+- `alembic/env.py`: Migrations bypass PgBouncer via POSTGRES_DIRECT_URL
+- Phase 4 progress: 18/21 features (86%)
+- Overall progress: 56/61 features (92%)
+
+### Fixed
+- `sentry_release` version discrepancy (0.8.0 → 0.8.2)
+
+### Architecture
+- Only API routes through PgBouncer (async SQLAlchemy benefits most)
+- Paperless and Nextcloud keep direct PostgreSQL connections (have internal pooling)
+- Migrations use direct connection to avoid PgBouncer transaction mode limitations
+
+---
+
 ## [0.8.1] - 2026-01-16
 
 ### Added

@@ -92,6 +92,43 @@ services:
         reservations:
           memory: 64M
 
+  # PgBouncer connection pooler for API (Paperless/Nextcloud use direct connections)
+  pgbouncer:
+    image: edoburu/pgbouncer:1.23.1
+    container_name: auditcaseos-pgbouncer
+    environment:
+      # Database connection (connects to postgres container)
+      DATABASE_URL: postgres://${POSTGRES_USER:-auditcaseos}:${POSTGRES_PASSWORD:-auditcaseos_secret}@postgres:5432/${POSTGRES_DB:-auditcaseos}
+      # Pool settings
+      POOL_MODE: transaction
+      DEFAULT_POOL_SIZE: 20
+      MIN_POOL_SIZE: 5
+      MAX_CLIENT_CONN: 500
+      MAX_DB_CONNECTIONS: 50
+      # Auth
+      AUTH_TYPE: md5
+    volumes:
+      - ./configs/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./configs/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+    ports:
+      - "16432:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "5432"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+        reservations:
+          memory: 64M
+
   # Paperless-ngx for OCR and document intelligence
   paperless:
     image: ghcr.io/paperless-ngx/paperless-ngx:latest
@@ -161,7 +198,11 @@ services:
       - nextcloud_admin_pass
       - onlyoffice_jwt
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-auditcaseos}:${POSTGRES_PASSWORD:-auditcaseos_secret}@postgres:5432/${POSTGRES_DB:-auditcaseos}
+      # API connects via PgBouncer for connection pooling
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-auditcaseos}:${POSTGRES_PASSWORD:-auditcaseos_secret}@pgbouncer:5432/${POSTGRES_DB:-auditcaseos}
+      # Direct PostgreSQL connection for migrations (bypasses PgBouncer)
+      POSTGRES_DIRECT_URL: postgresql+asyncpg://${POSTGRES_USER:-auditcaseos}:${POSTGRES_PASSWORD:-auditcaseos_secret}@postgres:5432/${POSTGRES_DB:-auditcaseos}
+      PGBOUNCER_ENABLED: "true"
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
@@ -190,6 +231,8 @@ services:
       - "18000:8000"
     depends_on:
       postgres:
+        condition: service_healthy
+      pgbouncer:
         condition: service_healthy
       minio:
         condition: service_started

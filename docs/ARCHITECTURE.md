@@ -40,6 +40,7 @@ AuditCaseOS is an internal audit case management system with AI-powered analysis
 |-------|------------|
 | Backend | FastAPI (Python 3.12) |
 | Database | PostgreSQL 16 + pgvector |
+| Connection Pool | PgBouncer (transaction mode) |
 | Storage | MinIO (S3-compatible) |
 | AI/LLM | Ollama (local - llama3.2, nomic-embed-text) |
 | OCR | Paperless-ngx |
@@ -53,6 +54,7 @@ AuditCaseOS is an internal audit case management system with AI-powered analysis
 | Frontend | 13000 | 80 | React SPA |
 | API | 18000 | 8000 | FastAPI backend |
 | PostgreSQL | 15432 | 5432 | PostgreSQL + pgvector |
+| PgBouncer | 16432 | 5432 | Connection pooler (API only) |
 | MinIO API | 19000 | 9000 | MinIO S3 API |
 | MinIO Console | 19001 | 9001 | MinIO Web Console |
 | Ollama | 21434 | 11434 | Ollama LLM API |
@@ -65,7 +67,8 @@ AuditCaseOS is an internal audit case management system with AI-powered analysis
 ### Critical Rule: Internal vs External URLs
 
 **INTERNAL URLs** - For server-to-server communication within Docker network:
-- `postgres:5432`
+- `postgres:5432` (direct PostgreSQL - for Paperless, Nextcloud, migrations)
+- `pgbouncer:5432` (pooled PostgreSQL - for API)
 - `minio:9000`
 - `redis:6379`
 - `http://ollama:11434`

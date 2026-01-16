@@ -1,0 +1,4 @@
+;; PgBouncer userlist - format: "username" "password"
+;; Password can be plain text, md5, or scram-sha-256
+;; For md5: "md5" + md5(password + username)
+"auditcaseos" "auditcaseos_secret"

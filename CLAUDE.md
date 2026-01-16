@@ -4,9 +4,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Version | 0.8.1 |
-| Phase | 4 (Production Hardening) - 81% complete |
-| Features | 55/61 (90%) |
+| Version | 0.8.2 |
+| Phase | 4 (Production Hardening) - 86% complete |
+| Features | 56/61 (92%) |
 | Repo | https://github.com/SBG4/auditcaseos |
 | Stack | FastAPI + React + PostgreSQL + MinIO + Ollama + Paperless + Nextcloud + ONLYOFFICE |
 
@@ -36,6 +36,7 @@ docker exec -it auditcaseos-db psql -U auditcaseos -d auditcaseos
 | API | 18000 | http://api:8000 |
 | Frontend | 13000 | http://frontend:80 |
 | Postgres | 15432 | postgres:5432 |
+| PgBouncer | 16432 | pgbouncer:5432 |
 | MinIO | 19000 | minio:9000 |
 | Paperless | 18080 | http://paperless:8000 |
 | Nextcloud | 18081 | http://nextcloud |

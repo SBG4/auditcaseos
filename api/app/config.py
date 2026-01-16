@@ -137,7 +137,15 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     # Database settings (DATABASE_URL from docker-compose)
-    database_url: str = "postgresql+asyncpg://auditcaseos:auditcaseos_secret@postgres:5432/auditcaseos"
+    database_url: str = "postgresql+asyncpg://auditcaseos:auditcaseos_secret@pgbouncer:5432/auditcaseos"
+
+    # PgBouncer settings
+    # When enabled, API connects via PgBouncer for connection pooling
+    pgbouncer_enabled: bool = True
+
+    # Direct PostgreSQL URL for migrations (bypasses PgBouncer)
+    # Migrations need session-level features not available in PgBouncer transaction mode
+    postgres_direct_url: str = "postgresql+asyncpg://auditcaseos:auditcaseos_secret@postgres:5432/auditcaseos"
 
     # MinIO settings
     # INTERNAL: Used by API container to reach MinIO
@@ -176,7 +184,7 @@ class Settings(BaseSettings):
     sentry_dsn: str = ""
     sentry_environment: str = "development"
     sentry_traces_sample_rate: float = 0.1  # 10% of requests for performance monitoring
-    sentry_release: str = "0.8.0"
+    sentry_release: str = "0.8.2"
 
     @property
     def sentry_enabled(self) -> bool:

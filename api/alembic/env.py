@@ -35,10 +35,16 @@ except ImportError:
 # Target metadata for autogenerate
 target_metadata = Base.metadata
 
-# Get database URL from environment (set by Docker Compose)
+# Get database URL for migrations
+# IMPORTANT: Use POSTGRES_DIRECT_URL to bypass PgBouncer for migrations
+# Migrations need session-level features (prepared statements, advisory locks)
+# that are not available in PgBouncer's transaction mode
 DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+asyncpg://auditcaseos:auditcaseos_secret@localhost:15432/auditcaseos"
+    "POSTGRES_DIRECT_URL",
+    os.getenv(
+        "DATABASE_URL",
+        "postgresql+asyncpg://auditcaseos:auditcaseos_secret@postgres:5432/auditcaseos"
+    )
 )
 
 # Override sqlalchemy.url with environment variable

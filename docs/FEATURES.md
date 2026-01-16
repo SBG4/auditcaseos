@@ -1,6 +1,6 @@
 # AuditCaseOS Features
 
-**Version: 0.8.1** | **Last Updated: 2026-01-16**
+**Version: 0.8.2** | **Last Updated: 2026-01-16**
 
 ## Progress Summary
 
@@ -9,9 +9,9 @@
 | 1 | Core Platform | COMPLETED | 12/12 |
 | 2 | Document Intelligence | COMPLETED | 12/12 |
 | 3 | Frontend & Collaboration | COMPLETED | 14/14 |
-| 4 | Production Hardening | IN PROGRESS | 17/21 (81%) |
+| 4 | Production Hardening | IN PROGRESS | 18/21 (86%) |
 | 5 | Future Enhancements | PLANNED | 0/8 |
-| **Total** | | | **55/61 (90%)** |
+| **Total** | | | **56/61 (92%)** |
 
 ---
 
@@ -248,8 +248,13 @@ Sentry integration with FastAPI, SQLAlchemy, and logging integrations.
 #### 4.13 Docker Security (COMPLETED)
 Non-root users, resource limits.
 
-#### 4.14 Database Optimization (PENDING)
-PgBouncer for connection pooling.
+#### 4.14 Database Optimization (COMPLETED)
+PgBouncer connection pooler for API database connections.
+- Port: 16432 (external), 5432 (internal)
+- Pool mode: transaction (best for async apps)
+- Only API routes through PgBouncer (Paperless/Nextcloud use direct connections)
+- SQLAlchemy uses NullPool, statement caching disabled
+- Migrations bypass PgBouncer via POSTGRES_DIRECT_URL
 
 #### 4.15 Redis Caching (PENDING)
 Cache-aside pattern for frequently accessed data.

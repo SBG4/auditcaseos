@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import NullPool
 
 from app.config import Settings, get_settings
 
@@ -32,19 +33,40 @@ def create_engine(settings: Settings):
     """
     Create an async SQLAlchemy engine.
 
+    When PgBouncer is enabled, we use NullPool to let PgBouncer handle
+    all connection pooling. Statement caching is disabled because PgBouncer
+    in transaction mode doesn't support persistent prepared statements.
+
     Args:
         settings: Application settings containing database URL.
 
     Returns:
         AsyncEngine: Configured async database engine.
     """
-    return create_async_engine(
-        settings.async_database_url,
-        echo=settings.debug,
-        pool_pre_ping=True,
-        pool_size=5,
-        max_overflow=10,
-    )
+    # When using PgBouncer, disable SQLAlchemy's internal pool
+    # and asyncpg's statement caching (required for transaction mode)
+    if settings.pgbouncer_enabled:
+        return create_async_engine(
+            settings.async_database_url,
+            echo=settings.debug,
+            poolclass=NullPool,  # Let PgBouncer handle pooling
+            connect_args={
+                "statement_cache_size": 0,  # Required for PgBouncer transaction mode
+                "prepared_statement_cache_size": 0,
+                "server_settings": {
+                    "application_name": "auditcaseos-api",
+                },
+            },
+        )
+    else:
+        # Direct PostgreSQL connection with SQLAlchemy pooling
+        return create_async_engine(
+            settings.async_database_url,
+            echo=settings.debug,
+            pool_pre_ping=True,
+            pool_size=5,
+            max_overflow=10,
+        )
 
 
 def create_session_factory(engine) -> async_sessionmaker[AsyncSession]:
