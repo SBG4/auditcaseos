@@ -2,7 +2,19 @@
 
 Internal audit case management system with AI-powered analysis, evidence vault, document editing, real-time collaboration, and smart report generation.
 
-**Version: 0.5.5** | **Progress: 38/38 features (100%) ✅ COMPLETE**
+**Version: 0.6.2** | **Phase 4: Production Hardening (80%)** | **Status: Stable Dev**
+
+![CI](https://github.com/SBG4/auditcaseos/actions/workflows/ci.yml/badge.svg)
+
+## Project Status
+
+| Phase | Description | Features | Status |
+|-------|-------------|----------|--------|
+| Phase 1 | Core Platform | 12/12 | ✅ Complete |
+| Phase 2 | Document Intelligence | 12/12 | ✅ Complete |
+| Phase 3 | Collaboration & Enterprise | 14/14 | ✅ Complete |
+| Phase 4 | Production Hardening | 12/15 | 🔄 80% Complete |
+| **Total** | **All Features** | **50/53** | **94%** |
 
 ## Features
 
@@ -38,6 +50,27 @@ Internal audit case management system with AI-powered analysis, evidence vault, 
 - **Advanced Search**: Hybrid keyword + semantic search across all content
 - **Global Search Bar**: Header search with auto-suggestions
 
+### Phase 4: Production Hardening (12/15 features - 80%)
+
+#### Completed
+- **Rate Limiting**: slowapi with auth-specific limits (10/min login, 60/min general)
+- **Security Headers**: CSP, HSTS, X-Frame-Options, X-Content-Type-Options
+- **CORS Hardening**: Specific origins instead of wildcard
+- **Production API Config**: Docs disabled in production
+- **Dependency Scanning**: pip-audit, Trivy in CI
+- **pytest Setup**: Async fixtures, SQLite test database
+- **API Tests**: 18 auth tests passing (35% coverage)
+- **CI/CD Pipeline**: GitHub Actions (lint, test, security, build)
+- **Pre-commit Hooks**: ruff, mypy, detect-secrets
+- **Structured Logging**: structlog with JSON output
+- **Prometheus Metrics**: /metrics endpoint for monitoring
+- **Docker Security**: Non-root users, resource limits, multi-stage builds
+
+#### Remaining (20%)
+- **Sentry Integration**: Error tracking and alerting
+- **Database Optimization**: PgBouncer connection pooling
+- **Redis Caching**: Response and query caching
+
 ## Quick Start
 
 ### 1. Setup Environment
@@ -67,6 +100,7 @@ docker exec -it auditcaseos-ollama ollama pull nomic-embed-text
 |---------|-----|-------------|
 | Frontend | http://localhost:13000 | admin@example.com / admin123 |
 | API Docs (Swagger) | http://localhost:18000/docs | - |
+| Prometheus Metrics | http://localhost:18000/metrics | - |
 | MinIO Console | http://localhost:19001 | minioadmin / minioadmin123 |
 | Paperless | http://localhost:18080 | admin / admin123 |
 | Nextcloud | http://localhost:18081 | admin / admin123 |
@@ -97,11 +131,11 @@ docker exec -it auditcaseos-ollama ollama pull nomic-embed-text
 │  │  (Evidence)  │  │    (OCR)     │  │   (Local LLM)        │   │
 │  └──────────────┘  └──────────────┘  └──────────────────────┘   │
 │                                                                  │
-│  ┌──────────────┐  ┌──────────────┐                             │
-│  │  Nextcloud   │  │  ONLYOFFICE  │                             │
-│  │   :18081     │  │   :18082     │                             │
-│  │  (Collab)    │  │  (Editing)   │                             │
-│  └──────────────┘  └──────────────┘                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
+│  │  Nextcloud   │  │  ONLYOFFICE  │  │       Redis          │   │
+│  │   :18081     │  │   :18082     │  │      (queue)         │   │
+│  │  (Collab)    │  │  (Editing)   │  │                      │   │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -163,12 +197,20 @@ docker exec -it auditcaseos-ollama ollama pull nomic-embed-text
 
 ## Testing
 
-Run all tests:
+### Run Unit Tests
 ```bash
-bash scripts/test-all.sh              # 19 core tests
-bash scripts/test-evidence-sync.sh    # 24 sync tests
-bash scripts/test-onlyoffice.sh       # 24 ONLYOFFICE tests
-# Total: 67 tests
+# Inside API container
+docker exec auditcaseos-api pytest tests/ -v
+
+# With coverage
+docker exec auditcaseos-api pytest tests/ --cov=app --cov-report=term-missing
+```
+
+### Run Integration Tests
+```bash
+bash scripts/test-all.sh              # Core tests
+bash scripts/test-evidence-sync.sh    # Sync tests
+bash scripts/test-onlyoffice.sh       # ONLYOFFICE tests
 ```
 
 ## Development
@@ -193,6 +235,11 @@ docker compose up -d --build frontend
 docker exec -it auditcaseos-db psql -U auditcaseos -d auditcaseos
 ```
 
+### Run Linting
+```bash
+docker exec auditcaseos-api ruff check /app/app --no-cache
+```
+
 ### Reset Everything
 ```bash
 docker compose down -v
@@ -207,11 +254,26 @@ docker compose down -v
 | `MINIO_ROOT_USER` | minioadmin | MinIO admin user |
 | `MINIO_ROOT_PASSWORD` | minioadmin123 | MinIO admin password |
 | `SECRET_KEY` | (set in .env) | API secret key |
+| `ENVIRONMENT` | development | Environment mode |
 | `NEXTCLOUD_ADMIN_USER` | admin | Nextcloud admin |
 | `NEXTCLOUD_ADMIN_PASSWORD` | admin123 | Nextcloud password |
 | `ONLYOFFICE_JWT_SECRET` | auditcaseos-onlyoffice-secret | JWT for ONLYOFFICE |
 | `NEXTCLOUD_EXTERNAL_URL` | http://localhost:18081 | Browser access to Nextcloud |
 | `ONLYOFFICE_EXTERNAL_URL` | http://localhost:18082 | Browser access to ONLYOFFICE |
+
+## Production Readiness Gaps
+
+| Gap | Priority | Status |
+|-----|----------|--------|
+| SSL/TLS (HTTPS) | High | Not started |
+| Secret Management | High | Using defaults |
+| Database Migrations (Alembic) | High | Not started |
+| Sentry Error Tracking | Medium | Not started |
+| Backup Strategy | Medium | Not documented |
+| Test Coverage (70%+) | Medium | 35% current |
+| PgBouncer Connection Pooling | Medium | Not started |
+| Load Testing | Medium | Not started |
+| Monitoring/Alerting | Medium | Metrics only |
 
 ## Implementation Guidelines
 
@@ -231,18 +293,12 @@ Full project specification is maintained in `PROJECT_SPEC.xml` including:
 - API specifications
 - Changelog
 
-## Recent Updates (v0.5.4)
+## Recent Updates (v0.6.2)
 
-- **Advanced Search**: Hybrid keyword + semantic search across all content
-- **Global Search Bar**: Header search with auto-suggestions
-- **Workflow Automation**: Rule-based triggers with notifications
-- **Analytics Dashboard**: Visual charts for metrics and trends
-- **WebSocket Updates**: Real-time case collaboration
-- **Notification Center**: In-app notifications with priorities
-
-## Remaining Features
-
-- **Feature 3.10**: Real-time Collaboration (presence, cursors)
+- **CI Pipeline**: All 4 jobs passing (Security, Backend, Frontend, Docker)
+- **Linting**: All ruff errors resolved with proper configuration
+- **Testing**: 18 auth tests passing with SQLite compatibility
+- **Stable Dev**: Phase 4 at 80% - ready for gap prioritization
 
 ## License
 

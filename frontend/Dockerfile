@@ -25,7 +25,7 @@ FROM nginx:alpine AS production
 # Security: Add labels
 LABEL org.opencontainers.image.source="https://github.com/SBG4/auditcaseos"
 LABEL org.opencontainers.image.description="AuditCaseOS Frontend"
-LABEL org.opencontainers.image.version="0.6.0"
+LABEL org.opencontainers.image.version="0.6.2"
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf

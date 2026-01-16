@@ -28,7 +28,7 @@ FROM python:3.12-slim AS production
 # Security: Add labels
 LABEL org.opencontainers.image.source="https://github.com/SBG4/auditcaseos"
 LABEL org.opencontainers.image.description="AuditCaseOS API"
-LABEL org.opencontainers.image.version="0.6.0"
+LABEL org.opencontainers.image.version="0.6.2"
 
 # Security: Create non-root user
 # Source: OWASP Container Security - Run as non-root
