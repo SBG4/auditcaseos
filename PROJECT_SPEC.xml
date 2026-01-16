@@ -16,7 +16,7 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.7.0</version>
+    <version>0.7.1</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-16</last_updated>
     <current_phase>4</current_phase>
@@ -2695,15 +2695,15 @@ $$ LANGUAGE plpgsql;
         </tasks>
         <source>https://letsencrypt.org/docs/</source>
       </feature>
-      <feature id="4.18" status="PENDING">
+      <feature id="4.18" status="COMPLETED">
         <name>Database Migrations</name>
         <description>Alembic setup for schema version control and migrations</description>
         <priority>1</priority>
         <tasks>
-          <task>Install and configure Alembic</task>
-          <task>Generate initial migration from existing schema</task>
-          <task>Add migration command to startup</task>
-          <task>Document migration workflow</task>
+          <task status="done">Install and configure Alembic</task>
+          <task status="done">Generate initial migration from existing schema</task>
+          <task status="done">Add migration command to startup</task>
+          <task status="done">Document migration workflow</task>
         </tasks>
         <source>https://alembic.sqlalchemy.org/</source>
       </feature>
@@ -2813,17 +2813,17 @@ $$ LANGUAGE plpgsql;
   <progress>
     <summary>
       <total_features>59</total_features>
-      <completed>50</completed>
-      <in_progress>1</in_progress>
+      <completed>51</completed>
+      <in_progress>0</in_progress>
       <pending>8</pending>
-      <completion_percentage>85</completion_percentage>
+      <completion_percentage>86</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="2" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="3" features_total="14" features_completed="14" status="COMPLETED"/>
-      <phase number="4" features_total="21" features_completed="12" status="IN_PROGRESS"/>
+      <phase number="4" features_total="21" features_completed="13" status="IN_PROGRESS"/>
       <phase number="5" features_total="6" features_completed="0" status="PLANNED"/>
     </phase_status>
 
@@ -2845,6 +2845,15 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-16" version="0.7.1" phase="4">
+      <changes>
+        <change type="added">Feature 4.18: Alembic database migrations</change>
+        <change type="added">alembic.ini and alembic/ directory with async env.py</change>
+        <change type="added">Baseline migration (001) stamps existing schema</change>
+        <change type="added">Auto-migration on API container startup</change>
+        <change type="fixed">CI: Duplicate dictionary key in config.py secret_mappings</change>
+      </changes>
+    </entry>
     <entry date="2026-01-16" version="0.7.0" phase="4">
       <changes>
         <change type="added">6 new production hardening features (4.16-4.21)</change>
