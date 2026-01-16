@@ -2670,18 +2670,27 @@ $$ LANGUAGE plpgsql;
     </feature_group>
 
     <feature_group name="Production Security">
-      <feature id="4.16" status="PENDING">
+      <feature id="4.16" status="COMPLETED">
         <name>Secret Management</name>
         <description>Implement SOPS + age for encrypted secrets with Docker Compose secrets</description>
         <priority>1</priority>
+        <completion_date>2026-01-16</completion_date>
         <tasks>
-          <task>Install and configure SOPS with age encryption</task>
-          <task>Create secrets/ directory with encrypted files</task>
-          <task>Update docker-compose.yml with secrets section</task>
-          <task>Update config.py to read from /run/secrets/</task>
-          <task>Create setup and decrypt scripts</task>
-          <task>Remove hardcoded defaults from code</task>
+          <task status="done">Install and configure SOPS with age encryption</task>
+          <task status="done">Create secrets/ directory with encrypted files</task>
+          <task status="done">Update docker-compose.yml with secrets section</task>
+          <task status="done">Update config.py to read from /run/secrets/</task>
+          <task status="done">Create setup and decrypt scripts</task>
+          <task status="done">Remove hardcoded defaults from code</task>
         </tasks>
+        <files_created>
+          <file>secrets/README.md</file>
+          <file>secrets/.gitignore</file>
+          <file>secrets/development.template.yaml</file>
+          <file>scripts/setup-secrets.sh</file>
+          <file>scripts/decrypt-secrets.sh</file>
+          <file>.sops.yaml</file>
+        </files_created>
         <source>https://github.com/getsops/sops</source>
       </feature>
       <feature id="4.17" status="PENDING">
@@ -2851,26 +2860,23 @@ $$ LANGUAGE plpgsql;
   <progress>
     <summary>
       <total_features>61</total_features>
-      <completed>53</completed>
+      <completed>54</completed>
       <in_progress>0</in_progress>
-      <pending>8</pending>
-      <completion_percentage>87</completion_percentage>
+      <pending>7</pending>
+      <completion_percentage>89</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="2" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="3" features_total="14" features_completed="14" status="COMPLETED"/>
-      <phase number="4" features_total="21" features_completed="15" status="IN_PROGRESS"/>
+      <phase number="4" features_total="21" features_completed="16" status="IN_PROGRESS"/>
       <phase number="5" features_total="8" features_completed="0" status="PLANNED"/>
     </phase_status>
 
     <next_steps>
-      <note>Phase 4: Production Hardening - Priority Features</note>
-      <step priority="1" feature_id="4.16">Secret Management (SOPS + age) - IN PROGRESS</step>
+      <note>Phase 4: Production Hardening - Remaining Features</note>
       <step priority="1" feature_id="4.17">SSL/TLS (HTTPS)</step>
-      <step priority="1" feature_id="4.18">Database Migrations (Alembic)</step>
-      <step priority="1" feature_id="4.19">Backup Strategy</step>
       <step priority="2" feature_id="4.12">Error Tracking (Sentry)</step>
       <step priority="2" feature_id="4.14">Database Optimization (PgBouncer)</step>
       <step priority="2" feature_id="4.15">Redis Caching</step>
