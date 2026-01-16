@@ -146,6 +146,12 @@ services:
       context: ./api
       dockerfile: Dockerfile
     container_name: auditcaseos-api
+    secrets:
+      - postgres_password
+      - jwt_secret
+      - minio_password
+      - nextcloud_admin_pass
+      - onlyoffice_jwt
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-auditcaseos}:${POSTGRES_PASSWORD:-auditcaseos_secret}@postgres:5432/${POSTGRES_DB:-auditcaseos}
       MINIO_ENDPOINT: minio:9000
@@ -303,3 +309,23 @@ volumes:
   onlyoffice_data:
   onlyoffice_logs:
   onlyoffice_fonts:
+
+# Docker Compose Secrets
+# These are mounted as files to /run/secrets/<name> in containers
+# For development: Run ./scripts/setup-secrets.sh to create these files
+# For production: Use encrypted secrets with SOPS
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+  minio_password:
+    file: ./secrets/minio_password.txt
+  paperless_secret:
+    file: ./secrets/paperless_secret.txt
+  paperless_admin_pass:
+    file: ./secrets/paperless_admin_pass.txt
+  nextcloud_admin_pass:
+    file: ./secrets/nextcloud_admin_pass.txt
+  onlyoffice_jwt:
+    file: ./secrets/onlyoffice_jwt.txt

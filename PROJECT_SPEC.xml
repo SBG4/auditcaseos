@@ -16,11 +16,11 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.6.2</version>
+    <version>0.7.0</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-16</last_updated>
     <current_phase>4</current_phase>
-    <overall_progress>phase_4_80_percent_stable_dev</overall_progress>
+    <overall_progress>phase_4_57_percent_with_full_roadmap</overall_progress>
   </metadata>
 
   <!-- ============================================== -->
@@ -2667,6 +2667,83 @@ $$ LANGUAGE plpgsql;
         <source>https://redis.io/solutions/caching/</source>
       </feature>
     </feature_group>
+
+    <feature_group name="Production Security">
+      <feature id="4.16" status="PENDING">
+        <name>Secret Management</name>
+        <description>Implement SOPS + age for encrypted secrets with Docker Compose secrets</description>
+        <priority>1</priority>
+        <tasks>
+          <task>Install and configure SOPS with age encryption</task>
+          <task>Create secrets/ directory with encrypted files</task>
+          <task>Update docker-compose.yml with secrets section</task>
+          <task>Update config.py to read from /run/secrets/</task>
+          <task>Create setup and decrypt scripts</task>
+          <task>Remove hardcoded defaults from code</task>
+        </tasks>
+        <source>https://github.com/getsops/sops</source>
+      </feature>
+      <feature id="4.17" status="PENDING">
+        <name>SSL/TLS (HTTPS)</name>
+        <description>Configure Nginx with Let's Encrypt or reverse proxy for HTTPS</description>
+        <priority>1</priority>
+        <tasks>
+          <task>Add Nginx service or Traefik as reverse proxy</task>
+          <task>Configure Let's Encrypt automatic certificate renewal</task>
+          <task>Redirect HTTP to HTTPS</task>
+          <task>Configure HSTS in production</task>
+        </tasks>
+        <source>https://letsencrypt.org/docs/</source>
+      </feature>
+      <feature id="4.18" status="PENDING">
+        <name>Database Migrations</name>
+        <description>Alembic setup for schema version control and migrations</description>
+        <priority>1</priority>
+        <tasks>
+          <task>Install and configure Alembic</task>
+          <task>Generate initial migration from existing schema</task>
+          <task>Add migration command to startup</task>
+          <task>Document migration workflow</task>
+        </tasks>
+        <source>https://alembic.sqlalchemy.org/</source>
+      </feature>
+      <feature id="4.19" status="PENDING">
+        <name>Backup Strategy</name>
+        <description>Automated backup for PostgreSQL and MinIO with restore procedures</description>
+        <priority>1</priority>
+        <tasks>
+          <task>Create pg_dump backup script</task>
+          <task>Configure MinIO bucket replication or backup</task>
+          <task>Document restore procedures</task>
+          <task>Add backup cron job or service</task>
+        </tasks>
+        <source>https://www.postgresql.org/docs/current/backup.html</source>
+      </feature>
+      <feature id="4.20" status="PENDING">
+        <name>Load Testing</name>
+        <description>Performance testing with k6 or Locust to establish baselines</description>
+        <priority>2</priority>
+        <tasks>
+          <task>Install k6 or Locust</task>
+          <task>Create test scenarios for critical endpoints</task>
+          <task>Establish performance baselines</task>
+          <task>Document results and limits</task>
+        </tasks>
+        <source>https://k6.io/docs/</source>
+      </feature>
+      <feature id="4.21" status="PENDING">
+        <name>Monitoring and Alerting</name>
+        <description>Grafana dashboards with AlertManager for alerts</description>
+        <priority>2</priority>
+        <tasks>
+          <task>Add Grafana service to docker-compose</task>
+          <task>Configure Prometheus data source</task>
+          <task>Create dashboards for key metrics</task>
+          <task>Configure AlertManager for critical alerts</task>
+        </tasks>
+        <source>https://grafana.com/docs/grafana/latest/</source>
+      </feature>
+    </feature_group>
   </phase>
 
   <!-- ============================================== -->
@@ -2735,28 +2812,32 @@ $$ LANGUAGE plpgsql;
   <!-- ============================================== -->
   <progress>
     <summary>
-      <total_features>53</total_features>
-      <completed>38</completed>
-      <in_progress>0</in_progress>
-      <pending>15</pending>
-      <completion_percentage>72</completion_percentage>
+      <total_features>59</total_features>
+      <completed>50</completed>
+      <in_progress>1</in_progress>
+      <pending>8</pending>
+      <completion_percentage>85</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="2" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="3" features_total="14" features_completed="14" status="COMPLETED"/>
-      <phase number="4" features_total="15" features_completed="12" status="IN_PROGRESS"/>
+      <phase number="4" features_total="21" features_completed="12" status="IN_PROGRESS"/>
       <phase number="5" features_total="6" features_completed="0" status="PLANNED"/>
     </phase_status>
 
     <next_steps>
-      <note>Phase 4: Production Hardening - Starting Now</note>
-      <step priority="1" feature_id="4.1">Rate Limiting (slowapi)</step>
-      <step priority="1" feature_id="4.2">Security Headers</step>
-      <step priority="1" feature_id="4.3">CORS Hardening</step>
-      <step priority="1" feature_id="4.6">pytest Setup</step>
-      <step priority="1" feature_id="4.8">CI/CD Pipeline</step>
+      <note>Phase 4: Production Hardening - Priority Features</note>
+      <step priority="1" feature_id="4.16">Secret Management (SOPS + age) - IN PROGRESS</step>
+      <step priority="1" feature_id="4.17">SSL/TLS (HTTPS)</step>
+      <step priority="1" feature_id="4.18">Database Migrations (Alembic)</step>
+      <step priority="1" feature_id="4.19">Backup Strategy</step>
+      <step priority="2" feature_id="4.12">Error Tracking (Sentry)</step>
+      <step priority="2" feature_id="4.14">Database Optimization (PgBouncer)</step>
+      <step priority="2" feature_id="4.15">Redis Caching</step>
+      <step priority="2" feature_id="4.20">Load Testing</step>
+      <step priority="2" feature_id="4.21">Monitoring/Alerting (Grafana)</step>
     </next_steps>
   </progress>
 
@@ -2764,6 +2845,19 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-16" version="0.7.0" phase="4">
+      <changes>
+        <change type="added">6 new production hardening features (4.16-4.21)</change>
+        <change type="added">Feature 4.16: Secret Management (SOPS + age)</change>
+        <change type="added">Feature 4.17: SSL/TLS (HTTPS)</change>
+        <change type="added">Feature 4.18: Database Migrations (Alembic)</change>
+        <change type="added">Feature 4.19: Backup Strategy</change>
+        <change type="added">Feature 4.20: Load Testing</change>
+        <change type="added">Feature 4.21: Monitoring/Alerting (Grafana)</change>
+        <change type="updated">Phase 4 roadmap now complete with 21 features</change>
+        <change type="updated">Total project features: 59 (was 53)</change>
+      </changes>
+    </entry>
     <entry date="2026-01-16" version="0.6.2" phase="4">
       <changes>
         <change type="fixed">All ruff linting errors resolved (90+ auto-fixes, config updates)</change>

@@ -1,0 +1,15 @@
+# SOPS Configuration for AuditCaseOS
+# Documentation: https://github.com/getsops/sops
+
+creation_rules:
+  # Development secrets - can be decrypted by any developer
+  - path_regex: secrets/development\.enc\.yaml$
+    age: >-
+      age1placeholder_replace_with_your_public_key
+    # Add more developer public keys separated by commas
+
+  # Production secrets - restricted access
+  - path_regex: secrets/production\.enc\.yaml$
+    age: >-
+      age1placeholder_replace_with_production_key
+    # Only CI/CD and production admins should have this key

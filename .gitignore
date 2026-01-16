@@ -2,6 +2,14 @@
 .env
 *.env.local
 
+# Secrets (decrypted files - NEVER commit)
+secrets/*.txt
+secrets/*.yaml
+!secrets/*.enc.yaml
+!secrets/*.template.yaml
+secrets/keys.txt
+*.age.key
+
 # Python
 __pycache__/
 *.py[cod]
