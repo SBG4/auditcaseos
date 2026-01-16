@@ -94,22 +94,34 @@ services:
 
   # PgBouncer connection pooler for API (Paperless/Nextcloud use direct connections)
   pgbouncer:
-    image: edoburu/pgbouncer:1.23.1
+    image: edoburu/pgbouncer:latest
     container_name: auditcaseos-pgbouncer
     environment:
       # Database connection (connects to postgres container)
       DATABASE_URL: postgres://${POSTGRES_USER:-auditcaseos}:${POSTGRES_PASSWORD:-auditcaseos_secret}@postgres:5432/${POSTGRES_DB:-auditcaseos}
-      # Pool settings
+      # Pool mode: transaction is best for async apps (SQLAlchemy + asyncpg)
       POOL_MODE: transaction
+      # Pool sizing
       DEFAULT_POOL_SIZE: 20
       MIN_POOL_SIZE: 5
+      RESERVE_POOL_SIZE: 5
       MAX_CLIENT_CONN: 500
       MAX_DB_CONNECTIONS: 50
+      # Timeouts
+      SERVER_IDLE_TIMEOUT: 600
+      SERVER_LIFETIME: 3600
+      SERVER_CONNECT_TIMEOUT: 15
+      QUERY_WAIT_TIMEOUT: 120
+      # Session cleanup
+      SERVER_RESET_QUERY: DISCARD ALL
+      # Logging
+      LOG_CONNECTIONS: 1
+      LOG_DISCONNECTIONS: 1
+      # Admin users (for SHOW commands)
+      ADMIN_USERS: ${POSTGRES_USER:-auditcaseos}
+      STATS_USERS: ${POSTGRES_USER:-auditcaseos}
       # Auth
-      AUTH_TYPE: md5
-    volumes:
-      - ./configs/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
-      - ./configs/pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+      AUTH_TYPE: scram-sha-256
     ports:
       - "16432:5432"
     depends_on:
