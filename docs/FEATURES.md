@@ -1,6 +1,6 @@
 # AuditCaseOS Features
 
-**Version: 0.8.4** | **Last Updated: 2026-01-16**
+**Version: 0.8.5** | **Last Updated: 2026-01-16**
 
 ## Progress Summary
 
@@ -9,9 +9,9 @@
 | 1 | Core Platform | COMPLETED | 12/12 |
 | 2 | Document Intelligence | COMPLETED | 12/12 |
 | 3 | Frontend & Collaboration | COMPLETED | 14/14 |
-| 4 | Production Hardening | COMPLETED | 20/21 (95%) |
+| 4 | Production Hardening | COMPLETED | 21/21 (100%) |
 | 5 | Future Enhancements | PLANNED | 0/8 |
-| **Total** | | | **59/61 (97%)** |
+| **Total** | | | **60/61 (98%)** |
 
 ---
 
@@ -195,7 +195,7 @@ Automatic sync between MinIO evidence storage and Nextcloud.
 
 ---
 
-## Phase 4: Production Hardening (COMPLETED - 95%)
+## Phase 4: Production Hardening (COMPLETED - 100%)
 
 ### Security Hardening
 
@@ -273,8 +273,14 @@ SOPS + age for encrypted secrets.
 - Files: `.sops.yaml`, `secrets/`, `scripts/setup-secrets.sh`, `scripts/decrypt-secrets.sh`
 - Docker Compose secrets section configured
 
-#### 4.17 SSL/TLS (PENDING)
-Let's Encrypt or reverse proxy for HTTPS.
+#### 4.17 SSL/TLS (COMPLETED)
+Caddy reverse proxy with automatic HTTPS.
+- Port: 443 (HTTPS), 80 (HTTP redirect)
+- TLS modes: "internal" (self-signed for dev), empty (Let's Encrypt for prod)
+- HTTP/3 (QUIC) support
+- Automatic certificate management
+- Files: `configs/caddy/Caddyfile`, `configs/caddy/Caddyfile.prod`
+- Environment: `DOMAIN`, `TLS_MODE`, `ACME_EMAIL`
 
 #### 4.18 Database Migrations (COMPLETED)
 Alembic for schema version control.

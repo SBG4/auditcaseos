@@ -1,0 +1,75 @@
+# AuditCaseOS Caddy Configuration
+# Feature 4.17: SSL/TLS Reverse Proxy
+#
+# Development: Uses self-signed cert for localhost
+# Production: Set DOMAIN and clear TLS_MODE for Let's Encrypt
+
+{
+    # Global options
+    admin off  # Disable admin API in production
+}
+
+# Main site configuration
+{$DOMAIN:localhost} {
+    # TLS mode: "internal" = self-signed, empty = Let's Encrypt
+    tls {$TLS_MODE:internal}
+
+    # API routes (must be before frontend catch-all)
+    handle /api/* {
+        reverse_proxy api:8000 {
+            # WebSocket support (automatic in Caddy)
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # WebSocket route (explicit for clarity)
+    handle /api/v1/ws/* {
+        reverse_proxy api:8000 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Prometheus metrics (internal access only in production)
+    handle /metrics {
+        reverse_proxy api:8000
+    }
+
+    # Health check endpoint
+    handle /health {
+        respond "OK" 200
+    }
+
+    # Frontend (React SPA) - catch-all
+    handle {
+        reverse_proxy frontend:80 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Security headers
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Remove server header
+        -Server
+    }
+
+    # Logging
+    log {
+        output stdout
+        format console
+        level INFO
+    }
+}
+
+# HTTP to HTTPS redirect
+http://{$DOMAIN:localhost} {
+    redir https://{host}{uri} permanent
+}

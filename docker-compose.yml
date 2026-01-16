@@ -456,6 +456,45 @@ services:
         reservations:
           memory: 32M
 
+  # Caddy Reverse Proxy with automatic HTTPS
+  # Feature 4.17: SSL/TLS Termination
+  caddy:
+    image: caddy:2-alpine
+    container_name: auditcaseos-caddy
+    environment:
+      # Domain for SSL certificate
+      DOMAIN: ${DOMAIN:-localhost}
+      # TLS mode: "internal" = self-signed (dev), empty = Let's Encrypt (prod)
+      TLS_MODE: ${TLS_MODE:-internal}
+      # Email for Let's Encrypt notifications
+      ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
+    volumes:
+      - ./configs/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3 (QUIC) support
+    depends_on:
+      frontend:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.5"
+        reservations:
+          memory: 32M
+
 volumes:
   postgres_data:
   minio_data:
@@ -473,6 +512,8 @@ volumes:
   onlyoffice_fonts:
   prometheus_data:
   grafana_data:
+  caddy_data:
+  caddy_config:
 
 # Docker Compose Secrets
 # These are mounted as files to /run/secrets/<name> in containers

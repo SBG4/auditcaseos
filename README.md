@@ -2,7 +2,7 @@
 
 Internal audit case management system with AI-powered analysis, evidence vault, document editing, real-time collaboration, and smart report generation.
 
-**Version: 0.8.4** | **Phase 4: Production Hardening (95%)** | **Status: Active Development**
+**Version: 0.8.5** | **Phase 4: Production Hardening (100% COMPLETE)** | **Status: Active Development**
 
 ![CI](https://github.com/SBG4/auditcaseos/actions/workflows/ci.yml/badge.svg)
 
@@ -13,9 +13,9 @@ Internal audit case management system with AI-powered analysis, evidence vault, 
 | Phase 1 | Core Platform | 12/12 | ✅ Complete |
 | Phase 2 | Document Intelligence | 12/12 | ✅ Complete |
 | Phase 3 | Collaboration & Enterprise | 14/14 | ✅ Complete |
-| Phase 4 | Production Hardening | 20/21 | ✅ 95% Complete |
+| Phase 4 | Production Hardening | 21/21 | ✅ 100% Complete |
 | Phase 5 | Future Enhancements | 0/8 | 📋 Planned |
-| **Total** | **All Features** | **59/61** | **97%** |
+| **Total** | **All Features** | **60/61** | **98%** |
 
 ## Features
 
@@ -51,9 +51,8 @@ Internal audit case management system with AI-powered analysis, evidence vault, 
 - **Advanced Search**: Hybrid keyword + semantic search across all content
 - **Global Search Bar**: Header search with auto-suggestions
 
-### Phase 4: Production Hardening (20/21 features - 95%)
+### Phase 4: Production Hardening (21/21 features - 100% COMPLETE)
 
-#### Completed
 - **Rate Limiting**: slowapi with auth-specific limits (10/min login, 60/min general)
 - **Security Headers**: CSP, HSTS, X-Frame-Options, X-Content-Type-Options
 - **CORS Hardening**: Specific origins instead of wildcard
@@ -70,13 +69,11 @@ Internal audit case management system with AI-powered analysis, evidence vault, 
 - **PgBouncer**: Connection pooling for API (transaction mode, 20 pool size)
 - **Redis Caching**: Cache-aside pattern with orjson, graceful degradation
 - **Secret Management**: SOPS + age encrypted secrets infrastructure
+- **SSL/TLS (HTTPS)**: Caddy reverse proxy with auto-HTTPS (self-signed for dev, Let's Encrypt for prod)
 - **Database Migrations**: Alembic setup with async SQLAlchemy
 - **Backup Strategy**: pg_dump + mc mirror scripts with 7-day retention (42 tests)
 - **Load Testing**: k6 framework with smoke, load, and stress tests
 - **Monitoring/Alerting**: Prometheus + Grafana dashboards with alert rules
-
-#### Remaining (5%)
-- **SSL/TLS (HTTPS)**: Let's Encrypt certificates
 
 ## Quick Start
 
@@ -105,7 +102,8 @@ docker exec -it auditcaseos-ollama ollama pull nomic-embed-text
 
 | Service | URL | Credentials |
 |---------|-----|-------------|
-| Frontend | http://localhost:13000 | admin@example.com / admin123 |
+| **HTTPS Entry (Recommended)** | **https://localhost** | admin@example.com / admin123 |
+| Frontend (direct) | http://localhost:13000 | admin@example.com / admin123 |
 | API Docs (Swagger) | http://localhost:18000/docs | - |
 | Prometheus Metrics | http://localhost:18000/metrics | - |
 | MinIO Console | http://localhost:19001 | minioadmin / minioadmin123 |
@@ -114,6 +112,8 @@ docker exec -it auditcaseos-ollama ollama pull nomic-embed-text
 | ONLYOFFICE | http://localhost:18082 | - |
 | Prometheus | http://localhost:19090 | - |
 | Grafana | http://localhost:19091 | admin / admin123 |
+
+> **Note**: The HTTPS entry (https://localhost) uses a self-signed certificate for development. Your browser will show a security warning - this is expected for local development. For production, set `TLS_MODE=` (empty) and `DOMAIN=yourdomain.com` to use Let's Encrypt certificates.
 
 ## Architecture
 

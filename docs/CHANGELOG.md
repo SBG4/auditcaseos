@@ -4,6 +4,35 @@ All notable changes to this project are documented here.
 
 ---
 
+## [0.8.5] - 2026-01-16
+
+### Added
+- Feature 4.17: SSL/TLS with Caddy reverse proxy - COMPLETE
+  - Automatic HTTPS with self-signed certificates (development)
+  - Let's Encrypt support for production
+  - HTTP to HTTPS redirect
+  - HTTP/3 (QUIC) support
+  - `configs/caddy/Caddyfile` - Development configuration
+  - `configs/caddy/Caddyfile.prod` - Production template
+  - Environment variables: `DOMAIN`, `TLS_MODE`, `ACME_EMAIL`
+
+### Changed
+- Phase 4 progress: 20/21 → 21/21 (100%) **PHASE 4 COMPLETE**
+- Overall progress: 59/61 → 60/61 (98%)
+
+### New Services
+- `caddy` - caddy:2-alpine (ports 80, 443, 443/udp)
+
+### New Volumes
+- `caddy_data` - Certificate storage
+- `caddy_config` - Caddy configuration cache
+
+### Milestone
+- **PHASE 4 COMPLETE** - All production hardening features implemented
+- Only Phase 5 (Future Enhancements) remaining
+
+---
+
 ## [0.8.4] - 2026-01-16
 
 ### Added

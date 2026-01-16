@@ -4,12 +4,12 @@
 
 | Metric | Value |
 |--------|-------|
-| Version | 0.8.4 |
+| Version | 0.8.5 |
 | Total Features | 61 |
-| Completed | 59 |
+| Completed | 60 |
 | In Progress | 0 |
-| Pending | 2 |
-| Completion | 97% |
+| Pending | 1 |
+| Completion | 98% |
 
 ## Phase Status
 
@@ -18,18 +18,12 @@
 | Phase 1: Core Platform | 12/12 | COMPLETED |
 | Phase 2: Document Intelligence | 12/12 | COMPLETED |
 | Phase 3: Frontend & Collaboration | 14/14 | COMPLETED |
-| Phase 4: Production Hardening | 20/21 (95%) | COMPLETED |
+| Phase 4: Production Hardening | 21/21 (100%) | COMPLETED |
 | Phase 5: Future Enhancements | 0/8 | PLANNED |
 
 ---
 
-## Phase 4: Production Hardening (COMPLETED - 95%)
-
-### Remaining Features
-
-| Feature | Status | Description |
-|---------|--------|-------------|
-| 4.17 | PENDING | SSL/TLS (HTTPS) |
+## Phase 4: Production Hardening (COMPLETED - 100%)
 
 ### Completed in Phase 4
 
@@ -51,6 +45,7 @@
 | 4.14 | Database Optimization (PgBouncer) |
 | 4.15 | Redis Caching (cache-aside, orjson, graceful degradation) |
 | 4.16 | Secret Management (SOPS + age) |
+| 4.17 | SSL/TLS (Caddy reverse proxy) |
 | 4.18 | Database Migrations (Alembic) |
 | 4.19 | Backup Strategy (42 test cases) |
 | 4.20 | Load Testing (k6 framework) |
@@ -152,6 +147,7 @@ docker exec -it auditcaseos-ollama ollama pull llama3.2
 
 | Service | URL |
 |---------|-----|
+| **HTTPS Entry** | https://localhost |
 | API Docs | http://localhost:18000/docs |
 | Health Check | http://localhost:18000/health |
 | Frontend | http://localhost:13000 |
@@ -159,6 +155,8 @@ docker exec -it auditcaseos-ollama ollama pull llama3.2
 | Paperless | http://localhost:18080 |
 | Nextcloud | http://localhost:18081 |
 | ONLYOFFICE | http://localhost:18082 |
+| Prometheus | http://localhost:19090 |
+| Grafana | http://localhost:19091 |
 
 ---
 
