@@ -1,0 +1,10 @@
+# Ignore actual backup files (they can be large)
+*.dump
+postgres/*_*.dump
+minio/*_*/
+
+# Keep the directory structure
+!.gitignore
+!README.md
+!postgres/.gitkeep
+!minio/.gitkeep

@@ -16,11 +16,11 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.7.1</version>
+    <version>0.7.2</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-16</last_updated>
     <current_phase>4</current_phase>
-    <overall_progress>phase_4_57_percent_with_full_roadmap</overall_progress>
+    <overall_progress>phase_4_71_percent_15_of_21_complete</overall_progress>
   </metadata>
 
   <!-- ============================================== -->
@@ -2707,15 +2707,17 @@ $$ LANGUAGE plpgsql;
         </tasks>
         <source>https://alembic.sqlalchemy.org/</source>
       </feature>
-      <feature id="4.19" status="PENDING">
+      <feature id="4.19" status="COMPLETED">
         <name>Backup Strategy</name>
         <description>Automated backup for PostgreSQL and MinIO with restore procedures</description>
         <priority>1</priority>
         <tasks>
-          <task>Create pg_dump backup script</task>
-          <task>Configure MinIO bucket replication or backup</task>
-          <task>Document restore procedures</task>
-          <task>Add backup cron job or service</task>
+          <task status="done">Create pg_dump backup script (backup-database.sh)</task>
+          <task status="done">Create mc mirror backup for MinIO (backup-minio.sh)</task>
+          <task status="done">Document restore procedures (restore-database.sh, restore-minio.sh)</task>
+          <task status="done">Create combined backup script (backup-all.sh)</task>
+          <task status="done">Add backups/ directory with .gitignore and README</task>
+          <task status="done">7-day retention policy with automatic cleanup</task>
         </tasks>
         <source>https://www.postgresql.org/docs/current/backup.html</source>
       </feature>
@@ -2845,6 +2847,19 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-16" version="0.7.2" phase="4">
+      <changes>
+        <change type="added">Feature 4.19: Backup Strategy - COMPLETE</change>
+        <change type="added">scripts/backup-database.sh - PostgreSQL backup using pg_dump -Fc</change>
+        <change type="added">scripts/backup-minio.sh - MinIO backup using mc mirror</change>
+        <change type="added">scripts/restore-database.sh - PostgreSQL restore with ANALYZE</change>
+        <change type="added">scripts/restore-minio.sh - MinIO bucket restore</change>
+        <change type="added">scripts/backup-all.sh - Combined backup script for cron</change>
+        <change type="added">backups/ directory structure with README</change>
+        <change type="added">7-day retention policy with automatic cleanup</change>
+        <change type="updated">Phase 4 progress: 14/21 features (67%)</change>
+      </changes>
+    </entry>
     <entry date="2026-01-16" version="0.7.1" phase="4">
       <changes>
         <change type="added">Feature 4.18: Alembic database migrations</change>
