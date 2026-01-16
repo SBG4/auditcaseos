@@ -4,9 +4,9 @@
 
 | Metric | Value |
 |--------|-------|
-| Version | 0.8.0 |
-| Phase | 4 (Production Hardening) - 71% complete |
-| Features | 53/61 (87%) |
+| Version | 0.8.1 |
+| Phase | 4 (Production Hardening) - 81% complete |
+| Features | 55/61 (90%) |
 | Repo | https://github.com/SBG4/auditcaseos |
 | Stack | FastAPI + React + PostgreSQL + MinIO + Ollama + Paperless + Nextcloud + ONLYOFFICE |
 

@@ -2,7 +2,7 @@
 
 Internal audit case management system with AI-powered analysis, evidence vault, document editing, real-time collaboration, and smart report generation.
 
-**Version: 0.7.0** | **Phase 4: Production Hardening (57%)** | **Status: Active Development**
+**Version: 0.8.1** | **Phase 4: Production Hardening (81%)** | **Status: Active Development**
 
 ![CI](https://github.com/SBG4/auditcaseos/actions/workflows/ci.yml/badge.svg)
 
@@ -13,8 +13,9 @@ Internal audit case management system with AI-powered analysis, evidence vault, 
 | Phase 1 | Core Platform | 12/12 | ✅ Complete |
 | Phase 2 | Document Intelligence | 12/12 | ✅ Complete |
 | Phase 3 | Collaboration & Enterprise | 14/14 | ✅ Complete |
-| Phase 4 | Production Hardening | 12/21 | 🔄 57% Complete |
-| **Total** | **All Features** | **50/59** | **85%** |
+| Phase 4 | Production Hardening | 17/21 | 🔄 81% Complete |
+| Phase 5 | Future Enhancements | 0/8 | 📋 Planned |
+| **Total** | **All Features** | **55/61** | **90%** |
 
 ## Features
 
@@ -50,7 +51,7 @@ Internal audit case management system with AI-powered analysis, evidence vault, 
 - **Advanced Search**: Hybrid keyword + semantic search across all content
 - **Global Search Bar**: Header search with auto-suggestions
 
-### Phase 4: Production Hardening (12/15 features - 80%)
+### Phase 4: Production Hardening (17/21 features - 81%)
 
 #### Completed
 - **Rate Limiting**: slowapi with auth-specific limits (10/min login, 60/min general)
@@ -64,14 +65,14 @@ Internal audit case management system with AI-powered analysis, evidence vault, 
 - **Pre-commit Hooks**: ruff, mypy, detect-secrets
 - **Structured Logging**: structlog with JSON output
 - **Prometheus Metrics**: /metrics endpoint for monitoring
+- **Sentry Integration**: Error tracking with user context and performance monitoring
 - **Docker Security**: Non-root users, resource limits, multi-stage builds
+- **Secret Management**: SOPS + age encrypted secrets infrastructure
+- **Database Migrations**: Alembic setup with async SQLAlchemy
+- **Backup Strategy**: pg_dump + mc mirror scripts with 7-day retention (42 tests)
 
-#### Remaining (43%)
-- **Secret Management**: SOPS + age encrypted secrets (IN PROGRESS)
+#### Remaining (19%)
 - **SSL/TLS (HTTPS)**: Let's Encrypt certificates
-- **Database Migrations**: Alembic setup
-- **Backup Strategy**: PostgreSQL and MinIO backups
-- **Sentry Integration**: Error tracking and alerting
 - **Database Optimization**: PgBouncer connection pooling
 - **Redis Caching**: Response and query caching
 - **Load Testing**: k6 performance testing
@@ -272,14 +273,14 @@ docker compose down -v
 | Gap | Priority | Status |
 |-----|----------|--------|
 | SSL/TLS (HTTPS) | High | Not started |
-| Secret Management | High | Using defaults |
-| Database Migrations (Alembic) | High | Not started |
-| Sentry Error Tracking | Medium | Not started |
-| Backup Strategy | Medium | Not documented |
+| Secret Management | High | ✅ SOPS + age infrastructure ready |
+| Database Migrations (Alembic) | High | ✅ Complete |
+| Sentry Error Tracking | Medium | ✅ Complete |
+| Backup Strategy | Medium | ✅ Complete (42 tests) |
 | Test Coverage (70%+) | Medium | 35% current |
 | PgBouncer Connection Pooling | Medium | Not started |
 | Load Testing | Medium | Not started |
-| Monitoring/Alerting | Medium | Metrics only |
+| Monitoring/Alerting | Medium | Prometheus metrics only |
 
 ## Implementation Guidelines
 
@@ -299,12 +300,15 @@ Full project specification is maintained in `PROJECT_SPEC.xml` including:
 - API specifications
 - Changelog
 
-## Recent Updates (v0.6.2)
+## Recent Updates (v0.8.1)
 
+- **Sentry Integration**: Error tracking with FastAPI, SQLAlchemy, and logging integrations
+- **Backup Strategy**: Full backup/restore scripts with 42 automated tests
+- **Database Migrations**: Alembic setup with async SQLAlchemy support
+- **Secret Management**: SOPS + age infrastructure for encrypted secrets
+- **Layered Documentation**: PROJECT_SPEC.xml split into focused docs/ files
+- **Dependency Drift Fixes**: SQLAlchemy 2.x compatibility, IPv6 healthcheck fixes
 - **CI Pipeline**: All 4 jobs passing (Security, Backend, Frontend, Docker)
-- **Linting**: All ruff errors resolved with proper configuration
-- **Testing**: 18 auth tests passing with SQLite compatibility
-- **Stable Dev**: Phase 4 at 80% - ready for gap prioritization
 
 ## License
 
