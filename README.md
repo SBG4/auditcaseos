@@ -1,28 +1,42 @@
 # AuditCaseOS
 
-Internal audit case management system with AI-powered analysis, evidence vault, document editing, and smart report generation.
+Internal audit case management system with AI-powered analysis, evidence vault, document editing, real-time collaboration, and smart report generation.
+
+**Version: 0.5.4** | **Progress: 37/38 features (97%)**
 
 ## Features
 
-### Core (Phase 1)
+### Phase 1: Core Platform (12 features - Complete)
 - **Unified Case ID System**: Automatic ID generation in `SCOPE-TYPE-SEQ` format (e.g., `FIN-USB-0001`)
 - **Case Types**: USB, EMAIL, WEB, POLICY
 - **Scopes**: FIN, HR, IT, SEC, OPS, CORP, LEGAL, RND, PRO, MKT, QA, ENV, SAF, EXT, GOV, GEN
-- **Evidence Vault**: Secure MinIO storage with audit trail
+- **Evidence Vault**: Secure MinIO storage with SHA-256 hash verification
 - **AI Analysis**: Local Ollama LLM for case summaries and insights
-- **Full Audit Log**: Every action tracked
+- **Full Audit Log**: Every action tracked with user attribution
+- **Case Timeline**: Chronological event tracking
+- **Findings Management**: Document violations, observations, recommendations
+- **User Management**: Role-based access (admin, auditor, reviewer, viewer)
+- **JWT Authentication**: Secure token-based auth
 
-### Document Intelligence (Phase 2)
+### Phase 2: Document Intelligence (12 features - Complete)
 - **OCR Processing**: Paperless-ngx for document text extraction
-- **Entity Extraction**: Automatic detection of employee IDs, hostnames, IPs
-- **Report Generation**: DOCX reports from templates
-- **Vector Search**: Semantic search with pgvector embeddings
+- **Entity Extraction**: Automatic detection of employee IDs, hostnames, IPs, emails
+- **Report Generation**: DOCX reports from 4 templates (Standard, Executive, Detailed, Compliance)
+- **Vector Search**: Semantic search with pgvector embeddings (768 dimensions)
+- **Similar Case Detection**: AI-powered case matching
+- **RAG Engine**: Retrieval-Augmented Generation for intelligent analysis
 
-### Collaboration (Phase 3) - Current
+### Phase 3: Collaboration & Enterprise (13/14 features - 93%)
 - **React Frontend**: Modern SPA with TypeScript and TailwindCSS
 - **Nextcloud Integration**: File collaboration and case folders
-- **ONLYOFFICE**: In-browser document editing (DOCX, XLSX, PPTX)
+- **ONLYOFFICE**: In-browser document editing (DOCX, XLSX, PPTX, ODS, ODP)
 - **Bidirectional Sync**: Evidence syncs between API and Nextcloud
+- **WebSocket Real-time Updates**: Live case updates and presence tracking
+- **Analytics Dashboard**: Visual charts for case metrics, trends, and insights
+- **Workflow Automation**: Rule-based triggers with 5 action types
+- **Notification System**: In-app notifications with priority levels
+- **Advanced Search**: Hybrid keyword + semantic search across all content
+- **Global Search Bar**: Header search with auto-suggestions
 
 ## Quick Start
 
@@ -40,7 +54,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-### 3. Pull Ollama Model (first time only)
+### 3. Pull Ollama Models (first time only)
 
 ```bash
 docker exec -it auditcaseos-ollama ollama pull llama3.2
@@ -101,26 +115,51 @@ docker exec -it auditcaseos-ollama ollama pull nomic-embed-text
 - `DELETE /api/v1/cases/{case_id}` - Archive case
 
 ### Evidence
-- `POST /api/v1/evidence/cases/{case_id}` - Upload evidence
+- `POST /api/v1/evidence/cases/{case_id}/upload` - Upload evidence
 - `GET /api/v1/evidence/cases/{case_id}` - List case evidence
 - `GET /api/v1/evidence/{evidence_id}/download` - Download file
 - `POST /api/v1/evidence/cases/{case_id}/sync-to-nextcloud` - Sync to Nextcloud
 - `POST /api/v1/evidence/cases/{case_id}/import-from-nextcloud` - Import from Nextcloud
 
+### Search
+- `GET /api/v1/search` - Hybrid search (keyword + semantic)
+- `GET /api/v1/search/suggest` - Auto-complete suggestions
+
 ### AI
 - `POST /api/v1/ai/summarize/{case_id}` - Generate AI summary
-- `POST /api/v1/ai/similar/{case_id}` - Find similar cases
-- `POST /api/v1/ai/extract-entities` - Extract entities from text
+- `GET /api/v1/ai/similar-cases/{case_id}` - Find similar cases
+- `POST /api/v1/ai/embed/case/{case_id}` - Generate embeddings
+
+### Analytics
+- `GET /api/v1/analytics/overview` - Dashboard overview stats
+- `GET /api/v1/analytics/cases` - Case statistics by status/severity/type
+- `GET /api/v1/analytics/trends` - Case trends over time
+- `GET /api/v1/analytics/full` - Complete analytics data
+
+### Workflows
+- `GET /api/v1/workflows/rules` - List workflow rules
+- `POST /api/v1/workflows/rules` - Create workflow rule (admin)
+- `POST /api/v1/workflows/rules/{id}/toggle` - Enable/disable rule
+- `GET /api/v1/workflows/history` - Execution history
+
+### Notifications
+- `GET /api/v1/notifications` - List notifications
+- `GET /api/v1/notifications/unread-count` - Unread count
+- `POST /api/v1/notifications/mark-all-read` - Mark all as read
 
 ### ONLYOFFICE
 - `GET /api/v1/onlyoffice/health` - ONLYOFFICE health check
 - `GET /api/v1/onlyoffice/extensions` - Supported file types
 - `GET /api/v1/onlyoffice/edit-url` - Get document edit URL
 
+### WebSocket
+- `WS /api/v1/ws/cases/{case_id}` - Real-time case updates
+
 ### Users & Auth
 - `POST /api/v1/auth/login` - Login
-- `GET /api/v1/users/me` - Current user profile
-- `POST /api/v1/users` - Create user (admin only)
+- `GET /api/v1/auth/me` - Current user profile
+- `POST /api/v1/auth/register` - Create user (admin only)
+- `GET /api/v1/auth/users` - List users (admin only)
 
 ## Testing
 
@@ -181,6 +220,8 @@ See `PROJECT_SPEC.xml` for detailed implementation guidelines including:
 - ONLYOFFICE Configuration
 - Common Failure Patterns to Avoid
 - Implementation Checklist
+- Development Best Practices (80+ rules from official sources)
+- AI Agent Guidelines for multi-agent development
 
 ## Project Tracking
 
@@ -190,4 +231,19 @@ Full project specification is maintained in `PROJECT_SPEC.xml` including:
 - API specifications
 - Changelog
 
-Current version: **0.4.8**
+## Recent Updates (v0.5.4)
+
+- **Advanced Search**: Hybrid keyword + semantic search across all content
+- **Global Search Bar**: Header search with auto-suggestions
+- **Workflow Automation**: Rule-based triggers with notifications
+- **Analytics Dashboard**: Visual charts for metrics and trends
+- **WebSocket Updates**: Real-time case collaboration
+- **Notification Center**: In-app notifications with priorities
+
+## Remaining Features
+
+- **Feature 3.10**: Real-time Collaboration (presence, cursors)
+
+## License
+
+Proprietary - Internal Use Only
