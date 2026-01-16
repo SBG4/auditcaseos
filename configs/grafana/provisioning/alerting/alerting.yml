@@ -1,0 +1,309 @@
+# Grafana Alerting Configuration for AuditCaseOS
+# Note: Email notifications require SMTP to be configured in docker-compose.yml
+
+apiVersion: 1
+
+# Contact Points - Define where alerts are sent
+contactPoints:
+  - orgId: 1
+    name: email-alerts
+    receivers:
+      - uid: email-primary
+        type: email
+        settings:
+          addresses: yajindanyashi4@gmail.com
+          singleEmail: true
+        disableResolveMessage: false
+
+# Notification Policies - Define routing rules
+policies:
+  - orgId: 1
+    receiver: email-alerts
+    group_by:
+      - grafana_folder
+      - alertname
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+
+# Alert Rules
+groups:
+  - orgId: 1
+    name: AuditCaseOS API Alerts
+    folder: AuditCaseOS
+    interval: 1m
+    rules:
+      # API Down Alert
+      - uid: api-down
+        title: API Down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: up{job="auditcaseos-api"}
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: last
+              refId: C
+              type: classic_conditions
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 1m
+        annotations:
+          summary: AuditCaseOS API is down
+          description: The API service has been unreachable for more than 1 minute.
+        labels:
+          severity: critical
+          service: api
+
+      # High Error Rate Alert
+      - uid: api-high-error-rate
+        title: API High Error Rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) * 100
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 5
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: avg
+              refId: C
+              type: classic_conditions
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: High API error rate detected
+          description: Error rate is above 5% for the last 5 minutes.
+        labels:
+          severity: critical
+          service: api
+
+      # High Latency Alert
+      - uid: api-high-latency
+        title: API High Latency
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 2
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: avg
+              refId: C
+              type: classic_conditions
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: High API latency detected
+          description: P95 latency is above 2 seconds for the last 5 minutes.
+        labels:
+          severity: warning
+          service: api
+
+  - orgId: 1
+    name: AuditCaseOS Database Alerts
+    folder: AuditCaseOS
+    interval: 1m
+    rules:
+      # PostgreSQL Down
+      - uid: postgresql-down
+        title: PostgreSQL Down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: pg_up
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: last
+              refId: C
+              type: classic_conditions
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 1m
+        annotations:
+          summary: PostgreSQL database is down
+          description: PostgreSQL has been unreachable for more than 1 minute.
+        labels:
+          severity: critical
+          service: postgresql
+
+      # Redis Down
+      - uid: redis-down
+        title: Redis Down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: redis_up
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: last
+              refId: C
+              type: classic_conditions
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 1m
+        annotations:
+          summary: Redis cache is down
+          description: Redis has been unreachable for more than 1 minute.
+        labels:
+          severity: critical
+          service: redis
+
+      # Redis High Memory
+      - uid: redis-high-memory
+        title: Redis High Memory Usage
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: redis_memory_used_bytes / redis_memory_max_bytes * 100
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 80
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: avg
+              refId: C
+              type: classic_conditions
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: Redis memory usage is high
+          description: Redis memory usage has been above 80% for 5 minutes.
+        labels:
+          severity: warning
+          service: redis
