@@ -237,7 +237,7 @@ auditcaseos/
 | SEC | Security | Physical and information security |
 | OPS | Operations | Business operations |
 | CORP | Corporate | Corporate and executive matters |
-| LEGAL | Legal | Legal compliance, contracts |
+| LEG | Legal | Legal compliance, contracts |
 | RND | Research & Development | R&D, innovation |
 | PRO | Procurement | Purchasing, vendor management |
 | MKT | Marketing | Marketing activities |

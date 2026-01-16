@@ -22,7 +22,7 @@ Internal audit case management system with AI-powered analysis, evidence vault, 
 ### Phase 1: Core Platform (12 features - Complete)
 - **Unified Case ID System**: Automatic ID generation in `SCOPE-TYPE-SEQ` format (e.g., `FIN-USB-0001`)
 - **Case Types**: USB, EMAIL, WEB, POLICY
-- **Scopes**: FIN, HR, IT, SEC, OPS, CORP, LEGAL, RND, PRO, MKT, QA, ENV, SAF, EXT, GOV, GEN
+- **Scopes**: FIN, HR, IT, SEC, OPS, CORP, LEG, RND, PRO, MKT, QA, ENV, SAF, EXT, GOV, GEN
 - **Evidence Vault**: Secure MinIO storage with SHA-256 hash verification
 - **AI Analysis**: Local Ollama LLM for case summaries and insights
 - **Full Audit Log**: Every action tracked with user attribution

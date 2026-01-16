@@ -16,12 +16,12 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.8.0</version>
+    <version>0.8.1</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-16</last_updated>
     <documentation_layer>See docs/ folder and CLAUDE.md for layered documentation</documentation_layer>
     <current_phase>4</current_phase>
-    <overall_progress>phase_4_71_percent_15_of_21_complete</overall_progress>
+    <overall_progress>phase_4_81_percent_17_of_21_complete</overall_progress>
   </metadata>
 
   <!-- ============================================== -->
@@ -2904,6 +2904,19 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-16" version="0.8.1" phase="4">
+      <changes>
+        <change type="added">Feature 4.12: Sentry error tracking with FastAPI, SQLAlchemy, logging integrations</change>
+        <change type="added">SentryUserContextMiddleware for JWT-based user attribution in errors</change>
+        <change type="fixed">SQLAlchemy 2.x compatibility - renamed 'metadata' attribute to 'extra_data'</change>
+        <change type="fixed">Frontend healthcheck IPv6 issue - changed localhost to 127.0.0.1</change>
+        <change type="fixed">Alembic files missing from Docker image - added COPY commands</change>
+        <change type="fixed">Nginx config permissions for non-root user</change>
+        <change type="fixed">Documentation inconsistencies across all files</change>
+        <change type="updated">Phase 4 progress: 17/21 features (81%)</change>
+        <change type="updated">Overall progress: 55/61 features (90%)</change>
+      </changes>
+    </entry>
     <entry date="2026-01-16" version="0.8.0" phase="4">
       <changes>
         <change type="added">Layered Memory Architecture for Claude Code</change>

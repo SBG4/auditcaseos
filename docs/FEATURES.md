@@ -1,5 +1,7 @@
 # AuditCaseOS Features
 
+**Version: 0.8.1** | **Last Updated: 2026-01-16**
+
 ## Progress Summary
 
 | Phase | Name | Status | Features |
@@ -254,8 +256,10 @@ Cache-aside pattern for frequently accessed data.
 
 ### Production Security
 
-#### 4.16 Secret Management (PENDING)
+#### 4.16 Secret Management (COMPLETED)
 SOPS + age for encrypted secrets.
+- Files: `.sops.yaml`, `secrets/`, `scripts/setup-secrets.sh`, `scripts/decrypt-secrets.sh`
+- Docker Compose secrets section configured
 
 #### 4.17 SSL/TLS (PENDING)
 Let's Encrypt or reverse proxy for HTTPS.

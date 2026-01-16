@@ -4,6 +4,44 @@ All notable changes to this project are documented here.
 
 ---
 
+## [0.8.1] - 2026-01-16
+
+### Added
+- Feature 4.12: Sentry error tracking with FastAPI, SQLAlchemy, logging integrations
+- SentryUserContextMiddleware for JWT-based user attribution
+
+### Fixed
+- SQLAlchemy 2.x compatibility - renamed 'metadata' attribute to 'extra_data' in models
+- Frontend healthcheck IPv6 issue - changed localhost to 127.0.0.1
+- Alembic files missing from Docker image - added COPY commands
+- Nginx config permissions for non-root user
+- Documentation inconsistencies across all files (version, progress, scope codes)
+
+### Changed
+- Phase 4 progress: 17/21 features (81%)
+- Overall progress: 55/61 features (90%)
+
+---
+
+## [0.8.0] - 2026-01-16
+
+### Added
+- Layered Memory Architecture for Claude Code
+- `docs/ARCHITECTURE.md` - System design, diagrams, URL rules
+- `docs/FEATURES.md` - All 61 features by phase
+- `docs/CONVENTIONS.md` - Code style, patterns from official sources
+- `docs/ROADMAP.md` - Progress tracking and next steps
+- `docs/CHANGELOG.md` - Version history
+- `docs/AGENT_PATTERNS.md` - AI agent usage guidelines
+- `.claude/commands/` - build.md, test.md, backup.md
+
+### Changed
+- `CLAUDE.md` rewritten as Layer 1 quick reference (~115 lines)
+- `PROJECT_SPEC.xml` now serves as versioned archive
+- Context reduction: 48K tokens → ~3-5K per session (90% reduction)
+
+---
+
 ## [0.7.3] - 2026-01-16
 
 ### Added
