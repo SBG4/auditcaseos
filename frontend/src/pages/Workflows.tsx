@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   BoltIcon,
-  PlusIcon,
-  PencilIcon,
   TrashIcon,
   PlayIcon,
   PauseIcon,
@@ -18,7 +16,6 @@ import Button from '../components/common/Button';
 import Card, { CardHeader } from '../components/common/Card';
 import type {
   WorkflowRule,
-  WorkflowRuleCreate,
   TriggerType,
   ActionType,
   WorkflowHistory,

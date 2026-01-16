@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import {
   BellIcon,
   CheckIcon,
-  XMarkIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon,
 } from '@heroicons/react/24/outline';

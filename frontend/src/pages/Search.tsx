@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import {
   MagnifyingGlassIcon,
   FunnelIcon,
@@ -12,11 +12,12 @@ import {
 } from '@heroicons/react/24/outline';
 import { searchApi } from '../services/api';
 import Card from '../components/common/Card';
-import Badge from '../components/common/Badge';
-import type { SearchEntityType, SearchMode, SearchResultItem } from '../types';
+import type { SearchEntityType, SearchMode, SearchResultItem, SearchResponse } from '../types';
 import { format } from 'date-fns';
 
-const ENTITY_TYPES: { value: SearchEntityType; label: string }[] = [
+type EntityTypeOption = SearchEntityType | 'all';
+
+const ENTITY_TYPES: { value: EntityTypeOption; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'case', label: 'Cases' },
   { value: 'evidence', label: 'Evidence' },
@@ -34,11 +35,11 @@ const SEARCH_MODES: { value: SearchMode; label: string; description: string }[] 
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
-  const initialEntityTypes = searchParams.get('entity_types')?.split(',') as SearchEntityType[] || ['all'];
+  const initialEntityTypes = (searchParams.get('entity_types')?.split(',') || ['all']) as EntityTypeOption[];
   const initialMode = (searchParams.get('mode') as SearchMode) || 'hybrid';
 
   const [query, setQuery] = useState(initialQuery);
-  const [entityTypes, setEntityTypes] = useState<SearchEntityType[]>(initialEntityTypes);
+  const [entityTypes, setEntityTypes] = useState<EntityTypeOption[]>(initialEntityTypes);
   const [mode, setMode] = useState<SearchMode>(initialMode);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
@@ -48,25 +49,25 @@ export default function Search() {
     const q = searchParams.get('q') || '';
     setQuery(q);
     if (searchParams.get('entity_types')) {
-      setEntityTypes(searchParams.get('entity_types')!.split(',') as SearchEntityType[]);
+      setEntityTypes(searchParams.get('entity_types')!.split(',') as EntityTypeOption[]);
     }
     if (searchParams.get('mode')) {
       setMode(searchParams.get('mode') as SearchMode);
     }
   }, [searchParams]);
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching } = useQuery<SearchResponse>({
     queryKey: ['search', query, entityTypes, mode, page],
     queryFn: () =>
       searchApi.search({
         q: query,
-        entity_types: entityTypes.includes('all') ? undefined : entityTypes,
+        entity_types: entityTypes.includes('all') ? undefined : entityTypes.filter((t): t is SearchEntityType => t !== 'all'),
         mode,
         page,
         page_size: 20,
       }),
     enabled: query.length >= 2,
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 
   const handleSearch = (e: React.FormEvent) => {
@@ -85,11 +86,11 @@ export default function Search() {
     }
   };
 
-  const toggleEntityType = (type: SearchEntityType) => {
+  const toggleEntityType = (type: EntityTypeOption) => {
     if (type === 'all') {
       setEntityTypes(['all']);
     } else {
-      let newTypes = entityTypes.filter((t) => t !== 'all');
+      let newTypes: EntityTypeOption[] = entityTypes.filter((t) => t !== 'all');
       if (newTypes.includes(type)) {
         newTypes = newTypes.filter((t) => t !== type);
       } else {
@@ -119,20 +120,20 @@ export default function Search() {
     }
   };
 
-  const getEntityColor = (type: string): 'primary' | 'success' | 'warning' | 'danger' | 'gray' => {
+  const getEntityColorClass = (type: string): string => {
     switch (type) {
       case 'case':
-        return 'primary';
+        return 'bg-blue-100 text-blue-600';
       case 'evidence':
-        return 'success';
+        return 'bg-green-100 text-green-600';
       case 'finding':
-        return 'warning';
+        return 'bg-yellow-100 text-yellow-600';
       case 'entity':
-        return 'danger';
+        return 'bg-red-100 text-red-600';
       case 'timeline':
-        return 'gray';
+        return 'bg-gray-100 text-gray-600';
       default:
-        return 'gray';
+        return 'bg-gray-100 text-gray-600';
     }
   };
 
@@ -269,7 +270,7 @@ export default function Search() {
                     key={type}
                     className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded"
                   >
-                    {type}: {count}
+                    {type}: {count as number}
                   </span>
                 ))}
               </div>
@@ -290,16 +291,14 @@ export default function Search() {
               </div>
             ) : (
               <div className="divide-y divide-gray-200">
-                {data.items.map((result) => (
+                {data.items.map((result: SearchResultItem) => (
                   <Link
                     key={`${result.entity_type}-${result.id}`}
                     to={getResultLink(result)}
                     className="block p-4 hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex items-start gap-4">
-                      <div
-                        className={`p-2 rounded-lg bg-${getEntityColor(result.entity_type)}-100 text-${getEntityColor(result.entity_type)}-600`}
-                      >
+                      <div className={`p-2 rounded-lg ${getEntityColorClass(result.entity_type)}`}>
                         {getEntityIcon(result.entity_type)}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -307,9 +306,9 @@ export default function Search() {
                           <h3 className="text-sm font-semibold text-gray-900 truncate">
                             {result.title}
                           </h3>
-                          <Badge variant={getEntityColor(result.entity_type)} size="sm">
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getEntityColorClass(result.entity_type)}`}>
                             {result.entity_type}
-                          </Badge>
+                          </span>
                         </div>
                         <p className="text-sm text-gray-600 line-clamp-2">{result.snippet}</p>
                         <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
