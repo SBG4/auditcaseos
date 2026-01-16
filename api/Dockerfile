@@ -50,6 +50,10 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Copy application code
 COPY --chown=appuser:appgroup app/ ./app/
 
+# Copy Alembic migration files
+COPY --chown=appuser:appgroup alembic.ini ./
+COPY --chown=appuser:appgroup alembic/ ./alembic/
+
 # Security: Switch to non-root user
 USER appuser
 

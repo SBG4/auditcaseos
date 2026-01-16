@@ -126,7 +126,9 @@ class AuditLog(Base):
         nullable=True,
     )
 
-    metadata: Mapped[dict[str, Any] | None] = mapped_column(
+    # Note: 'metadata' is reserved in SQLAlchemy 2.x, use 'extra_data' as attribute name
+    extra_data: Mapped[dict[str, Any] | None] = mapped_column(
+        "metadata",  # Keep the column name as 'metadata' in the database
         JSONB,
         nullable=True,
     )
