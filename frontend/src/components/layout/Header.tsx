@@ -5,6 +5,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../hooks/useAuth';
 import NotificationCenter from '../notifications/NotificationCenter';
+import SearchBar from '../search/SearchBar';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -27,6 +28,11 @@ export default function Header({ onMenuClick }: HeaderProps) {
           <Link to="/" className="flex items-center ml-2 lg:ml-0">
             <span className="text-xl font-bold text-primary-600">AuditCaseOS</span>
           </Link>
+        </div>
+
+        {/* Global Search */}
+        <div className="hidden md:block flex-1 max-w-xl mx-8">
+          <SearchBar placeholder="Search..." />
         </div>
 
         <div className="flex items-center gap-4">

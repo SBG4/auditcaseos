@@ -472,3 +472,43 @@ export interface WorkflowHistoryListResponse {
   page_size: number;
   total_pages: number;
 }
+
+// Search types
+export type SearchEntityType = 'case' | 'evidence' | 'finding' | 'entity' | 'timeline' | 'all';
+export type SearchMode = 'keyword' | 'semantic' | 'hybrid';
+
+export interface SearchResultItem {
+  id: string;
+  entity_type: SearchEntityType;
+  title: string;
+  snippet: string;
+  keyword_score: number;
+  semantic_score: number;
+  combined_score: number;
+  case_id: string | null;
+  case_uuid: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface SearchResponse {
+  items: SearchResultItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  query: string;
+  mode: SearchMode;
+  entity_type_counts: Record<string, number>;
+  search_time_ms: number;
+}
+
+export interface SearchSuggestion {
+  type: string;
+  value: string;
+  entity_type?: string;
+}
+
+export interface SearchSuggestResponse {
+  suggestions: SearchSuggestion[];
+}

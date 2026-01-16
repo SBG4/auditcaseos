@@ -11,6 +11,7 @@ import Reports from './pages/Reports';
 import Analytics from './pages/Analytics';
 import Admin from './pages/Admin';
 import Workflows from './pages/Workflows';
+import Search from './pages/Search';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -45,6 +46,7 @@ export default function App() {
           <Route path="cases/:id" element={<ErrorBoundary><CaseDetail /></ErrorBoundary>} />
           <Route path="reports" element={<ErrorBoundary><Reports /></ErrorBoundary>} />
           <Route path="analytics" element={<ErrorBoundary><Analytics /></ErrorBoundary>} />
+          <Route path="search" element={<ErrorBoundary><Search /></ErrorBoundary>} />
           <Route path="admin" element={<ErrorBoundary><Admin /></ErrorBoundary>} />
           <Route path="workflows" element={<ErrorBoundary><Workflows /></ErrorBoundary>} />
         </Route>

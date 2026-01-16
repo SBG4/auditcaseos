@@ -16,7 +16,7 @@
     <name>AuditCaseOS</name>
     <tagline>Case management + Evidence vault + Doc intelligence + RAG + Reporting</tagline>
     <description>Internal audit case management system with AI-powered analysis, evidence vault, and smart report generation. A composed-from-existing-projects dockerized bundle designed to be forked and evolved.</description>
-    <version>0.5.3</version>
+    <version>0.5.4</version>
     <repository>https://github.com/SBG4/auditcaseos</repository>
     <last_updated>2026-01-15</last_updated>
     <current_phase>3</current_phase>
@@ -2394,9 +2394,44 @@ $$ LANGUAGE plpgsql;
         </api_endpoints>
         <tested>false</tested>
       </feature>
-      <feature id="3.13" status="PENDING">
+      <feature id="3.13" status="COMPLETED">
         <name>Advanced Search</name>
         <description>Full-text and semantic search across all content</description>
+        <completion_date>2026-01-16</completion_date>
+        <files_created>
+          <file>api/app/schemas/search.py - Search request/response schemas</file>
+          <file>api/app/services/search_service.py - Hybrid search service (keyword + semantic)</file>
+          <file>api/app/routers/search.py - Search API endpoints</file>
+          <file>frontend/src/hooks/useDebounce.ts - Debounce hook for search input</file>
+          <file>frontend/src/components/search/SearchBar.tsx - Global search bar with suggestions</file>
+          <file>frontend/src/pages/Search.tsx - Search results page</file>
+        </files_created>
+        <files_modified>
+          <file>api/app/main.py - Added search router</file>
+          <file>api/app/routers/__init__.py - Added search_router export</file>
+          <file>api/app/services/__init__.py - Added SearchService export</file>
+          <file>frontend/src/types/index.ts - Added search types</file>
+          <file>frontend/src/services/api.ts - Added searchApi</file>
+          <file>frontend/src/components/layout/Header.tsx - Added SearchBar</file>
+          <file>frontend/src/App.tsx - Added /search route</file>
+        </files_modified>
+        <features>
+          <feature>Hybrid search combining keyword (ILIKE) and semantic (pgvector) with 40/60 weighting</feature>
+          <feature>Search across cases, evidence, findings, entities, and timeline</feature>
+          <feature>Entity type filtering (search in specific content types)</feature>
+          <feature>Search mode selection: keyword, semantic, or hybrid</feature>
+          <feature>Auto-suggest with debounced input (300ms)</feature>
+          <feature>Global search bar in header with dropdown suggestions</feature>
+          <feature>Dedicated search results page with filters and pagination</feature>
+          <feature>Result snippets with relevance scoring</feature>
+          <feature>Entity type counts in search results</feature>
+          <feature>Search time performance metrics</feature>
+        </features>
+        <api_endpoints>
+          <endpoint method="GET" path="/api/v1/search">Search with filters</endpoint>
+          <endpoint method="GET" path="/api/v1/search/suggest">Auto-complete suggestions</endpoint>
+        </api_endpoints>
+        <tested>false</tested>
       </feature>
       <feature id="3.14" status="COMPLETED">
         <name>Evidence-Nextcloud Bidirectional Sync</name>
@@ -2433,20 +2468,20 @@ $$ LANGUAGE plpgsql;
   <progress>
     <summary>
       <total_features>38</total_features>
-      <completed>36</completed>
+      <completed>37</completed>
       <in_progress>0</in_progress>
-      <pending>2</pending>
-      <completion_percentage>95</completion_percentage>
+      <pending>1</pending>
+      <completion_percentage>97</completion_percentage>
     </summary>
 
     <phase_status>
       <phase number="1" features_total="12" features_completed="12" status="COMPLETED"/>
       <phase number="2" features_total="12" features_completed="12" status="COMPLETED"/>
-      <phase number="3" features_total="14" features_completed="12" status="IN_PROGRESS"/>
+      <phase number="3" features_total="14" features_completed="13" status="IN_PROGRESS"/>
     </phase_status>
 
     <next_steps>
-      <step priority="1" feature_id="3.13">Advanced Search</step>
+      <step priority="1" feature_id="3.10">Real-time Collaboration</step>
     </next_steps>
   </progress>
 
@@ -2454,6 +2489,19 @@ $$ LANGUAGE plpgsql;
   <!-- CHANGELOG                                      -->
   <!-- ============================================== -->
   <changelog>
+    <entry date="2026-01-16" version="0.5.4" phase="3">
+      <changes>
+        <change type="added">Feature 3.13: Advanced Search - COMPLETE</change>
+        <change type="added">Hybrid search combining keyword (ILIKE 40%) and semantic (pgvector 60%)</change>
+        <change type="added">Search across cases, evidence, findings, entities, and timeline</change>
+        <change type="added">Global search bar in header with auto-suggestions</change>
+        <change type="added">Dedicated search results page with filters and pagination</change>
+        <change type="added">Search mode selection: keyword, semantic, or hybrid</change>
+        <change type="added">Entity type filtering in search</change>
+        <change type="added">Debounced search input (300ms) for performance</change>
+        <change type="added">API endpoints: GET /search, GET /search/suggest</change>
+      </changes>
+    </entry>
     <entry date="2026-01-16" version="0.5.3" phase="3">
       <changes>
         <change type="added">Feature 3.12: Workflow Automation - COMPLETE</change>

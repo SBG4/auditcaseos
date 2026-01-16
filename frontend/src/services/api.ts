@@ -36,6 +36,10 @@ import type {
   WorkflowAction,
   WorkflowHistory,
   WorkflowHistoryListResponse,
+  SearchEntityType,
+  SearchMode,
+  SearchResponse,
+  SearchSuggestResponse,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
@@ -639,6 +643,32 @@ export const workflowsApi = {
     const response = await api.post<WorkflowHistory>(
       `/workflows/rules/${ruleId}/trigger/${caseId}`
     );
+    return response.data;
+  },
+};
+
+// Search API
+export const searchApi = {
+  search: async (params: {
+    q: string;
+    entity_types?: SearchEntityType[];
+    mode?: SearchMode;
+    scope_code?: string;
+    severity?: string;
+    status?: string;
+    date_from?: string;
+    date_to?: string;
+    page?: number;
+    page_size?: number;
+  }): Promise<SearchResponse> => {
+    const response = await api.get<SearchResponse>('/search', { params });
+    return response.data;
+  },
+
+  suggest: async (q: string, limit?: number): Promise<SearchSuggestResponse> => {
+    const response = await api.get<SearchSuggestResponse>('/search/suggest', {
+      params: { q, limit },
+    });
     return response.data;
   },
 };

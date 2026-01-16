@@ -16,6 +16,7 @@ from .scopes import router as scopes_router
 from .sync import router as sync_router
 from .users import router as users_router
 from .websocket import router as websocket_router
+from .search import router as search_router
 from .workflows import router as workflows_router
 
 __all__ = [
@@ -29,6 +30,7 @@ __all__ = [
     "onlyoffice_router",
     "reports_router",
     "scopes_router",
+    "search_router",
     "sync_router",
     "users_router",
     "websocket_router",

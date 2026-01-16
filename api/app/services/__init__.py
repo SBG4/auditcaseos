@@ -14,6 +14,7 @@ from .workflow_service import WorkflowService
 from .onlyoffice_service import OnlyOfficeService
 from .paperless_service import PaperlessService
 from .report_service import ReportService
+from .search_service import SearchService
 from .storage_service import StorageService
 from .websocket_service import ConnectionManager
 
@@ -31,6 +32,7 @@ __all__ = [
     "PaperlessService",
     "ReportService",
     "SchedulerService",
+    "SearchService",
     "StorageService",
     "WorkflowExecutor",
     "WorkflowService",
