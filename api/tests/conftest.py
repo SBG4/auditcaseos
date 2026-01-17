@@ -778,6 +778,39 @@ def sample_text_file():
 
 
 # =============================================================================
+# PYTEST FIXTURES - ADDITIONAL
+# =============================================================================
+
+
+@pytest_asyncio.fixture(scope="function")
+async def async_client(client: AsyncClient) -> AsyncClient:
+    """Alias for client fixture - for compatibility with different test naming conventions.
+
+    Returns:
+        AsyncClient: The async HTTP test client
+    """
+    return client
+
+
+@pytest_asyncio.fixture(scope="function")
+async def test_scope(db_session: AsyncSession) -> dict:
+    """Get a test scope from the database.
+
+    The scopes are pre-populated by the schema SQL.
+
+    Returns:
+        dict: Scope data with code, name, description
+    """
+    result = await db_session.execute(
+        text("SELECT * FROM scopes WHERE code = 'IT'")
+    )
+    row = result.fetchone()
+    if row:
+        return dict(row._mapping)
+    return {"code": "IT", "name": "Information Technology", "description": "IT security incidents"}
+
+
+# =============================================================================
 # PYTEST CONFIGURATION
 # =============================================================================
 
