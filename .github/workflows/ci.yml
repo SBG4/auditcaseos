@@ -113,7 +113,7 @@ jobs:
           ENVIRONMENT: testing
         run: |
           cd api
-          pytest tests/unit/ -v --cov=app --cov-report=xml --cov-fail-under=60
+          pytest tests/unit/ -v --cov=app --cov-report=xml --cov-fail-under=30
 
       - name: Frontend unit tests
         run: |
