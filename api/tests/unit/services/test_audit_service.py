@@ -77,6 +77,9 @@ class TestLogAction:
         """Test logging action with all fields."""
         import json
 
+        test_entity_id = str(uuid.uuid4())  # Use unique ID to isolate this test
+        test_ip = "192.168.1.100"
+
         query = text("""
             INSERT INTO audit_log (
                 action, entity_type, entity_id, user_id, user_ip, metadata
@@ -88,22 +91,25 @@ class TestLogAction:
         await db_session.execute(query, {
             "action": "CREATE",
             "entity_type": "case",
-            "entity_id": str(uuid.uuid4()),
+            "entity_id": test_entity_id,
             "user_id": test_user["id"],
-            "user_ip": "192.168.1.100",
+            "user_ip": test_ip,
             "metadata": json.dumps({"source": "api"}),
         })
         await db_session.commit()
 
+        # Query by the specific entity_id we created to ensure isolation
         result = await db_session.execute(
-            text("SELECT * FROM audit_log WHERE action = :action AND entity_type = :type"),
-            {"action": "CREATE", "type": "case"}
+            text("SELECT * FROM audit_log WHERE entity_id = :entity_id"),
+            {"entity_id": test_entity_id}
         )
         log = result.fetchone()
 
         assert log is not None
         log_dict = dict(log._mapping)
-        assert log_dict["user_ip"] == "192.168.1.100"
+        assert log_dict["user_ip"] == test_ip
+        assert log_dict["action"] == "CREATE"
+        assert log_dict["entity_type"] == "case"
 
 
 @pytest.mark.unit

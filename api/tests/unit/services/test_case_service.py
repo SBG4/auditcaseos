@@ -191,14 +191,25 @@ class TestGetCase:
 
 @pytest.mark.unit
 class TestListCases:
-    """Tests for case listing."""
+    """Tests for case listing.
+
+    Note: These tests filter by owner_id to ensure test isolation.
+    This is necessary because transaction rollback only prevents writes
+    from persisting, but doesn't hide existing data in shared databases.
+    """
 
     @pytest.mark.asyncio
-    async def test_list_cases_empty(self, db_session: AsyncSession):
-        """Test listing when no cases exist."""
+    async def test_list_cases_empty_for_owner(
+        self, db_session: AsyncSession, test_user: dict
+    ):
+        """Test listing when owner has no cases."""
         from sqlalchemy import text
 
-        result = await db_session.execute(text("SELECT COUNT(*) FROM cases"))
+        # Filter by owner to ensure isolation from production data
+        result = await db_session.execute(
+            text("SELECT COUNT(*) FROM cases WHERE owner_id = :owner_id"),
+            {"owner_id": test_user["id"]}
+        )
         count = result.scalar()
 
         assert count == 0
@@ -207,7 +218,7 @@ class TestListCases:
     async def test_list_cases_with_cases(
         self, db_session: AsyncSession, test_user: dict
     ):
-        """Test listing with multiple cases."""
+        """Test listing with multiple cases for an owner."""
         # Create multiple cases
         for i in range(3):
             await create_test_case(
@@ -217,7 +228,10 @@ class TestListCases:
             )
 
         from sqlalchemy import text
-        result = await db_session.execute(text("SELECT * FROM cases"))
+        result = await db_session.execute(
+            text("SELECT * FROM cases WHERE owner_id = :owner_id"),
+            {"owner_id": test_user["id"]}
+        )
         cases = result.fetchall()
 
         assert len(cases) == 3
@@ -241,8 +255,8 @@ class TestListCases:
 
         from sqlalchemy import text
         result = await db_session.execute(
-            text("SELECT * FROM cases WHERE status = :status"),
-            {"status": "OPEN"}
+            text("SELECT * FROM cases WHERE status = :status AND owner_id = :owner_id"),
+            {"status": "OPEN", "owner_id": test_user["id"]}
         )
         cases = result.fetchall()
 
@@ -267,8 +281,8 @@ class TestListCases:
 
         from sqlalchemy import text
         result = await db_session.execute(
-            text("SELECT * FROM cases WHERE severity = :severity"),
-            {"severity": "CRITICAL"}
+            text("SELECT * FROM cases WHERE severity = :severity AND owner_id = :owner_id"),
+            {"severity": "CRITICAL", "owner_id": test_user["id"]}
         )
         cases = result.fetchall()
 
