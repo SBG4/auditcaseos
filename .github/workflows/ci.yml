@@ -104,7 +104,7 @@ jobs:
         env:
           PGPASSWORD: test
         run: |
-          psql -h localhost -U test -d test -f database/init.sql
+          psql -h localhost -U test -d test -f configs/postgres/init.sql
 
       - name: Run unit tests
         env:
@@ -164,7 +164,7 @@ jobs:
         env:
           PGPASSWORD: test
         run: |
-          psql -h localhost -U test -d test -f database/init.sql
+          psql -h localhost -U test -d test -f configs/postgres/init.sql
 
       - name: Run integration tests
         env:
@@ -352,7 +352,7 @@ jobs:
         env:
           PGPASSWORD: test
         run: |
-          psql -h localhost -U test -d test -f database/init.sql
+          psql -h localhost -U test -d test -f configs/postgres/init.sql
 
       - name: Run all backend tests with coverage
         env:
