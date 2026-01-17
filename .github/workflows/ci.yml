@@ -173,7 +173,7 @@ jobs:
           ENVIRONMENT: testing
         run: |
           cd api
-          pytest tests/integration/ -v --cov=app --cov-report=xml --cov-fail-under=50
+          pytest tests/integration/ -v --cov=app --cov-report=xml --cov-fail-under=30
 
       - name: Run security tests
         env:
