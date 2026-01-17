@@ -20,8 +20,8 @@ from fastapi import (
     Query,
     Request,
     UploadFile,
+    status as http_status,
 )
-from fastapi import status as http_status
 from fastapi.responses import StreamingResponse
 from pydantic import Field
 from sqlalchemy import text

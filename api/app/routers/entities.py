@@ -7,8 +7,7 @@ from case evidence (employee IDs, IP addresses, emails, hostnames, etc.).
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from fastapi import status as http_status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status as http_status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db

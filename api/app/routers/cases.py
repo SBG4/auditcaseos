@@ -12,8 +12,7 @@ from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
-from fastapi import status as http_status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status as http_status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
