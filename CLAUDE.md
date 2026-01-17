@@ -84,7 +84,50 @@ docker exec -it auditcaseos-db psql -U auditcaseos -d auditcaseos
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Progress tracking |
 | [docs/CHANGELOG.md](docs/CHANGELOG.md) | Version history |
 | [docs/AGENT_PATTERNS.md](docs/AGENT_PATTERNS.md) | AI agent guidelines |
+| [docs/TESTING.md](docs/TESTING.md) | Comprehensive testing guide |
 | [PROJECT_SPEC.xml](PROJECT_SPEC.xml) | Full spec (archived) |
+
+## Testing Requirements
+
+### Before Any Feature is Complete
+
+Every feature MUST pass all test levels before merge:
+
+| Level | Command | Threshold | Scope |
+|-------|---------|-----------|-------|
+| Unit | `cd api && pytest tests/unit/` | 60% | Isolated logic |
+| Integration | `cd api && pytest tests/integration/` | 50% | API + Database |
+| Security | `cd api && pytest tests/security/` | All pass | OWASP compliance |
+| E2E | `cd frontend && npx playwright test` | All pass | User journeys |
+
+### Feature Testing Checklist
+
+Before marking any feature complete:
+- [ ] Unit tests for new service methods
+- [ ] Integration tests for new API endpoints
+- [ ] E2E test for critical user journey (if UI change)
+- [ ] Update existing tests if behavior changed
+- [ ] Coverage threshold maintained
+
+### Test Commands
+
+```bash
+# Full backend test suite
+cd api && pytest tests/ -v
+
+# Run specific test types
+cd api && pytest tests/unit/ -v -m unit
+cd api && pytest tests/integration/ -v -m integration
+cd api && pytest tests/security/ -v -m security
+
+# E2E tests (requires services running)
+cd frontend && BASE_URL=http://localhost:13000 npx playwright test
+
+# Coverage report
+cd api && pytest tests/ --cov=app --cov-report=html
+```
+
+See [docs/TESTING.md](docs/TESTING.md) for comprehensive testing guide.
 
 ## Mandatory Rules
 
@@ -92,6 +135,7 @@ docker exec -it auditcaseos-db psql -U auditcaseos -d auditcaseos
 2. **Update version** in PROJECT_SPEC.xml when features complete
 3. **Run tests** before committing
 4. **Read relevant docs** before implementing features
+5. **Write tests** for new features (unit + integration minimum)
 
 ## Default Credentials
 
@@ -115,4 +159,4 @@ Before completing any feature:
 
 ## CI Status
 
-All 4 jobs passing: Security, Backend, Frontend, Docker
+7 quality gates: Lint → Unit Tests → Integration Tests → Security → Docker → E2E → Coverage

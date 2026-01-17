@@ -116,9 +116,24 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:13000,http://localhost:3000"
 
     # Rate limiting settings (requests per minute)
-    # Auth rate limit is strict in production (10/min) but higher in dev for testing (100/min)
+    # Auth rate limit is strict in production (10/min) but higher in dev (100/min)
+    # For testing, set ENVIRONMENT=testing to use low limits (5/min auth, 20/min general)
     rate_limit_per_minute: int = 60
     rate_limit_auth_per_minute: int = 100  # Set to 10 in production
+
+    @property
+    def effective_rate_limit_per_minute(self) -> int:
+        """Get effective rate limit based on environment."""
+        if self.environment.lower() == "testing":
+            return 20  # Low limit for test verification
+        return self.rate_limit_per_minute
+
+    @property
+    def effective_rate_limit_auth_per_minute(self) -> int:
+        """Get effective auth rate limit based on environment."""
+        if self.environment.lower() == "testing":
+            return 5  # Low limit for test verification
+        return self.rate_limit_auth_per_minute
 
     # JWT settings
     ALGORITHM: str = "HS256"

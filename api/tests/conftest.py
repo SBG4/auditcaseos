@@ -2,13 +2,16 @@
 Pytest configuration and fixtures for AuditCaseOS API tests.
 
 This module provides shared fixtures for async testing with FastAPI,
-including database sessions, test clients, authentication helpers,
-and mock services.
+including PostgreSQL database sessions (via testcontainers or CI service),
+test clients, authentication helpers, and mock services.
 
 Source: https://fastapi.tiangolo.com/advanced/testing-database/
+        https://testcontainers.com/guides/getting-started-with-testcontainers-for-python/
 """
 
 import asyncio
+import json
+import os
 import uuid
 from collections.abc import AsyncGenerator, Generator
 from datetime import datetime, timezone
@@ -21,7 +24,7 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import NullPool
 
 from app.database import get_db
 from app.main import app
@@ -39,200 +42,95 @@ from tests.fixtures.factories import (
     ADMIN_PASSWORD,
 )
 
+
 # =============================================================================
 # DATABASE CONFIGURATION
 # =============================================================================
 
-# Test database URL - use in-memory SQLite for isolation
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+# Check if PostgreSQL is provided via environment (CI) or use testcontainers
+DATABASE_URL = os.environ.get("DATABASE_URL")
+USE_TESTCONTAINERS = DATABASE_URL is None
 
-# Minimal schema for tests (raw SQL to avoid ORM model conflicts)
-SCHEMA_SQL = """
--- Users table
-CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    username TEXT UNIQUE NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    full_name TEXT NOT NULL,
-    role TEXT DEFAULT 'viewer',
-    department TEXT,
-    is_active INTEGER DEFAULT 1,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-);
 
--- Scopes table
-CREATE TABLE IF NOT EXISTS scopes (
-    code TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT
-);
+def get_test_database_url() -> str:
+    """Get the test database URL from environment or testcontainers."""
+    if DATABASE_URL:
+        return DATABASE_URL
+    # Fallback URL for testcontainers (will be overridden by fixture)
+    return "postgresql+asyncpg://test:test@localhost:5432/test"
 
--- Cases table
-CREATE TABLE IF NOT EXISTS cases (
-    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-    case_id TEXT UNIQUE NOT NULL,
-    scope_code TEXT NOT NULL,
-    case_type TEXT NOT NULL,
-    status TEXT DEFAULT 'OPEN',
-    severity TEXT DEFAULT 'MEDIUM',
-    title TEXT NOT NULL,
-    summary TEXT,
-    description TEXT,
-    subject_user TEXT,
-    subject_computer TEXT,
-    subject_devices TEXT,
-    related_users TEXT,
-    owner_id TEXT NOT NULL,
-    assigned_to TEXT,
-    incident_date TEXT,
-    tags TEXT,
-    metadata TEXT DEFAULT '{}',
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    closed_at TEXT,
-    FOREIGN KEY (owner_id) REFERENCES users(id)
-);
 
--- Evidence table
-CREATE TABLE IF NOT EXISTS evidence (
-    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-    case_id TEXT NOT NULL,
-    file_name TEXT NOT NULL,
-    file_path TEXT NOT NULL,
-    file_size INTEGER DEFAULT 0,
-    mime_type TEXT,
-    file_hash TEXT,
-    description TEXT,
-    uploaded_by TEXT NOT NULL,
-    uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    extracted_text TEXT,
-    metadata TEXT DEFAULT '{}',
-    FOREIGN KEY (case_id) REFERENCES cases(id),
-    FOREIGN KEY (uploaded_by) REFERENCES users(id)
-);
+# =============================================================================
+# POSTGRESQL TESTCONTAINER SETUP
+# =============================================================================
 
--- Findings table
-CREATE TABLE IF NOT EXISTS findings (
-    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-    case_id TEXT NOT NULL,
-    title TEXT NOT NULL,
-    description TEXT,
-    severity TEXT DEFAULT 'MEDIUM',
-    evidence_ids TEXT DEFAULT '[]',
-    created_by TEXT NOT NULL,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (case_id) REFERENCES cases(id),
-    FOREIGN KEY (created_by) REFERENCES users(id)
-);
+if USE_TESTCONTAINERS:
+    from testcontainers.postgres import PostgresContainer
 
--- Timeline events table
-CREATE TABLE IF NOT EXISTS timeline_events (
-    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-    case_id TEXT NOT NULL,
-    event_time TEXT NOT NULL,
-    event_type TEXT NOT NULL,
-    description TEXT,
-    source TEXT DEFAULT 'user',
-    evidence_id TEXT,
-    created_by TEXT NOT NULL,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (case_id) REFERENCES cases(id),
-    FOREIGN KEY (created_by) REFERENCES users(id)
-);
+    # Module-level container reference
+    _postgres_container = None
 
--- Entities table
-CREATE TABLE IF NOT EXISTS entities (
-    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-    case_id TEXT NOT NULL,
-    evidence_id TEXT,
-    entity_type TEXT NOT NULL,
-    value TEXT NOT NULL,
-    context TEXT,
-    confidence REAL DEFAULT 0.95,
-    metadata TEXT DEFAULT '{}',
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (case_id) REFERENCES cases(id)
-);
+    def get_postgres_container() -> PostgresContainer:
+        """Get or create the PostgreSQL test container."""
+        global _postgres_container
+        if _postgres_container is None:
+            _postgres_container = PostgresContainer(
+                image="pgvector/pgvector:pg16",
+                username="test",
+                password="test",
+                dbname="test_auditcaseos",
+                driver=None,  # We'll use asyncpg
+            )
+            _postgres_container.start()
+            # Run init.sql to set up schema
+            _run_init_sql(_postgres_container)
+        return _postgres_container
 
--- Audit log table (matches production schema)
-CREATE TABLE IF NOT EXISTS audit_log (
-    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-    action TEXT NOT NULL,
-    entity_type TEXT NOT NULL,
-    entity_id TEXT,
-    user_id TEXT,
-    user_ip TEXT,
-    old_values TEXT DEFAULT '{}',
-    new_values TEXT DEFAULT '{}',
-    metadata TEXT DEFAULT '{}',
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-);
+    def _run_init_sql(container: PostgresContainer) -> None:
+        """Run init.sql to set up the database schema."""
+        import psycopg2
 
--- Notifications table
-CREATE TABLE IF NOT EXISTS notifications (
-    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-    user_id TEXT NOT NULL,
-    title TEXT NOT NULL,
-    message TEXT NOT NULL,
-    notification_type TEXT DEFAULT 'INFO',
-    priority TEXT DEFAULT 'NORMAL',
-    is_read INTEGER DEFAULT 0,
-    related_case_id TEXT,
-    related_entity_type TEXT,
-    related_entity_id TEXT,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
+        # Get connection params
+        host = container.get_container_host_ip()
+        port = container.get_exposed_port(5432)
 
--- Workflow rules table
-CREATE TABLE IF NOT EXISTS workflow_rules (
-    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-    name TEXT NOT NULL,
-    description TEXT,
-    trigger_type TEXT NOT NULL,
-    trigger_config TEXT DEFAULT '{}',
-    is_enabled INTEGER DEFAULT 1,
-    created_by TEXT NOT NULL,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (created_by) REFERENCES users(id)
-);
+        # Read init.sql
+        init_sql_path = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "database",
+            "init.sql"
+        )
 
--- Workflow actions table
-CREATE TABLE IF NOT EXISTS workflow_actions (
-    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-    rule_id TEXT NOT NULL,
-    action_type TEXT NOT NULL,
-    action_config TEXT DEFAULT '{}',
-    action_order INTEGER DEFAULT 1,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (rule_id) REFERENCES workflow_rules(id)
-);
+        if os.path.exists(init_sql_path):
+            with open(init_sql_path, "r") as f:
+                init_sql = f.read()
 
--- Workflow history table
-CREATE TABLE IF NOT EXISTS workflow_history (
-    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-    rule_id TEXT NOT NULL,
-    case_id TEXT,
-    status TEXT DEFAULT 'PENDING',
-    started_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    completed_at TEXT,
-    error_message TEXT,
-    FOREIGN KEY (rule_id) REFERENCES workflow_rules(id)
-);
+            # Execute init.sql
+            conn = psycopg2.connect(
+                host=host,
+                port=port,
+                user="test",
+                password="test",
+                database="test_auditcaseos",
+            )
+            conn.autocommit = True
+            cur = conn.cursor()
+            try:
+                cur.execute(init_sql)
+            except Exception as e:
+                print(f"Warning: Error running init.sql: {e}")
+            finally:
+                cur.close()
+                conn.close()
 
--- Insert default scopes
-INSERT OR IGNORE INTO scopes (code, name, description) VALUES
-    ('FIN', 'Finance', 'Financial department investigations'),
-    ('HR', 'Human Resources', 'HR related investigations'),
-    ('IT', 'Information Technology', 'IT security incidents'),
-    ('SEC', 'Security', 'Physical and cybersecurity'),
-    ('OPS', 'Operations', 'Operational incidents'),
-    ('GEN', 'General', 'General investigations');
-"""
+    def stop_postgres_container() -> None:
+        """Stop the PostgreSQL test container."""
+        global _postgres_container
+        if _postgres_container is not None:
+            _postgres_container.stop()
+            _postgres_container = None
 
 
 # =============================================================================
@@ -250,17 +148,14 @@ async def create_test_user(
     department: str | None = None,
 ) -> dict:
     """
-    Create a test user directly in SQLite.
-
-    Unlike auth_service.create_user(), this generates UUIDs in Python
-    since SQLite doesn't have gen_random_uuid().
+    Create a test user directly in the database.
     """
     user_id = str(uuid.uuid4())
     password_hashed = hash_password(password)
 
     query = text("""
         INSERT INTO users (id, username, email, password_hash, full_name, role, department, is_active)
-        VALUES (:id, :username, :email, :password_hash, :full_name, :role, :department, 1)
+        VALUES (:id, :username, :email, :password_hash, :full_name, CAST(:role AS user_role), :department, true)
     """)
 
     await db.execute(query, {
@@ -288,29 +183,35 @@ async def create_test_case(
     owner_id: str,
     case_data: dict[str, Any] | None = None,
 ) -> dict:
-    """Create a test case directly in SQLite."""
+    """Create a test case using the database's generate_case_id function."""
     case_data = case_data or create_case_data()
     case_uuid = str(uuid.uuid4())
-    case_id = f"{case_data['scope_code']}-{case_data['case_type']}-{uuid.uuid4().hex[:4].upper()}"
+    scope_code = case_data.get("scope_code", "IT")
+    case_type = case_data.get("case_type", "USB")
 
+    # Use PostgreSQL's generate_case_id function
     query = text("""
         INSERT INTO cases (
             id, case_id, scope_code, case_type, status, severity,
             title, summary, description, subject_user, subject_computer,
             owner_id, tags, metadata
         ) VALUES (
-            :id, :case_id, :scope_code, :case_type, :status, :severity,
+            :id,
+            generate_case_id(CAST(:scope_code AS scope_code), CAST(:case_type AS case_type)),
+            CAST(:scope_code AS scope_code),
+            CAST(:case_type AS case_type),
+            CAST(:status AS case_status),
+            CAST(:severity AS severity_level),
             :title, :summary, :description, :subject_user, :subject_computer,
             :owner_id, :tags, :metadata
         )
+        RETURNING *
     """)
 
-    import json
-    await db.execute(query, {
+    result = await db.execute(query, {
         "id": case_uuid,
-        "case_id": case_id,
-        "scope_code": case_data.get("scope_code", "IT"),
-        "case_type": case_data.get("case_type", "USB"),
+        "scope_code": scope_code,
+        "case_type": case_type,
         "status": case_data.get("status", "OPEN"),
         "severity": case_data.get("severity", "MEDIUM"),
         "title": case_data.get("title", "Test Case"),
@@ -324,10 +225,6 @@ async def create_test_case(
     })
     await db.commit()
 
-    result = await db.execute(
-        text("SELECT * FROM cases WHERE id = :id"),
-        {"id": case_uuid}
-    )
     row = result.fetchone()
     return dict(row._mapping)
 
@@ -338,7 +235,7 @@ async def create_test_evidence(
     uploaded_by: str,
     evidence_data: dict[str, Any] | None = None,
 ) -> dict:
-    """Create test evidence directly in SQLite."""
+    """Create test evidence directly in the database."""
     evidence_data = evidence_data or create_evidence_data()
     evidence_id = str(uuid.uuid4())
 
@@ -350,10 +247,10 @@ async def create_test_evidence(
             :id, :case_id, :file_name, :file_path, :file_size, :mime_type,
             :file_hash, :description, :uploaded_by, :extracted_text, :metadata
         )
+        RETURNING *
     """)
 
-    import json
-    await db.execute(query, {
+    result = await db.execute(query, {
         "id": evidence_id,
         "case_id": case_id,
         "file_name": evidence_data.get("file_name", "test.pdf"),
@@ -368,10 +265,6 @@ async def create_test_evidence(
     })
     await db.commit()
 
-    result = await db.execute(
-        text("SELECT * FROM evidence WHERE id = :id"),
-        {"id": evidence_id}
-    )
     row = result.fetchone()
     return dict(row._mapping)
 
@@ -382,7 +275,7 @@ async def create_test_finding(
     created_by: str,
     finding_data: dict[str, Any] | None = None,
 ) -> dict:
-    """Create test finding directly in SQLite."""
+    """Create test finding directly in the database."""
     finding_data = finding_data or create_finding_data()
     finding_id = str(uuid.uuid4())
 
@@ -390,12 +283,12 @@ async def create_test_finding(
         INSERT INTO findings (
             id, case_id, title, description, severity, evidence_ids, created_by
         ) VALUES (
-            :id, :case_id, :title, :description, :severity, :evidence_ids, :created_by
+            :id, :case_id, :title, :description, CAST(:severity AS severity_level), :evidence_ids, :created_by
         )
+        RETURNING *
     """)
 
-    import json
-    await db.execute(query, {
+    result = await db.execute(query, {
         "id": finding_id,
         "case_id": case_id,
         "title": finding_data.get("title", "Test Finding"),
@@ -406,10 +299,6 @@ async def create_test_finding(
     })
     await db.commit()
 
-    result = await db.execute(
-        text("SELECT * FROM findings WHERE id = :id"),
-        {"id": finding_id}
-    )
     row = result.fetchone()
     return dict(row._mapping)
 
@@ -430,25 +319,36 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
     loop.close()
 
 
-@pytest_asyncio.fixture(scope="function")
-async def async_engine():
-    """Create an async engine for each test function.
+@pytest.fixture(scope="session")
+def postgres_url() -> Generator[str, None, None]:
+    """
+    Get PostgreSQL URL for tests.
 
-    Uses SQLite in-memory database with StaticPool for test isolation.
+    Uses environment variable (CI) or starts testcontainer (local).
+    """
+    if DATABASE_URL:
+        # CI environment - use provided PostgreSQL
+        yield DATABASE_URL
+    else:
+        # Local development - use testcontainers
+        container = get_postgres_container()
+        host = container.get_container_host_ip()
+        port = container.get_exposed_port(5432)
+        yield f"postgresql+asyncpg://test:test@{host}:{port}/test_auditcaseos"
+        # Container cleanup happens at end of test session
+
+
+@pytest_asyncio.fixture(scope="session")
+async def async_engine(postgres_url: str):
+    """Create an async engine for the test session.
+
+    Uses PostgreSQL (from CI service or testcontainers).
     """
     engine = create_async_engine(
-        TEST_DATABASE_URL,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
+        postgres_url,
+        poolclass=NullPool,  # Required for testcontainers compatibility
         echo=False,
     )
-
-    # Create schema using raw SQL
-    async with engine.begin() as conn:
-        for statement in SCHEMA_SQL.split(";"):
-            statement = statement.strip()
-            if statement:
-                await conn.execute(text(statement))
 
     yield engine
 
@@ -459,15 +359,23 @@ async def async_engine():
 async def db_session(async_engine) -> AsyncGenerator[AsyncSession, None]:
     """Create a database session for each test.
 
-    Rolls back all changes after each test for isolation.
+    Uses transaction rollback for test isolation.
     """
-    async_session_maker = async_sessionmaker(
-        async_engine, class_=AsyncSession, expire_on_commit=False
-    )
+    async with async_engine.connect() as connection:
+        # Start a transaction that we'll roll back after the test
+        transaction = await connection.begin()
 
-    async with async_session_maker() as session:
-        yield session
-        await session.rollback()
+        async_session = AsyncSession(
+            bind=connection,
+            expire_on_commit=False,
+            join_transaction_mode="create_savepoint",
+        )
+
+        try:
+            yield async_session
+        finally:
+            await async_session.close()
+            await transaction.rollback()
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -798,7 +706,7 @@ async def async_client(client: AsyncClient) -> AsyncClient:
 async def test_scope(db_session: AsyncSession) -> dict:
     """Get a test scope from the database.
 
-    The scopes are pre-populated by the schema SQL.
+    The scopes are pre-populated by init.sql.
 
     Returns:
         dict: Scope data with code, name, description
@@ -837,3 +745,9 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "e2e: marks tests as end-to-end tests"
     )
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Clean up testcontainers after test session."""
+    if USE_TESTCONTAINERS:
+        stop_postgres_container()

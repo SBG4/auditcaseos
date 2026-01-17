@@ -8,10 +8,12 @@ Tests cover:
 - Retrieving user activity
 
 Source: pytest best practices
+Uses PostgreSQL via testcontainers (local) or CI service (GitHub Actions).
 """
 
 import pytest
 import uuid
+import json
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 

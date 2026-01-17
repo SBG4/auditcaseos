@@ -21,10 +21,12 @@ export default defineConfig({
         '**/*.d.ts',
       ],
       thresholds: {
-        lines: 30,
-        branches: 30,
-        functions: 30,
-        statements: 30,
+        // Target: 50% coverage for frontend unit tests
+        // Will increase as more tests are added
+        lines: 50,
+        branches: 50,
+        functions: 50,
+        statements: 50,
       },
     },
     testTimeout: 10000,

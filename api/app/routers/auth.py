@@ -25,7 +25,7 @@ from app.database import get_db
 from app.schemas.common import BaseSchema, MessageResponse
 from app.services.audit_service import audit_service
 from app.services.auth_service import auth_service
-from app.utils.rate_limit import limiter
+from app.utils.rate_limit import limiter, AUTH_RATE_LIMIT
 from app.utils.security import decode_access_token
 
 logger = logging.getLogger(__name__)
@@ -193,7 +193,7 @@ OptionalUser = Annotated[dict | None, Depends(get_current_user)]
     summary="Login and get access token",
     description="Authenticate with username/email and password to receive a JWT access token.",
 )
-@limiter.limit(f"{settings.rate_limit_auth_per_minute}/minute")
+@limiter.limit(AUTH_RATE_LIMIT)
 async def login(
     request: Request,
     db: DbSession,
