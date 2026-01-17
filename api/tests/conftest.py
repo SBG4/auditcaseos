@@ -93,7 +93,8 @@ if USE_TESTCONTAINERS:
             os.path.dirname(__file__),
             "..",
             "..",
-            "database",
+            "configs",
+            "postgres",
             "init.sql"
         )
 
