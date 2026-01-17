@@ -14,9 +14,8 @@ Tests verify:
 
 import pytest
 
-from tests.conftest import create_test_user, create_test_case
+from tests.conftest import create_test_case, create_test_user
 from tests.fixtures.factories import DEFAULT_PASSWORD
-
 
 # =============================================================================
 # BOLA: Case Access Tests

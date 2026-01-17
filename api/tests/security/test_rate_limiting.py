@@ -16,9 +16,9 @@ The actual rate limits depend on the environment:
 These tests verify rate limiting behavior is working, not specific thresholds.
 """
 
-import pytest
 import asyncio
 
+import pytest
 
 # =============================================================================
 # Login Rate Limiting Tests

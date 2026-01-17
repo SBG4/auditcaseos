@@ -29,15 +29,13 @@ from app.database import get_db
 from app.main import app
 from app.services.auth_service import auth_service
 from app.utils.security import hash_password
-
 from tests.fixtures.factories import (
+    ADMIN_PASSWORD,
+    DEFAULT_PASSWORD,
     create_case_data,
     create_evidence_data,
     create_finding_data,
-    DEFAULT_PASSWORD,
-    ADMIN_PASSWORD,
 )
-
 
 # =============================================================================
 # DATABASE CONFIGURATION
@@ -100,7 +98,7 @@ if USE_TESTCONTAINERS:
         )
 
         if os.path.exists(init_sql_path):
-            with open(init_sql_path, "r") as f:
+            with open(init_sql_path) as f:
                 init_sql = f.read()
 
             # Execute init.sql

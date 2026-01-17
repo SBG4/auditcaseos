@@ -9,7 +9,7 @@ Source: pytest best practices
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 # Default test passwords
@@ -338,8 +338,8 @@ def create_timeline_event_data(
     """
     return {
         "event_type": event_type,
-        "event_time": event_time or datetime.now(timezone.utc),
-        "description": description or f"Test event at {datetime.now(timezone.utc).isoformat()}",
+        "event_time": event_time or datetime.now(UTC),
+        "description": description or f"Test event at {datetime.now(UTC).isoformat()}",
         "source": source,
         "evidence_id": evidence_id,
     }

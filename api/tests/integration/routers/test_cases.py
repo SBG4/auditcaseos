@@ -15,7 +15,6 @@ Uses PostgreSQL via testcontainers (local) or CI service (GitHub Actions).
 
 import pytest
 
-
 # =============================================================================
 # List Cases Tests
 # =============================================================================

@@ -62,8 +62,8 @@ fixable = ["ALL"]
 unfixable = []
 
 [lint.per-file-ignores]
-# Tests can use assert and have unused arguments
-"tests/**/*.py" = ["S101", "ARG001", "ARG002"]
+# Tests can use assert, have unused arguments, and print for debugging
+"tests/**/*.py" = ["S101", "ARG001", "ARG002", "T201"]
 # Allow print in scripts
 "scripts/**/*.py" = ["T20"]
 

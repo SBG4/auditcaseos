@@ -9,15 +9,14 @@ Tests verify:
 - Algorithm confusion attacks are prevented
 """
 
-import pytest
-from datetime import datetime, timedelta, UTC
 import base64
 import json
+from datetime import UTC, datetime, timedelta
 
+import pytest
 from jose import jwt
 
 from app.config import settings
-
 
 # =============================================================================
 # Token Expiration Tests

@@ -13,7 +13,12 @@ from pydantic import EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.schemas.common import BaseSchema, MessageResponse, PaginatedResponse, TimestampMixin
+from app.schemas.common import (
+    BaseSchema,
+    MessageResponse,
+    PaginatedResponse,
+    TimestampMixin,
+)
 
 router = APIRouter(prefix="/users", tags=["users"])
 

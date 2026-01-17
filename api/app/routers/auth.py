@@ -15,7 +15,8 @@ Source: OWASP API Security Top 10 - API4:2023 Unrestricted Resource Consumption
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status as http_status
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import status as http_status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,7 +26,7 @@ from app.database import get_db
 from app.schemas.common import BaseSchema, MessageResponse
 from app.services.audit_service import audit_service
 from app.services.auth_service import auth_service
-from app.utils.rate_limit import limiter, AUTH_RATE_LIMIT
+from app.utils.rate_limit import AUTH_RATE_LIMIT, limiter
 from app.utils.security import decode_access_token
 
 logger = logging.getLogger(__name__)

@@ -12,10 +12,10 @@ Tests cover:
 Source: pytest best practices
 """
 
-import pytest
 from io import BytesIO
 from unittest.mock import MagicMock, patch
 
+import pytest
 from minio.error import S3Error
 
 from app.services.storage_service import StorageService

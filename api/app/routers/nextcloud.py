@@ -10,8 +10,8 @@ from fastapi import (
     HTTPException,
     Query,
     UploadFile,
-    status as http_status,
 )
+from fastapi import status as http_status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 

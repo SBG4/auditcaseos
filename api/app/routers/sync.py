@@ -9,7 +9,8 @@ import logging
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status as http_status
+from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import status as http_status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
