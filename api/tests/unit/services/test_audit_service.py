@@ -56,7 +56,7 @@ class TestLogAction:
         await db_session.execute(query, {
             "action": "TEST_ACTION",
             "entity_type": "test",
-            "entity_id": "test-123",
+            "entity_id": str(uuid.uuid4()),  # Must be valid UUID
             "user_id": test_user["id"],
             "metadata": json.dumps({}),
         })

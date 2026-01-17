@@ -85,19 +85,19 @@ def create_auditor_data(**kwargs) -> dict[str, Any]:
 # CASE FACTORIES
 # =============================================================================
 
-# Valid case types from database schema
-CASE_TYPES = ["USB", "EMAIL", "WEB", "POLICY", "LEAK", "ACCESS", "OTHER"]
+# Valid case types from database schema (case_type enum)
+CASE_TYPES = ["USB", "EMAIL", "WEB", "POLICY"]
 
-# Valid case statuses
+# Valid case statuses (case_status enum)
 CASE_STATUSES = ["OPEN", "IN_PROGRESS", "PENDING_REVIEW", "CLOSED", "ARCHIVED"]
 
-# Valid severity levels
-SEVERITY_LEVELS = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
+# Valid severity levels (severity_level enum)
+SEVERITY_LEVELS = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
 
-# Valid scope codes
+# Valid scope codes (from scopes table)
 SCOPE_CODES = [
-    "FIN", "HR", "IT", "SEC", "OPS", "CORP", "LEG", "RND",
-    "PRO", "MKT", "QA", "ENV", "SAF", "EXT", "GOV", "GEN"
+    "FIN", "HR", "IT", "SEC", "OPS", "LEG", "PRO", "MKT",
+    "RND", "QA", "ENV", "SAF", "EXT", "GOV", "GEN"
 ]
 
 

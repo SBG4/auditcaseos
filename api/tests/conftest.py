@@ -190,6 +190,7 @@ async def create_test_case(
     case_type = case_data.get("case_type", "USB")
 
     # Use PostgreSQL's generate_case_id function
+    # Note: scope_code is VARCHAR, case_type/status/severity are enums
     query = text("""
         INSERT INTO cases (
             id, case_id, scope_code, case_type, status, severity,
@@ -197,8 +198,8 @@ async def create_test_case(
             owner_id, tags, metadata
         ) VALUES (
             :id,
-            generate_case_id(CAST(:scope_code AS scope_code), CAST(:case_type AS case_type)),
-            CAST(:scope_code AS scope_code),
+            generate_case_id(:scope_code, CAST(:case_type AS case_type)),
+            :scope_code,
             CAST(:case_type AS case_type),
             CAST(:status AS case_status),
             CAST(:severity AS severity_level),
@@ -220,8 +221,8 @@ async def create_test_case(
         "subject_user": case_data.get("subject_user"),
         "subject_computer": case_data.get("subject_computer"),
         "owner_id": owner_id,
-        "tags": json.dumps(case_data.get("tags", [])),
-        "metadata": json.dumps(case_data.get("metadata", {})),
+        "tags": case_data.get("tags", []),  # text[] array, not JSON
+        "metadata": json.dumps(case_data.get("metadata", {})),  # JSONB
     })
     await db.commit()
 
@@ -294,7 +295,7 @@ async def create_test_finding(
         "title": finding_data.get("title", "Test Finding"),
         "description": finding_data.get("description"),
         "severity": finding_data.get("severity", "MEDIUM"),
-        "evidence_ids": json.dumps(finding_data.get("evidence_ids", [])),
+        "evidence_ids": finding_data.get("evidence_ids", []),  # uuid[] array, not JSON
         "created_by": created_by,
     })
     await db.commit()
@@ -319,15 +320,15 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
     loop.close()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def postgres_url() -> Generator[str, None, None]:
     """
     Get PostgreSQL URL for tests.
 
-    Uses environment variable (CI) or starts testcontainer (local).
+    Uses environment variable (CI/Docker) or starts testcontainer (local).
     """
     if DATABASE_URL:
-        # CI environment - use provided PostgreSQL
+        # CI/Docker environment - use provided PostgreSQL
         yield DATABASE_URL
     else:
         # Local development - use testcontainers
@@ -338,11 +339,11 @@ def postgres_url() -> Generator[str, None, None]:
         # Container cleanup happens at end of test session
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="function")
 async def async_engine(postgres_url: str):
-    """Create an async engine for the test session.
+    """Create an async engine for each test function.
 
-    Uses PostgreSQL (from CI service or testcontainers).
+    Uses PostgreSQL (from CI service, Docker, or testcontainers).
     """
     engine = create_async_engine(
         postgres_url,

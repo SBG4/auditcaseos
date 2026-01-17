@@ -53,7 +53,7 @@ class TestTokenExpiration:
         # Create token that expired 1 hour ago
         expired_token = jwt.encode(
             {
-                "sub": test_user["id"],
+                "sub": str(test_user["id"]),  # Convert UUID to string
                 "email": test_user["email"],
                 "role": test_user["role"],
                 "exp": datetime.now(UTC) - timedelta(hours=1),
@@ -81,7 +81,7 @@ class TestTokenExpiration:
         # Create token with iat in the future (clock skew attack)
         future_token = jwt.encode(
             {
-                "sub": test_user["id"],
+                "sub": str(test_user["id"]),
                 "email": test_user["email"],
                 "role": test_user["role"],
                 "iat": datetime.now(UTC) + timedelta(hours=1),
@@ -119,7 +119,7 @@ class TestTokenTampering:
         # Create valid token
         valid_token = jwt.encode(
             {
-                "sub": test_user["id"],
+                "sub": str(test_user["id"]),
                 "email": test_user["email"],
                 "role": "viewer",
                 "exp": datetime.now(UTC) + timedelta(hours=1),
@@ -158,7 +158,7 @@ class TestTokenTampering:
         # Create token with different secret
         wrong_key_token = jwt.encode(
             {
-                "sub": test_user["id"],
+                "sub": str(test_user["id"]),
                 "email": test_user["email"],
                 "role": test_user["role"],
                 "exp": datetime.now(UTC) + timedelta(hours=1),
@@ -226,7 +226,7 @@ class TestAlgorithmConfusion:
 
         payload = base64.urlsafe_b64encode(
             json.dumps({
-                "sub": test_user["id"],
+                "sub": str(test_user["id"]),
                 "email": test_user["email"],
                 "role": "admin",
                 "exp": int((datetime.now(UTC) + timedelta(hours=1)).timestamp()),
@@ -292,7 +292,7 @@ class TestAuthenticationHeader:
         """Authorization header without 'Bearer' prefix should be rejected."""
         valid_token = jwt.encode(
             {
-                "sub": test_user["id"],
+                "sub": str(test_user["id"]),
                 "email": test_user["email"],
                 "role": test_user["role"],
                 "exp": datetime.now(UTC) + timedelta(hours=1),
@@ -318,7 +318,7 @@ class TestAuthenticationHeader:
         """Wrong authentication scheme should be rejected."""
         valid_token = jwt.encode(
             {
-                "sub": test_user["id"],
+                "sub": str(test_user["id"]),
                 "email": test_user["email"],
                 "role": test_user["role"],
                 "exp": datetime.now(UTC) + timedelta(hours=1),

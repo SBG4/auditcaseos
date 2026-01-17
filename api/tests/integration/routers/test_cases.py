@@ -189,7 +189,7 @@ class TestCreateCase:
             "scope_code": test_scope["code"],
             "case_type": "EMAIL",
             "title": "Email Investigation",
-            "summary": "Summary",
+            "summary": "Email investigation summary",  # min_length=10
         }
 
         response = await async_client.post(
@@ -217,8 +217,8 @@ class TestCreateCase:
         case_data = {
             "scope_code": "INVALID",
             "case_type": "USB",
-            "title": "Test Case",
-            "summary": "Summary",
+            "title": "Test Case for Invalid Scope",  # min_length=5
+            "summary": "Testing invalid scope validation",  # min_length=10
         }
 
         response = await async_client.post(
