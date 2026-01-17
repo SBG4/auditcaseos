@@ -23,7 +23,7 @@ if config.config_file_name is not None:
 
 # Import models for autogenerate support
 # This imports the Base class with all model metadata
-from app.models import Base
+from app.models import Base  # noqa: E402
 
 # Import pgvector for type registration
 try:

@@ -18,7 +18,6 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.audit_service import AuditService, audit_service
-from tests.conftest import create_test_user, create_test_case
 
 
 @pytest.mark.unit
@@ -43,7 +42,6 @@ class TestLogAction:
     @pytest.mark.asyncio
     async def test_log_action_minimal(self, db_session: AsyncSession, test_user: dict):
         """Test logging action with minimal parameters."""
-        import json
 
         query = text("""
             INSERT INTO audit_log (
@@ -75,7 +73,6 @@ class TestLogAction:
     @pytest.mark.asyncio
     async def test_log_action_with_all_fields(self, db_session: AsyncSession, test_user: dict):
         """Test logging action with all fields."""
-        import json
 
         test_entity_id = str(uuid.uuid4())  # Use unique ID to isolate this test
         test_ip = "192.168.1.100"
@@ -119,7 +116,6 @@ class TestLogCreate:
     @pytest.mark.asyncio
     async def test_log_create_case(self, db_session: AsyncSession, test_user: dict, test_case: dict):
         """Test logging case creation."""
-        import json
 
         query = text("""
             INSERT INTO audit_log (
@@ -153,7 +149,6 @@ class TestLogUpdate:
     @pytest.mark.asyncio
     async def test_log_update_case(self, db_session: AsyncSession, test_user: dict, test_case: dict):
         """Test logging case update."""
-        import json
 
         query = text("""
             INSERT INTO audit_log (
@@ -187,7 +182,6 @@ class TestLogDelete:
     @pytest.mark.asyncio
     async def test_log_delete_case(self, db_session: AsyncSession, test_user: dict, test_case: dict):
         """Test logging case deletion."""
-        import json
 
         query = text("""
             INSERT INTO audit_log (
@@ -220,7 +214,6 @@ class TestLogView:
     @pytest.mark.asyncio
     async def test_log_view_case(self, db_session: AsyncSession, test_user: dict, test_case: dict):
         """Test logging case view."""
-        import json
 
         query = text("""
             INSERT INTO audit_log (
@@ -253,7 +246,6 @@ class TestLogDownload:
     @pytest.mark.asyncio
     async def test_log_download_evidence(self, db_session: AsyncSession, test_user: dict):
         """Test logging evidence download."""
-        import json
 
         evidence_id = str(uuid.uuid4())
         query = text("""
@@ -287,7 +279,6 @@ class TestLogLogin:
     @pytest.mark.asyncio
     async def test_log_login_success(self, db_session: AsyncSession, test_user: dict):
         """Test logging successful login."""
-        import json
 
         query = text("""
             INSERT INTO audit_log (
@@ -315,7 +306,6 @@ class TestLogLogin:
     @pytest.mark.asyncio
     async def test_log_login_failure(self, db_session: AsyncSession):
         """Test logging failed login."""
-        import json
 
         query = text("""
             INSERT INTO audit_log (
@@ -363,7 +353,6 @@ class TestGetEntityHistory:
         self, db_session: AsyncSession, test_user: dict, test_case: dict
     ):
         """Test getting history for entity with multiple logs."""
-        import json
 
         # Create multiple log entries
         for action in ["CREATE", "UPDATE", "VIEW"]:
@@ -421,7 +410,6 @@ class TestGetUserActivity:
         self, db_session: AsyncSession, test_user: dict
     ):
         """Test getting activity for user with multiple actions."""
-        import json
 
         # Create multiple activities
         for i in range(5):
@@ -460,7 +448,6 @@ class TestGetUserActivity:
         self, db_session: AsyncSession, test_user: dict
     ):
         """Test getting limited user activity."""
-        import json
 
         # Create more than limit
         for i in range(10):

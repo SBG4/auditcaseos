@@ -13,7 +13,6 @@ Tests verify:
 """
 
 import pytest
-from sqlalchemy import text
 
 from tests.conftest import create_test_user, create_test_case
 from tests.fixtures.factories import DEFAULT_PASSWORD

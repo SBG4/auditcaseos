@@ -14,7 +14,7 @@ Source: pytest best practices
 
 import pytest
 from io import BytesIO
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, patch
 
 from minio.error import S3Error
 

@@ -289,11 +289,8 @@ class TestRateLimitHeaders:
                 break
 
         if rate_limited_response:
-            # When rate limited, check for retry-after header
-            # slowapi typically adds X-RateLimit headers
-            headers = rate_limited_response.headers
-            # These headers may or may not be present depending on configuration
-            # Just verify we got a 429 response
+            # When rate limited, verify we got a 429 response
+            # slowapi typically adds X-RateLimit headers but may vary by configuration
             assert rate_limited_response.status_code == 429
 
 

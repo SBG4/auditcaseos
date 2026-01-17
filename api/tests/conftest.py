@@ -14,7 +14,6 @@ import json
 import os
 import uuid
 from collections.abc import AsyncGenerator, Generator
-from datetime import datetime, timezone
 from io import BytesIO
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -23,7 +22,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.database import get_db
@@ -32,12 +31,9 @@ from app.services.auth_service import auth_service
 from app.utils.security import hash_password
 
 from tests.fixtures.factories import (
-    create_user_data,
-    create_admin_data,
     create_case_data,
     create_evidence_data,
     create_finding_data,
-    create_timeline_event_data,
     DEFAULT_PASSWORD,
     ADMIN_PASSWORD,
 )

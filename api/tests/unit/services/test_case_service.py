@@ -18,13 +18,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.case_service import CaseService, case_service
 from tests.fixtures.factories import (
     create_case_data,
-    create_critical_case_data,
     CASE_TYPES,
-    CASE_STATUSES,
     SEVERITY_LEVELS,
     SCOPE_CODES,
 )
-from tests.conftest import create_test_case, create_test_user
+from tests.conftest import create_test_case
 
 
 @pytest.mark.unit

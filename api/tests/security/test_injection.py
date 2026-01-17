@@ -148,7 +148,6 @@ class TestXSS:
             if response.status_code == 201:
                 # If accepted, verify it's stored/returned safely
                 # The frontend should escape, but we document storage
-                data = response.json()
                 # Data is stored - XSS prevention is frontend responsibility
                 # This test documents the API stores as-is
                 pass
@@ -312,16 +311,9 @@ class TestCommandInjection:
 
         When files are processed, filenames should be sanitized.
         """
-        dangerous_filenames = [
-            "test; rm -rf /",
-            "test | cat /etc/passwd",
-            "test`whoami`.pdf",
-            "test$(id).pdf",
-            "test & ping evil.com",
-        ]
-
         # This test would require multipart upload
         # Documenting the test case for manual verification
+        # Dangerous filenames to test: test; rm -rf /, test | cat /etc/passwd, etc.
         pytest.skip(
             "Command injection via upload requires multipart form testing. "
             "Manual verification recommended."

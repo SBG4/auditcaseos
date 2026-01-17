@@ -11,9 +11,6 @@ Create Date: 2026-01-16
 """
 from collections.abc import Sequence
 
-from alembic import op
-import sqlalchemy as sa
-
 # revision identifiers, used by Alembic.
 revision: str = "001"
 down_revision: str | None = None

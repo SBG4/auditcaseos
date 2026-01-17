@@ -14,10 +14,6 @@ Uses PostgreSQL via testcontainers (local) or CI service (GitHub Actions).
 """
 
 import pytest
-from uuid import uuid4
-from datetime import datetime
-
-from tests.fixtures.factories import create_case_data, create_user_data
 
 
 # =============================================================================
