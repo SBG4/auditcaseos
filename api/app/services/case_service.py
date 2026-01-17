@@ -1,5 +1,6 @@
 """Case service for managing audit cases."""
 
+import json
 import logging
 from typing import Any
 from uuid import UUID
@@ -8,6 +9,32 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_json_field(value: Any, default: Any) -> Any:
+    """
+    Parse JSON string to Python object (handles SQLite vs PostgreSQL).
+
+    PostgreSQL returns JSONB/ARRAY as Python objects.
+    SQLite stores them as TEXT strings that need parsing.
+
+    Args:
+        value: The value to parse
+        default: Default value if parsing fails or value is None
+
+    Returns:
+        Parsed value or default
+    """
+    if value is None:
+        return default
+    if isinstance(value, (list, dict)):
+        return value  # Already parsed (PostgreSQL)
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return default
+    return default
 
 
 class CaseService:
@@ -526,6 +553,12 @@ class CaseService:
         Returns:
             Complete case response dict
         """
+        # Parse JSON fields (handles SQLite vs PostgreSQL differences)
+        # SQLite stores arrays as TEXT, PostgreSQL returns them as lists
+        case_data["tags"] = _parse_json_field(case_data.get("tags"), [])
+        case_data["subject_devices"] = _parse_json_field(case_data.get("subject_devices"), [])
+        case_data["related_users"] = _parse_json_field(case_data.get("related_users"), [])
+
         # Get owner info
         owner = await self.get_user_brief(db, case_data["owner_id"])
 

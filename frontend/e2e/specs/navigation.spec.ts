@@ -59,8 +59,8 @@ test.describe('Navigation', () => {
 
     test('should show user menu', async ({ page }) => {
       await page.goto('/');
-      // Look for user avatar or profile button
-      await expect(page.locator('header button').last()).toBeVisible();
+      // Look for user menu button (contains user avatar icon)
+      await expect(page.locator('header .relative.group > button')).toBeVisible();
     });
   });
 });

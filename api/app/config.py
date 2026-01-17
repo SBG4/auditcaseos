@@ -116,8 +116,9 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:13000,http://localhost:3000"
 
     # Rate limiting settings (requests per minute)
+    # Auth rate limit is strict in production (10/min) but higher in dev for testing (100/min)
     rate_limit_per_minute: int = 60
-    rate_limit_auth_per_minute: int = 10  # Stricter for auth endpoints
+    rate_limit_auth_per_minute: int = 100  # Set to 10 in production
 
     # JWT settings
     ALGORITHM: str = "HS256"

@@ -17,10 +17,11 @@ export class CaseListPage {
   constructor(page: Page) {
     this.page = page;
     this.pageTitle = page.locator('h1:has-text("Cases")');
-    this.searchInput = page.locator('input[placeholder*="Search"]');
+    // Use more specific selector for case list search (not header search)
+    this.searchInput = page.locator('main input[placeholder*="Search cases"]');
     this.statusFilter = page.locator('select').nth(0);
     this.severityFilter = page.locator('select').nth(1);
-    this.newCaseButton = page.locator('a:has-text("New Case")');
+    this.newCaseButton = page.locator('a:has-text("New Case"), button:has-text("New Case")');
     this.caseTable = page.locator('table');
     this.emptyState = page.locator('text=No cases found');
     this.loadingSpinner = page.locator('.animate-spin');

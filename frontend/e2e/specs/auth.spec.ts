@@ -61,8 +61,25 @@ test.describe('Authentication', () => {
       // Login first
       await loginAs(page);
 
+      // Verify token exists before reload
+      await page.waitForFunction(
+        () => localStorage.getItem('access_token') !== null,
+        { timeout: 5000 }
+      );
+
       // Refresh the page
       await page.reload();
+
+      // Wait for auth to reinitialize (spinner may appear briefly)
+      await page
+        .locator('.animate-spin')
+        .waitFor({
+          state: 'hidden',
+          timeout: 10000,
+        })
+        .catch(() => {
+          // Spinner may already be gone
+        });
 
       // Should still be logged in (on dashboard)
       const dashboard = new DashboardPage(page);
@@ -73,11 +90,17 @@ test.describe('Authentication', () => {
       // Login first
       await loginAs(page);
 
-      // Find and click sign out button (in dropdown menu)
-      await page.locator('button:has-text("Sign out")').click();
+      // Hover over user menu to reveal dropdown
+      const userMenu = page.locator('.relative.group').last();
+      await userMenu.hover();
+
+      // Wait for dropdown to appear and click Sign out
+      const signOutButton = page.locator('button:has-text("Sign out")');
+      await signOutButton.waitFor({ state: 'visible', timeout: 5000 });
+      await signOutButton.click();
 
       // Should be redirected to login
-      await expect(page).toHaveURL(/\/login/);
+      await expect(page).toHaveURL(/\/login/, { timeout: 10000 });
     });
   });
 });

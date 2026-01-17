@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS cases (
     metadata TEXT DEFAULT '{}',
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    closed_at TEXT,
     FOREIGN KEY (owner_id) REFERENCES users(id)
 );
 
@@ -156,16 +157,17 @@ CREATE TABLE IF NOT EXISTS entities (
     FOREIGN KEY (case_id) REFERENCES cases(id)
 );
 
--- Audit log table
+-- Audit log table (matches production schema)
 CREATE TABLE IF NOT EXISTS audit_log (
     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-    user_id TEXT,
     action TEXT NOT NULL,
-    resource_type TEXT NOT NULL,
-    resource_id TEXT,
-    details TEXT DEFAULT '{}',
-    ip_address TEXT,
-    user_agent TEXT,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT,
+    user_id TEXT,
+    user_ip TEXT,
+    old_values TEXT DEFAULT '{}',
+    new_values TEXT DEFAULT '{}',
+    metadata TEXT DEFAULT '{}',
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 

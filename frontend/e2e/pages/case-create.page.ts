@@ -9,7 +9,7 @@ export class CaseCreatePage {
   readonly scopeSelect: Locator;
   readonly typeSelect: Locator;
   readonly titleInput: Locator;
-  readonly summaryInput: Locator;
+  readonly summaryInput: Locator;  // Actually an input, not textarea
   readonly descriptionInput: Locator;
   readonly severitySelect: Locator;
   readonly submitButton: Locator;
@@ -18,16 +18,17 @@ export class CaseCreatePage {
 
   constructor(page: Page) {
     this.page = page;
-    this.pageTitle = page.locator('h1:has-text("New Case")');
-    this.scopeSelect = page.locator('select[name="scope_code"]');
-    this.typeSelect = page.locator('select[name="case_type"]');
-    this.titleInput = page.locator('input[name="title"]');
-    this.summaryInput = page.locator('textarea[name="summary"]');
-    this.descriptionInput = page.locator('textarea[name="description"]');
-    this.severitySelect = page.locator('select[name="severity"]');
+    this.pageTitle = page.locator('h1:has-text("Create New Case")');
+    // The form uses id attributes, not name attributes
+    this.scopeSelect = page.locator('#scope_code');
+    this.typeSelect = page.locator('#case_type');
+    this.titleInput = page.locator('#title');
+    this.summaryInput = page.locator('#summary');
+    this.descriptionInput = page.locator('#description');
+    this.severitySelect = page.locator('#severity');
     this.submitButton = page.locator('button[type="submit"]');
     this.cancelButton = page.locator('button:has-text("Cancel")');
-    this.errorMessage = page.locator('[role="alert"]');
+    this.errorMessage = page.locator('.bg-red-50.text-red-700');
   }
 
   /**

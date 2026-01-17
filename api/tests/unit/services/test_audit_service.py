@@ -41,24 +41,22 @@ class TestLogAction:
     @pytest.mark.asyncio
     async def test_log_action_minimal(self, db_session: AsyncSession, test_user: dict):
         """Test logging action with minimal parameters."""
-        # Note: SQLite doesn't support JSONB casting, so we need to modify the query
-        # For unit tests, we'll test the logic by directly inserting
         import json
 
         query = text("""
             INSERT INTO audit_log (
-                action, resource_type, resource_id, user_id, details
+                action, entity_type, entity_id, user_id, metadata
             ) VALUES (
-                :action, :resource_type, :resource_id, :user_id, :details
+                :action, :entity_type, :entity_id, :user_id, :metadata
             )
         """)
 
         await db_session.execute(query, {
             "action": "TEST_ACTION",
-            "resource_type": "test",
-            "resource_id": "test-123",
+            "entity_type": "test",
+            "entity_id": "test-123",
             "user_id": test_user["id"],
-            "details": json.dumps({}),
+            "metadata": json.dumps({}),
         })
         await db_session.commit()
 
@@ -79,33 +77,31 @@ class TestLogAction:
 
         query = text("""
             INSERT INTO audit_log (
-                action, resource_type, resource_id, user_id, ip_address, user_agent, details
+                action, entity_type, entity_id, user_id, user_ip, metadata
             ) VALUES (
-                :action, :resource_type, :resource_id, :user_id, :ip_address, :user_agent, :details
+                :action, :entity_type, :entity_id, :user_id, :user_ip, :metadata
             )
         """)
 
         await db_session.execute(query, {
             "action": "CREATE",
-            "resource_type": "case",
-            "resource_id": str(uuid.uuid4()),
+            "entity_type": "case",
+            "entity_id": str(uuid.uuid4()),
             "user_id": test_user["id"],
-            "ip_address": "192.168.1.100",
-            "user_agent": "Mozilla/5.0",
-            "details": json.dumps({"source": "api"}),
+            "user_ip": "192.168.1.100",
+            "metadata": json.dumps({"source": "api"}),
         })
         await db_session.commit()
 
         result = await db_session.execute(
-            text("SELECT * FROM audit_log WHERE action = :action AND resource_type = :type"),
+            text("SELECT * FROM audit_log WHERE action = :action AND entity_type = :type"),
             {"action": "CREATE", "type": "case"}
         )
         log = result.fetchone()
 
         assert log is not None
         log_dict = dict(log._mapping)
-        assert log_dict["ip_address"] == "192.168.1.100"
-        assert log_dict["user_agent"] == "Mozilla/5.0"
+        assert log_dict["user_ip"] == "192.168.1.100"
 
 
 @pytest.mark.unit
@@ -119,21 +115,21 @@ class TestLogCreate:
 
         query = text("""
             INSERT INTO audit_log (
-                action, resource_type, resource_id, user_id, details
+                action, entity_type, entity_id, user_id, metadata
             ) VALUES (
-                'CREATE', 'case', :resource_id, :user_id, :details
+                'CREATE', 'case', :entity_id, :user_id, :metadata
             )
         """)
 
         await db_session.execute(query, {
-            "resource_id": test_case["id"],
+            "entity_id": test_case["id"],
             "user_id": test_user["id"],
-            "details": json.dumps({"title": test_case["title"]}),
+            "metadata": json.dumps({"title": test_case["title"]}),
         })
         await db_session.commit()
 
         result = await db_session.execute(
-            text("SELECT * FROM audit_log WHERE resource_id = :id"),
+            text("SELECT * FROM audit_log WHERE entity_id = :id"),
             {"id": test_case["id"]}
         )
         log = result.fetchone()
@@ -153,24 +149,22 @@ class TestLogUpdate:
 
         query = text("""
             INSERT INTO audit_log (
-                action, resource_type, resource_id, user_id, details
+                action, entity_type, entity_id, user_id, old_values, new_values
             ) VALUES (
-                'UPDATE', 'case', :resource_id, :user_id, :details
+                'UPDATE', 'case', :entity_id, :user_id, :old_values, :new_values
             )
         """)
 
         await db_session.execute(query, {
-            "resource_id": test_case["id"],
+            "entity_id": test_case["id"],
             "user_id": test_user["id"],
-            "details": json.dumps({
-                "old": {"status": "OPEN"},
-                "new": {"status": "IN_PROGRESS"},
-            }),
+            "old_values": json.dumps({"status": "OPEN"}),
+            "new_values": json.dumps({"status": "IN_PROGRESS"}),
         })
         await db_session.commit()
 
         result = await db_session.execute(
-            text("SELECT * FROM audit_log WHERE action = 'UPDATE' AND resource_id = :id"),
+            text("SELECT * FROM audit_log WHERE action = 'UPDATE' AND entity_id = :id"),
             {"id": test_case["id"]}
         )
         log = result.fetchone()
@@ -189,21 +183,21 @@ class TestLogDelete:
 
         query = text("""
             INSERT INTO audit_log (
-                action, resource_type, resource_id, user_id, details
+                action, entity_type, entity_id, user_id, metadata
             ) VALUES (
-                'DELETE', 'case', :resource_id, :user_id, :details
+                'DELETE', 'case', :entity_id, :user_id, :metadata
             )
         """)
 
         await db_session.execute(query, {
-            "resource_id": test_case["id"],
+            "entity_id": test_case["id"],
             "user_id": test_user["id"],
-            "details": json.dumps({"title": test_case["title"]}),
+            "metadata": json.dumps({"title": test_case["title"]}),
         })
         await db_session.commit()
 
         result = await db_session.execute(
-            text("SELECT * FROM audit_log WHERE action = 'DELETE' AND resource_id = :id"),
+            text("SELECT * FROM audit_log WHERE action = 'DELETE' AND entity_id = :id"),
             {"id": test_case["id"]}
         )
         log = result.fetchone()
@@ -222,21 +216,21 @@ class TestLogView:
 
         query = text("""
             INSERT INTO audit_log (
-                action, resource_type, resource_id, user_id, details
+                action, entity_type, entity_id, user_id, metadata
             ) VALUES (
-                'VIEW', 'case', :resource_id, :user_id, :details
+                'VIEW', 'case', :entity_id, :user_id, :metadata
             )
         """)
 
         await db_session.execute(query, {
-            "resource_id": test_case["id"],
+            "entity_id": test_case["id"],
             "user_id": test_user["id"],
-            "details": json.dumps({}),
+            "metadata": json.dumps({}),
         })
         await db_session.commit()
 
         result = await db_session.execute(
-            text("SELECT * FROM audit_log WHERE action = 'VIEW' AND resource_id = :id"),
+            text("SELECT * FROM audit_log WHERE action = 'VIEW' AND entity_id = :id"),
             {"id": test_case["id"]}
         )
         log = result.fetchone()
@@ -256,21 +250,21 @@ class TestLogDownload:
         evidence_id = str(uuid.uuid4())
         query = text("""
             INSERT INTO audit_log (
-                action, resource_type, resource_id, user_id, details
+                action, entity_type, entity_id, user_id, metadata
             ) VALUES (
-                'DOWNLOAD', 'evidence', :resource_id, :user_id, :details
+                'DOWNLOAD', 'evidence', :entity_id, :user_id, :metadata
             )
         """)
 
         await db_session.execute(query, {
-            "resource_id": evidence_id,
+            "entity_id": evidence_id,
             "user_id": test_user["id"],
-            "details": json.dumps({"file_path": "cases/FIN-USB-0001/doc.pdf"}),
+            "metadata": json.dumps({"file_path": "cases/FIN-USB-0001/doc.pdf"}),
         })
         await db_session.commit()
 
         result = await db_session.execute(
-            text("SELECT * FROM audit_log WHERE action = 'DOWNLOAD' AND resource_id = :id"),
+            text("SELECT * FROM audit_log WHERE action = 'DOWNLOAD' AND entity_id = :id"),
             {"id": evidence_id}
         )
         log = result.fetchone()
@@ -289,17 +283,17 @@ class TestLogLogin:
 
         query = text("""
             INSERT INTO audit_log (
-                action, resource_type, resource_id, user_id, ip_address, details
+                action, entity_type, entity_id, user_id, user_ip, metadata
             ) VALUES (
-                'LOGIN_SUCCESS', 'user', :resource_id, :user_id, :ip_address, :details
+                'LOGIN_SUCCESS', 'user', :entity_id, :user_id, :user_ip, :metadata
             )
         """)
 
         await db_session.execute(query, {
-            "resource_id": test_user["id"],
+            "entity_id": test_user["id"],
             "user_id": test_user["id"],
-            "ip_address": "192.168.1.100",
-            "details": json.dumps({"username": test_user["username"]}),
+            "user_ip": "192.168.1.100",
+            "metadata": json.dumps({"username": test_user["username"]}),
         })
         await db_session.commit()
 
@@ -317,15 +311,15 @@ class TestLogLogin:
 
         query = text("""
             INSERT INTO audit_log (
-                action, resource_type, ip_address, details
+                action, entity_type, user_ip, metadata
             ) VALUES (
-                'LOGIN_FAILURE', 'user', :ip_address, :details
+                'LOGIN_FAILURE', 'user', :user_ip, :metadata
             )
         """)
 
         await db_session.execute(query, {
-            "ip_address": "192.168.1.100",
-            "details": json.dumps({"username": "invalid_user"}),
+            "user_ip": "192.168.1.100",
+            "metadata": json.dumps({"username": "invalid_user"}),
         })
         await db_session.commit()
 
@@ -347,7 +341,7 @@ class TestGetEntityHistory:
         result = await db_session.execute(
             text("""
                 SELECT * FROM audit_log
-                WHERE resource_type = 'case' AND resource_id = :id
+                WHERE entity_type = 'case' AND entity_id = :id
                 ORDER BY created_at DESC
             """),
             {"id": str(uuid.uuid4())}
@@ -368,16 +362,16 @@ class TestGetEntityHistory:
             await db_session.execute(
                 text("""
                     INSERT INTO audit_log (
-                        action, resource_type, resource_id, user_id, details
+                        action, entity_type, entity_id, user_id, metadata
                     ) VALUES (
-                        :action, 'case', :resource_id, :user_id, :details
+                        :action, 'case', :entity_id, :user_id, :metadata
                     )
                 """),
                 {
                     "action": action,
-                    "resource_id": test_case["id"],
+                    "entity_id": test_case["id"],
                     "user_id": test_user["id"],
-                    "details": json.dumps({}),
+                    "metadata": json.dumps({}),
                 }
             )
         await db_session.commit()
@@ -385,7 +379,7 @@ class TestGetEntityHistory:
         result = await db_session.execute(
             text("""
                 SELECT * FROM audit_log
-                WHERE resource_type = 'case' AND resource_id = :id
+                WHERE entity_type = 'case' AND entity_id = :id
                 ORDER BY created_at DESC
             """),
             {"id": test_case["id"]}
@@ -426,17 +420,17 @@ class TestGetUserActivity:
             await db_session.execute(
                 text("""
                     INSERT INTO audit_log (
-                        action, resource_type, resource_id, user_id, details
+                        action, entity_type, entity_id, user_id, metadata
                     ) VALUES (
-                        :action, :resource_type, :resource_id, :user_id, :details
+                        :action, :entity_type, :entity_id, :user_id, :metadata
                     )
                 """),
                 {
                     "action": "VIEW",
-                    "resource_type": "case",
-                    "resource_id": str(uuid.uuid4()),
+                    "entity_type": "case",
+                    "entity_id": str(uuid.uuid4()),
                     "user_id": test_user["id"],
-                    "details": json.dumps({}),
+                    "metadata": json.dumps({}),
                 }
             )
         await db_session.commit()
@@ -465,17 +459,17 @@ class TestGetUserActivity:
             await db_session.execute(
                 text("""
                     INSERT INTO audit_log (
-                        action, resource_type, resource_id, user_id, details
+                        action, entity_type, entity_id, user_id, metadata
                     ) VALUES (
-                        :action, :resource_type, :resource_id, :user_id, :details
+                        :action, :entity_type, :entity_id, :user_id, :metadata
                     )
                 """),
                 {
                     "action": "VIEW",
-                    "resource_type": "case",
-                    "resource_id": str(uuid.uuid4()),
+                    "entity_type": "case",
+                    "entity_id": str(uuid.uuid4()),
                     "user_id": test_user["id"],
-                    "details": json.dumps({}),
+                    "metadata": json.dumps({}),
                 }
             )
         await db_session.commit()

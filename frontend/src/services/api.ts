@@ -68,7 +68,9 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    if (error.response?.status === 401) {
+    // Only redirect on 401 if NOT the login endpoint (login failures should show error, not redirect)
+    const isLoginEndpoint = error.config?.url?.includes('/auth/login');
+    if (error.response?.status === 401 && !isLoginEndpoint) {
       localStorage.removeItem('access_token');
       window.location.href = '/login';
     }
