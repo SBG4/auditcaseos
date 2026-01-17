@@ -106,6 +106,19 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Run vitest tests
+        run: npm run test:run
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: frontend/coverage/coverage-final.json
+          flags: frontend
+          fail_ci_if_error: false
+
   # =============================================================================
   # Security Scanning
   # =============================================================================
