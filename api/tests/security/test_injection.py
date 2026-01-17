@@ -155,7 +155,7 @@ class TestXSS:
                 pass
             else:
                 # Unexpected response
-                assert False, f"XSS payload returned {response.status_code}"
+                raise AssertionError(f"XSS payload returned {response.status_code}")
 
     @pytest.mark.asyncio
     @pytest.mark.security
