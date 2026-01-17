@@ -54,6 +54,10 @@ COPY --chown=appuser:appgroup app/ ./app/
 COPY --chown=appuser:appgroup alembic.ini ./
 COPY --chown=appuser:appgroup alembic/ ./alembic/
 
+# Copy test files (for development testing)
+COPY --chown=appuser:appgroup tests/ ./tests/
+COPY --chown=appuser:appgroup pytest.ini ./
+
 # Security: Switch to non-root user
 USER appuser
 
